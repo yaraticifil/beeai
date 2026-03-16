@@ -1,0 +1,3 @@
+## 2025-03-16 - Optimize Check to OfferRequest mapping in `offers.tsx`
+**Learning:** In screens that list `checks` and map them to their corresponding `offerRequests`, iterating over `checks` and using `requests.find(...)` for each check results in O(N * M) time complexity, where N is `checks.length` and M is `requests.length`. This causes unnecessary performance overhead.
+**Action:** Use `useMemo` to build a `reqMap` (a `Map<string, OfferRequest>`) keyed by `checkId` from `user.offerRequests`, reducing the lookup complexity to O(N + M). Always pass stable dependencies into the `useMemo` hook (e.g. `user?.offerRequests`).

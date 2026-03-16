@@ -271,7 +271,7 @@ function computeOffers(check: CheckItem, pulse: DailyPulse, existingCount: numbe
   return out;
 }
 
-function parseCsvLike(text: string): Array<Record<string, string>> {
+function parseCsvLike(text: string): Record<string, string>[] {
   const raw = text.trim();
   if (!raw) return [];
   const lines = raw.split(/\r?\n/).filter(Boolean);
@@ -279,7 +279,7 @@ function parseCsvLike(text: string): Array<Record<string, string>> {
 
   const sep = lines[0].includes(";") ? ";" : ",";
   const headers = lines[0].split(sep).map((h) => h.trim().toLowerCase());
-  const rows: Array<Record<string, string>> = [];
+  const rows: Record<string, string>[] = [];
 
   for (let i = 1; i < lines.length; i++) {
     const cols = lines[i].split(sep).map((c) => c.trim());
