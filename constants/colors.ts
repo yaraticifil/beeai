@@ -1,28 +1,31 @@
-const primary = "#16a34a";
-const honey = "#f59e0b";
-const honeyLight = "#fef3c7";
-const honeyDark = "#d97706";
+const primary = "#22c55e"; // Electric Green
+const gold = "#fbbf24";    // Cyber Gold
+const slate = "#0f172a";   // Deep Slate
 
 export default {
   primary,
-  primaryLight: "#dcfce7",
-  primaryDark: "#14532d",
-  honey,
-  honeyLight,
-  honeyDark,
-  background: "#f0fdf4",
+  primaryLight: "rgba(34,197,94,0.15)",
+  primaryDark: "#15803d",
+  gold,
+  goldLight: "rgba(251,191,36,0.15)",
+  goldDark: "#b45309",
+  slate,
+  slateLight: "#1e293b",
+  background: "#f8fafc",
   card: "#ffffff",
-  cardBorder: "#d1fae5",
-  text: "#14532d",
-  textSecondary: "#4b7c5a",
-  textMuted: "#86b09a",
+  cardBorder: "rgba(226, 232, 240, 0.8)",
+  text: "#0f172a",
+  textSecondary: "#475569",
+  textMuted: "#94a3b8",
   danger: "#ef4444",
   white: "#ffffff",
+  glass: "rgba(255, 255, 255, 0.7)",
+  glassBorder: "rgba(255, 255, 255, 0.4)",
   light: {
-    text: "#14532d",
-    background: "#f0fdf4",
+    text: "#0f172a",
+    background: "#f8fafc",
     tint: primary,
-    tabIconDefault: "#86b09a",
+    tabIconDefault: "#94a3b8",
     tabIconSelected: primary,
   },
 };

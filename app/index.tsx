@@ -1,68 +1,46 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  Pressable,
-  Animated,
-  Dimensions,
-  Platform,
-} from "react-native";
+import React, { useEffect, useState } from "react";
+import { View, Text, StyleSheet, Pressable, Dimensions, Platform } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import Animated, { FadeIn, FadeOut, SlideInRight, SlideOutLeft } from "react-native-reanimated";
 import Colors from "@/constants/colors";
 import { useUser } from "@/contexts/UserContext";
+import { GlassCard } from "@/components/GlassCard";
 
 const { width, height } = Dimensions.get("window");
 
 const STEPS = [
   {
-    badge: "KOVAN",
-    title: "Sana bir kovan verdik.",
-    text:
-      "BeeAI’de her kullanıcıya bir kovan tahsis edilir. Bu kovan, finans dünyasında senin adına çalışan kişisel üssündür.",
-    emoji: "🏛️🐝",
+    badge: "MODERN KOVAN",
+    title: "Dijital Merkezin Senin Emrinde.",
+    text: "BeeAI’de her kullanıcıya premium bir kovan tahsis edilir. Finans dünyasındaki otonom üssüne hoş geldin.",
+    emoji: "🏛️",
   },
   {
-    badge: "BEBEK ARILAR",
-    title: "Büyüttükçe enstrümana dönüşür.",
-    text:
-      "Kovana bebek arılar bıraktık. Tıpkı çocukluğumuzun sanal bebekleri gibi besleyip büyütürsün. Büyüdükçe finansal bir aracı enstrüman olur.",
-    emoji: "🍼🐝",
+    badge: "BEE AGENTS",
+    title: "Hibrit Zeka ile Otonom Gelecek.",
+    text: "Arıların sadece yapay zeka değil, senin için veriyi toplayan ve pazarlık yapan otonom ajanlardır.",
+    emoji: "🐝",
   },
   {
-    badge: "HİBRİT ZEKA",
-    title: "+40 faktoring ağından veri toplar.",
-    text:
-      "Arılar yapay zekâ değil; hibrit, otonom ajanlardır. Veriyi toplar, anlamlandırır, teklifleri koşturur. Senin gözün, kulağın, iş bitiricin olur.",
-    emoji: "🧠⚡",
+    badge: "PİYASA NABZI",
+    title: "+40 Faktoring Ağından Canlı Veri.",
+    text: "Piyasa nabzını anlık takip et, 15 dakikada en iyi teklifleri topla. Güç senin elinde.",
+    emoji: "⚡",
   },
 ];
 
 export default function Entry() {
   const insets = useSafeAreaInsets();
   const { user, isLoading } = useUser();
-
   const [step, setStep] = useState(0);
-
-  const fade = useRef(new Animated.Value(0)).current;
-  const lift = useRef(new Animated.Value(16)).current;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fade, { toValue: 1, duration: 420, useNativeDriver: true }),
-      Animated.timing(lift, { toValue: 0, duration: 420, useNativeDriver: true }),
-    ]).start();
-  }, [step]);
 
   useEffect(() => {
     if (!isLoading && user) {
       router.replace("/(tabs)");
     }
   }, [isLoading, user]);
-
-  const current = STEPS[step];
 
   const goNext = () => {
     if (step < STEPS.length - 1) setStep((s) => s + 1);
@@ -71,129 +49,102 @@ export default function Entry() {
 
   const goLogin = () => router.push("/(auth)/login");
 
-  if (isLoading) return null;
-  if (user) return null;
+  if (isLoading || user) return null;
+
+  const current = STEPS[step];
 
   return (
-    <LinearGradient
-      colors={["#f0fdf4", "#dcfce7", "#bbf7d0"]}
-      style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}
-    >
-      <View style={styles.bgCircle1} />
-      <View style={styles.bgCircle2} />
+    <View style={styles.container}>
+      <LinearGradient
+        colors={[Colors.slate, "#1e293b", "#0f172a"]}
+        style={StyleSheet.absoluteFill}
+      />
+      
+      {/* Mesh Gradient Circles */}
+      <View style={[styles.meshCircle, { top: -100, left: -50, backgroundColor: 'rgba(34,197,94,0.15)' }]} />
+      <View style={[styles.meshCircle, { bottom: -100, right: -50, backgroundColor: 'rgba(251,191,36,0.1)' }]} />
 
-      <View style={styles.topBar}>
-        <View style={styles.logoRow}>
-          <Text style={styles.logoBee}>🐝</Text>
-          <Text style={styles.logoText}>BeeAI</Text>
+      <View style={[styles.content, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+        <View style={styles.topBar}>
+          <View style={styles.logoRow}>
+            <Text style={styles.logoBee}>🐝</Text>
+            <Text style={styles.logoText}>BeeAI</Text>
+          </View>
+          <Pressable onPress={goLogin} style={styles.loginLink}>
+            <Text style={styles.loginLinkText}>Giriş Yap</Text>
+          </Pressable>
         </View>
-        <Pressable onPress={goLogin} hitSlop={10}>
-          <Text style={styles.skipText}>Giriş</Text>
-        </Pressable>
+
+        <View style={styles.stepContainer}>
+          <Animated.View 
+            key={step} 
+            entering={SlideInRight.springify()} 
+            exiting={SlideOutLeft.springify()}
+            style={styles.animatedStep}
+          >
+             <Text style={styles.mainEmoji}>{current.emoji}</Text>
+             
+             <View style={styles.badgeContainer}>
+                <Text style={styles.badgeText}>{current.badge}</Text>
+             </View>
+
+             <Text style={styles.titleText}>{current.title}</Text>
+             <Text style={styles.bodyText}>{current.text}</Text>
+          </Animated.View>
+        </View>
+
+        <View style={styles.bottomSection}>
+          <View style={styles.dots}>
+            {STEPS.map((_, i) => (
+              <View key={i} style={[styles.dot, i === step && styles.dotActive]} />
+            ))}
+          </View>
+
+          <Pressable style={({ pressed }) => [styles.primaryBtn, pressed && { opacity: 0.9 }]} onPress={goNext}>
+            <Text style={styles.primaryBtnText}>{step < STEPS.length - 1 ? "Sonraki" : "Kovanı Başlat"}</Text>
+            <Text style={styles.primaryBtnIcon}>→</Text>
+          </Pressable>
+
+          <Text style={styles.footerNote}>
+            Pilot sürümü. Veriler ve teklifler gerçek zamanlı simüle edilir.
+          </Text>
+        </View>
       </View>
-
-      <Animated.View style={[styles.card, { opacity: fade, transform: [{ translateY: lift }] }]}>
-        <Text style={styles.emoji}>{current.emoji}</Text>
-
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>{current.badge}</Text>
-        </View>
-
-        <Text style={styles.title}>{current.title}</Text>
-        <Text style={styles.body}>{current.text}</Text>
-
-        <View style={styles.dots}>
-          {STEPS.map((_, i) => (
-            <View key={i} style={[styles.dot, i === step && styles.dotActive]} />
-          ))}
-        </View>
-
-        <Pressable style={({ pressed }) => [styles.btn, pressed && { opacity: 0.9 }]} onPress={goNext}>
-          <Text style={styles.btnText}>{step < STEPS.length - 1 ? "Devam" : "Kovanımı Kur"}</Text>
-          <Text style={styles.btnArrow}>→</Text>
-        </Pressable>
-
-        <Text style={styles.legal}>
-          Pilot kapsamında bazı hizmetler seçili iş ortaklarıyla sunulur. Sonuçlar veri ve yanıt hızına göre değişebilir.
-        </Text>
-      </Animated.View>
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  bgCircle1: {
+  container: { flex: 1, backgroundColor: Colors.slate },
+  meshCircle: {
     position: "absolute",
-    top: -height * 0.1,
-    left: -width * 0.12,
-    width: width * 0.65,
-    height: width * 0.65,
-    borderRadius: width * 0.325,
-    backgroundColor: "rgba(34,197,94,0.12)",
+    width: width * 0.8,
+    height: width * 0.8,
+    borderRadius: width * 0.4,
+    opacity: 0.6,
   },
-  bgCircle2: {
-    position: "absolute",
-    bottom: -height * 0.12,
-    right: -width * 0.12,
-    width: width * 0.75,
-    height: width * 0.75,
-    borderRadius: width * 0.375,
-    backgroundColor: "rgba(245,158,11,0.10)",
-  },
-  topBar: {
-    paddingHorizontal: 18,
-    paddingTop: 10,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  logoRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  logoBee: { fontSize: 22 },
-  logoText: { fontSize: 18, fontFamily: "Poppins_800ExtraBold", color: Colors.primaryDark },
-  skipText: { fontSize: 13, fontFamily: "Poppins_700Bold", color: Colors.primary },
-  card: {
-    marginTop: 18,
-    marginHorizontal: 18,
-    padding: 18,
-    borderRadius: 22,
-    backgroundColor: "rgba(255,255,255,0.88)",
-    borderWidth: 1,
-    borderColor: "rgba(34,197,94,0.18)",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.08,
-    shadowRadius: 18,
-    elevation: 6,
-  },
-  emoji: { fontSize: 42, marginBottom: 10 },
-  badge: {
-    alignSelf: "flex-start",
-    backgroundColor: "rgba(245,158,11,0.14)",
-    borderColor: "rgba(245,158,11,0.22)",
-    borderWidth: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
-    marginBottom: 10,
-  },
-  badgeText: { fontSize: 11, fontFamily: "Poppins_700Bold", color: Colors.honeyDark, letterSpacing: 0.5 },
-  title: { fontSize: 18, fontFamily: "Poppins_800ExtraBold", color: Colors.text, marginBottom: 8 },
-  body: { fontSize: 13, fontFamily: "Poppins_400Regular", color: Colors.textSecondary, lineHeight: 19, marginBottom: 14 },
-  dots: { flexDirection: "row", gap: 6, marginBottom: 14 },
-  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: "rgba(20,83,45,0.18)" },
-  dotActive: { backgroundColor: Colors.primary },
-  btn: {
-    backgroundColor: Colors.primary,
-    borderRadius: 16,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-  },
-  btnText: { fontSize: 14, fontFamily: "Poppins_700Bold", color: Colors.white },
-  btnArrow: { fontSize: 16, fontFamily: "Poppins_800ExtraBold", color: Colors.white },
-  legal: { marginTop: 12, fontSize: 10, fontFamily: "Poppins_400Regular", color: Colors.textMuted, lineHeight: 14 },
+  content: { flex: 1, paddingHorizontal: 24, justifyContent: 'space-between' },
+  topBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 + (Platform.OS === 'ios' ? 44 : 20) },
+  logoRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  logoBee: { fontSize: 24 },
+  logoText: { fontSize: 20, fontFamily: 'Poppins_800ExtraBold', color: Colors.white },
+  loginLink: { paddingVertical: 8, paddingHorizontal: 16, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 12 },
+  loginLinkText: { color: Colors.gold, fontFamily: 'Poppins_700Bold', fontSize: 13 },
+
+  stepContainer: { flex: 1, justifyContent: 'center' },
+  animatedStep: { alignItems: 'flex-start' },
+  mainEmoji: { fontSize: 64, marginBottom: 20 },
+  badgeContainer: { backgroundColor: 'rgba(251, 191, 36, 0.1)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(251, 191, 36, 0.2)' },
+  badgeText: { color: Colors.gold, fontSize: 11, fontFamily: 'Poppins_700Bold', letterSpacing: 1 },
+  titleText: { fontSize: 28, fontFamily: 'Poppins_800ExtraBold', color: Colors.white, marginBottom: 12, lineHeight: 36 },
+  bodyText: { fontSize: 15, fontFamily: 'Poppins_400Regular', color: 'rgba(255,255,255,0.7)', lineHeight: 24 },
+
+  bottomSection: { paddingBottom: 40 },
+  dots: { flexDirection: 'row', gap: 8, marginBottom: 24 },
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.2)' },
+  dotActive: { width: 24, backgroundColor: Colors.gold },
+  primaryBtn: { backgroundColor: Colors.gold, borderRadius: 20, paddingVertical: 18, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10 },
+  primaryBtnText: { color: Colors.slate, fontSize: 16, fontFamily: 'Poppins_800ExtraBold' },
+  primaryBtnIcon: { fontSize: 18, color: Colors.slate, fontWeight: 'bold' },
+  footerNote: { marginTop: 16, textAlign: 'center', fontSize: 10, color: 'rgba(255,255,255,0.4)', fontFamily: 'Poppins_400Regular' },
 });

@@ -52,20 +52,23 @@ function ClassicTabLayout() {
         },
         tabBarStyle: {
           position: "absolute",
-          backgroundColor: isIOS ? "transparent" : Colors.white,
+          backgroundColor: isIOS ? "transparent" : Colors.slate,
           borderTopWidth: isWeb ? 1 : 0,
-          borderTopColor: Colors.cardBorder,
+          borderTopColor: "rgba(255,255,255,0.1)",
           elevation: 0,
-          ...(isWeb ? { height: 84 } : {}),
+          height: isWeb ? 84 : 64,
+          borderTopLeftRadius: 24,
+          borderTopRightRadius: 24,
         },
         tabBarBackground: () =>
           isIOS ? (
-            <BlurView intensity={100} tint="light" style={StyleSheet.absoluteFill} />
+            <BlurView intensity={80} tint="dark" style={[StyleSheet.absoluteFill, { borderTopLeftRadius: 24, borderTopRightRadius: 24, overflow: 'hidden' }]} />
           ) : isWeb ? (
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: Colors.white }]} />
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: Colors.slate, borderTopLeftRadius: 24, borderTopRightRadius: 24 }]} />
           ) : null,
         tabBarItemStyle: {
-          paddingTop: isWeb ? 8 : 0,
+          paddingTop: isWeb ? 8 : 10,
+          paddingBottom: 10,
         },
       }}
     >
