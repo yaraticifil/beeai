@@ -18,7 +18,7 @@ const STEPS = [
     emoji: "🏛️",
   },
   {
-    badge: "BEE AGENTS",
+    badge: "ARI AJANLAR",
     title: "Hibrit Zeka ile Otonom Gelecek.",
     text: "Arıların sadece yapay zeka değil, senin için veriyi toplayan ve pazarlık yapan otonom ajanlardır.",
     emoji: "🐝",

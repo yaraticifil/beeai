@@ -47,25 +47,8 @@ const SHOP_ITEMS: ShopItem[] = [
     color: "#7c3aed",
     tag: "Popüler",
   },
-  {
-    id: "extra_spin",
-    emoji: "🎰",
-    name: "Ekstra Çevirme",
-    description: "Çark için +1 ekstra hak",
-    cost: 20,
-    category: "bonus",
-    color: Colors.honey,
-  },
-  {
-    id: "triple_spin",
-    emoji: "🎲",
-    name: "3x Çevirme Paketi",
-    description: "Çark için +3 ekstra hak",
-    cost: 50,
-    category: "bonus",
-    color: Colors.honeyDark,
-    tag: "Tasarruflu",
-  },
+  { id: "extra_spin", emoji: "🎰", name: "Ekstra Çevirme", description: "Çark için +1 ekstra hak", cost: 20, category: "bonus", color: Colors.gold },
+  { id: "triple_spin", emoji: "🎲", name: "3x Çevirme Paketi", description: "Çark için +3 ekstra hak", cost: 50, category: "bonus", color: Colors.goldDark, tag: "Tasarruflu" },
   {
     id: "flower_boost",
     emoji: "💨",
@@ -410,7 +393,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   costChip: {
-    backgroundColor: Colors.honeyLight,
+    backgroundColor: Colors.goldLight,
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -418,7 +401,7 @@ const styles = StyleSheet.create({
   costText: {
     fontSize: 12,
     fontFamily: "Poppins_700Bold",
-    color: Colors.honeyDark,
+    color: Colors.goldDark,
   },
   buyButton: {
     borderRadius: 10,

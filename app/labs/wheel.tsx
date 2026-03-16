@@ -25,7 +25,7 @@ const SEGMENTS = [
   { label: "Çiçek", color: "#22c55e", textColor: "#fff" },
   { label: "Kupon %5", color: "#8b5cf6", textColor: "#fff" },
   { label: "2x Bal", color: "#f59e0b", textColor: "#fff" },
-  { label: "JACKPOT", color: "#ef4444", textColor: "#fff" },
+  { label: "BÜYÜK İKRAMİYE", color: "#ef4444", textColor: "#fff" },
   { label: "5-25 Bal", color: "#14b8a6", textColor: "#fff" },
 ];
 
@@ -249,7 +249,7 @@ export default function WheelScreen() {
           <LinearGradient
             colors={
               user.spinCount > 0
-                ? [Colors.honey, Colors.honeyDark]
+                ? [Colors.gold, Colors.goldDark]
                 : ["#d1d5db", "#9ca3af"]
             }
             style={styles.spinBtnGradient}
@@ -332,7 +332,7 @@ const styles = StyleSheet.create({
     color: Colors.text,
   },
   spinCountBadge: {
-    backgroundColor: Colors.honey,
+    backgroundColor: Colors.gold,
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -429,8 +429,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 24,
     borderLeftColor: "transparent",
     borderRightColor: "transparent",
-    borderBottomColor: Colors.honey,
-    shadowColor: Colors.honey,
+    borderBottomColor: Colors.gold,
+    shadowColor: Colors.gold,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.4,
     shadowRadius: 4,
@@ -469,7 +469,7 @@ const styles = StyleSheet.create({
     width: "100%",
     borderRadius: 16,
     overflow: "hidden",
-    shadowColor: Colors.honey,
+    shadowColor: Colors.gold,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
@@ -520,7 +520,7 @@ const styles = StyleSheet.create({
   },
   infoBold: {
     fontFamily: "Poppins_700Bold",
-    color: Colors.honey,
+    color: Colors.gold,
   },
   buyBtn: {
     backgroundColor: Colors.primaryLight,

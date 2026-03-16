@@ -18,7 +18,7 @@ export interface Flower {
   ready: boolean;
 }
 
-export type BeeRole = "Scout" | "Broker" | "Clerk" | "Pulse";
+export type BeeRole = "İzci" | "Aracı" | "Kâtip" | "Nabız";
 
 export interface BeeAgent {
   id: string;
@@ -191,10 +191,10 @@ function computeLevel(points: number): number {
 function makeBeeAgents(): BeeAgent[] {
   const now = Date.now();
   return [
-    { id: `bee_${now}_1`, role: "Scout", name: "İzci Arı", level: 1, xp: 15, emoji: "🕵️‍♂️" },
-    { id: `bee_${now}_2`, role: "Broker", name: "Müzakereci Arı", level: 1, xp: 20, emoji: "⚡" },
-    { id: `bee_${now}_3`, role: "Clerk", name: "Kâtip Arı", level: 1, xp: 10, emoji: "🧾" },
-    { id: `bee_${now}_4`, role: "Pulse", name: "Nabız Arı", level: 1, xp: 18, emoji: "📊" },
+    { id: `bee_${now}_1`, role: "İzci", name: "İzci Arı", level: 1, xp: 15, emoji: "🕵️‍♂️" },
+    { id: `bee_${now}_2`, role: "Aracı", name: "Müzakereci Arı", level: 1, xp: 20, emoji: "⚡" },
+    { id: `bee_${now}_3`, role: "Kâtip", name: "Kâtip Arı", level: 1, xp: 10, emoji: "🧾" },
+    { id: `bee_${now}_4`, role: "Nabız", name: "Nabız Arı", level: 1, xp: 18, emoji: "📊" },
   ];
 }
 
@@ -441,7 +441,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       { prize: "Çiçek Tohumu", min: 0, max: 0, weight: 20, bonus: "flower" as const },
       { prize: "Kupon %5", min: 0, max: 0, weight: 15, bonus: "coupon" as const },
       { prize: "2x Bal", min: 0, max: 0, weight: 15, bonus: "double" as const },
-      { prize: "JACKPOT", min: 200, max: 500, weight: 5 },
+      { prize: "BÜYÜK İKRAMİYE", min: 200, max: 500, weight: 5 },
       { prize: "5-25 Bal", min: 5, max: 25, weight: 5 },
     ];
 

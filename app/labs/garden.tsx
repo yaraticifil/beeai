@@ -70,7 +70,7 @@ function FlowerItem({
               styles.flowerProgressFill,
               {
                 width: `${progress * 100}%`,
-                backgroundColor: isReady ? Colors.honey : Colors.primary,
+                backgroundColor: isReady ? Colors.gold : Colors.primary,
               },
             ]}
           />
@@ -150,7 +150,7 @@ export default function GardenScreen() {
           </View>
           <View style={styles.gardenStatDivider} />
           <View style={styles.gardenStatItem}>
-            <Text style={[styles.gardenStatValue, { color: Colors.honey }]}>
+            <Text style={[styles.gardenStatValue, { color: Colors.gold }]}>
               {readyCount}
             </Text>
             <Text style={styles.gardenStatLabel}>Hazır</Text>
@@ -174,7 +174,7 @@ export default function GardenScreen() {
         {harvestResult !== null && (
           <Animated.View style={[styles.harvestToast, { opacity: fadeAnim }]}>
             <LinearGradient
-              colors={[Colors.honey, Colors.honeyDark]}
+              colors={[Colors.gold, Colors.goldDark]}
               style={styles.harvestToastGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
@@ -403,8 +403,8 @@ const styles = StyleSheet.create({
   },
   flowerPressableReady: {
     backgroundColor: "rgba(245,158,11,0.15)",
-    borderColor: Colors.honey,
-    shadowColor: Colors.honey,
+    borderColor: Colors.gold,
+    shadowColor: Colors.gold,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 6,
@@ -430,7 +430,7 @@ const styles = StyleSheet.create({
   harvestText: {
     fontSize: 9,
     fontFamily: "Poppins_700Bold",
-    color: Colors.honey,
+    color: Colors.gold,
   },
   growText: {
     fontSize: 8,
