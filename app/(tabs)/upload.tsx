@@ -10,8 +10,6 @@ import Colors from "@/constants/colors";
 import { useUser } from "@/contexts/UserContext";
 import { GlassCard } from "@/components/GlassCard";
 
-const { width } = Dimensions.get("window");
-
 export default function UploadScreen() {
   const insets = useSafeAreaInsets();
   const { addCheck, startOfferCollection } = useUser();
@@ -21,6 +19,18 @@ export default function UploadScreen() {
   const [bankName, setBankName] = useState("");
   const [amount, setAmount] = useState("");
   const [dueDate, setDueDate] = useState(""); // YYYY-MM-DD
+
+  const formatCurrency = (val: string) => {
+    // Remove all non-digits
+    const clean = val.replace(/\D/g, "");
+    if (!clean) return "";
+    // Add dots as thousand separators
+    return clean.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  };
+
+  const handleAmountChange = (val: string) => {
+    setAmount(formatCurrency(val));
+  };
   const [imageUri, setImageUri] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(false);
 
@@ -107,7 +117,7 @@ export default function UploadScreen() {
               
               <View style={styles.row}>
                  <View style={{ flex: 1.2 }}>
-                   <Field label="Tutar (TRY)" value={amount} onChangeText={setAmount} placeholder="185.000" keyboardType="numeric" />
+                   <Field label="Tutar (TRY)" value={amount} onChangeText={handleAmountChange} placeholder="185.000" keyboardType="numeric" />
                  </View>
                  <View style={{ flex: 1 }}>
                    <Field label="Vade" value={dueDate} onChangeText={setDueDate} placeholder="2026-06-01" />
