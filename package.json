@@ -1,0 +1,12 @@
+{
+  "name": "beeai-ecosystem",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "mobile:dev": "npm run start --workspace=mobile",
+    "dashboard:dev": "npm run dev --workspace=dashboard",
+    "install:all": "npm install"
+  }
+}
