@@ -268,10 +268,17 @@ function AIAssistant() {
 
 export default function App(){
   const [module,setModule]=useState('landing');
-  const [analyses,setAnalyses]=useState([]);
+  const [analyses,setAnalyses]=useState(()=>{
+    const saved = localStorage.getItem('beeai_vault');
+    return saved ? JSON.parse(saved) : [];
+  });
   const [session]=useState('BEE-'+Math.random().toString(36).substr(2,9).toUpperCase());
   const [showWelcome, setShowWelcome] = useState(true);
   const [showFintechReport, setShowFintechReport] = useState(false);
+
+  useEffect(() => {
+    localStorage.setItem('beeai_vault', JSON.stringify(analyses));
+  }, [analyses]);
 
   useEffect(() => {
     speakAuthority("Bi-ey-ay Ekosistemi Çevrimiçi. Kovan aktif.");
@@ -300,7 +307,7 @@ export default function App(){
           <main>
             {module==='check'     && <CheckAnalysis setShowFintechReport={setShowFintechReport} setModule={changeModule} analyses={analyses} setAnalyses={setAnalyses}/>}
             {module==='risk'      && <RiskDashModule setShowFintechReport={setShowFintechReport} setModule={changeModule}/>}
-            {module==='history'   && <HistoryModule setModule={changeModule} analyses={analyses}/>}
+            {module==='vault'     && <VaultModule setModule={changeModule} analyses={analyses}/>}
             {module==='compare'   && <CompareModule setModule={changeModule} analyses={analyses}/>}
             {module==='cashflow'  && <CashflowModule setModule={changeModule} analyses={analyses}/>}
             {module==='firm'      && <FirmModule setShowFintechReport={setShowFintechReport} setModule={changeModule} analyses={analyses}/>}
@@ -323,6 +330,7 @@ function Header({module,setModule}){
     {id:'check',Icon:Search,label:'Kriminal'},
     {id:'risk',Icon:ShieldCheck,label:'Risk'},
     {id:'rate',Icon:Activity,label:'Faktoring'},
+    {id:'vault',Icon:Database,label:'Kovan Deposu'},
     {id:'petek',Icon:Cpu,label:'PETEK-X'},
   ];
   return(
@@ -574,7 +582,9 @@ function CheckAnalysis({setModule,analyses,setAnalyses, setShowFintechReport}){
       fileData:file.data,fileName:file.name
     };
     setResult(r);
-    setAnalyses(p=>[{...r,fileData:undefined},...p]);
+    setAnalyses(p=>[r,...p]);
+
+    addLog('success','✓ MATERYAL KOVAN DEPOSUNA AKTARILDI.');
     
     addLog('info','ANALİZ TAMAMLANDI. EKRAN KİLİTLENİYOR.');
     speakAuthority("Analiz tamamlandı. Sonuçlar kilitlendi.");
@@ -1615,6 +1625,100 @@ function GlobalStyles(){
       .terminal{background:#000;padding:10px;height:200px;overflow-y:auto;color:var(--primary);font-family:monospace;font-size:11px;border:1px solid var(--border);}
       .log-success{color:var(--success);}.log-error{color:var(--danger);}
       .absolute{position:absolute;}.rounded-full{border-radius:9999px;}.overflow-hidden{overflow:hidden;}.border-2{border-width:2px;}.z-50{z-index:50;}
+      .vault-item{display:grid;grid-template-columns:100px 1fr 120px 120px 80px;gap:16px;align-items:center;background:rgba(255,255,255,.03);padding:12px;border-radius:12px;border:1px solid var(--border);margin-bottom:12px;transition:0.3s;}
+      .vault-item:hover{background:rgba(245,158,11,.05); border-color:var(--primary);}
+      .vault-thumb{width:100px; height:60px; border-radius:6px; object-fit:cover; border:1px solid rgba(255,255,255,0.1);}
     `}</style>
+  );
+}
+
+function VaultModule({setModule, analyses}){
+  const [isLocked, setIsLocked] = useState(true);
+  const [pass, setPass] = useState('');
+
+  const stats = {
+    total: analyses.length,
+    risk: analyses.filter(a=>a.score<50).length,
+    volume: analyses.reduce((sum,a)=>sum+(a.amount||0),0).toLocaleString('tr-TR')
+  };
+
+  const handleEntry = () => {
+    if(pass === 'BEEAI2026') {
+       setIsLocked(false);
+       speakAuthority("Kovan anahtarı doğrulandı. Arşiv erişimi sağlandı.");
+    } else {
+       alert("Geçersiz Erişim Anahtarı!");
+    }
+  };
+
+  if(isLocked) {
+    return (
+      <div style={{animation:'fadeUp .4s ease', height:'60vh', display:'flex', alignItems:'center', justifyContent:'center'}}>
+        <div className="panel" style={{maxWidth:400, width:'100%', textAlign:'center', padding:40}}>
+           <Lock size={60} style={{color:'var(--primary)', marginBottom:24}} />
+           <h2 style={{fontSize:20, marginBottom:12}}>KOVAN ERİŞİM ANAHTARI</h2>
+           <p style={{fontSize:13, color:'var(--text-muted)', marginBottom:24}}>Bu alan özeldir. Devam etmek için yetkili anahtarınızı girin.</p>
+           <input type="password" placeholder="Erişim Anahtarı..." className="inp" value={pass} onChange={e=>setPass(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handleEntry()} />
+           <button className="btn-main" onClick={handleEntry}>ANAHTARI DOĞRULA</button>
+           <div style={{fontSize:10, color:'var(--text-muted)', marginTop:20}}>Ipucu: Pilot anahtarı BEEAI2026</div>
+        </div>
+      </div>
+    );
+  }
+
+  return(
+    <div style={{animation:'fadeUp .4s ease'}}>
+      <BackBar setModule={setModule} title="BEEAI KOVAN DEPOSU — Merkezi Arşiv"/>
+      
+      <div style={{display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:20, marginBottom:24}}>
+        <div className="panel" style={{textAlign:'center'}}>
+          <div style={{fontSize:10, color:'var(--text-muted)', marginBottom:4, fontWeight:800, letterSpacing:1}}>TOPLAM KAYIT</div>
+          <div style={{fontSize:32, fontWeight:900, color:'var(--primary)'}}>{stats.total}</div>
+        </div>
+        <div className="panel" style={{textAlign:'center'}}>
+          <div style={{fontSize:10, color:'var(--text-muted)', marginBottom:4, fontWeight:800, letterSpacing:1}}>TOPLAM TUTAR</div>
+          <div style={{fontSize:24, fontWeight:900, color:'var(--success)', marginTop:8}}>{stats.volume} ₺</div>
+        </div>
+        <div className="panel" style={{textAlign:'center', borderColor:stats.risk>0?'var(--danger)':'var(--border)'}}>
+          <div style={{fontSize:10, color:'var(--text-muted)', marginBottom:4, fontWeight:800, letterSpacing:1}}>RİSKLİ MATERYAL</div>
+          <div style={{fontSize:32, fontWeight:900, color:stats.risk>0?'var(--danger)':'var(--text-muted)'}}>{stats.risk}</div>
+        </div>
+      </div>
+
+      <div className="panel" style={{background:'rgba(5,5,5,0.6)'}}>
+        <div style={{display:'grid', gridTemplateColumns:'100px 1fr 120px 120px 80px', gap:16, padding:'0 12px 12px', fontSize:11, color:'var(--text-muted)', fontWeight:700, textTransform:'uppercase', letterSpacing:1, borderBottom:'1px solid var(--border)', marginBottom:16}}>
+          <div>Materyal</div>
+          <div>Kimlik / VKN</div>
+          <div>Tutar (₺)</div>
+          <div>Forensik Skor</div>
+          <div>Detay</div>
+        </div>
+
+        {analyses.length === 0 ? (
+          <div style={{textAlign:'center', padding:60, opacity:0.3}}>
+            <Database size={48} style={{marginBottom:16}} />
+            <p>Kovan deposunda henüz kayıtlı materyal bulunmuyor.</p>
+          </div>
+        ) : (
+          analyses.map(a => (
+            <div key={a.id} className="vault-item">
+              <img src={a.fileData} className="vault-thumb" alt="Check preview" />
+              <div>
+                <div style={{fontSize:14, fontWeight:700, color:'var(--text)'}}>{a.vkn}</div>
+                <div style={{fontSize:11, color:'var(--text-muted)', fontFamily:'monospace'}}>{new Date(a.timestamp).toLocaleString('tr-TR')}</div>
+              </div>
+              <div style={{fontSize:14, fontWeight:800, fontFamily:'JetBrains Mono'}}>{a.amount?.toLocaleString('tr-TR')}</div>
+              <div style={{display:'flex', alignItems:'center', gap:8}}>
+                <div style={{width:40, height:6, background:'rgba(255,255,255,0.1)', borderRadius:3, overflow:'hidden'}}>
+                   <div style={{width:`${a.score}%`, height:'100%', background:a.score<50?'var(--danger)':'var(--success)'}} />
+                </div>
+                <span style={{fontSize:12, fontWeight:900, color:a.score<50?'var(--danger)':'var(--success)'}}>%{a.score}</span>
+              </div>
+              <button className="nav-btn" style={{padding:'6px 10px', fontSize:10, border:'1px solid rgba(245,158,11,0.3)'}} onClick={() => alert(`Arşiv Kaydı #${a.id} - Forensik Dosya Erişiliyor...`)}>DOSYA</button>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
   );
 }
