@@ -9,7 +9,7 @@ import {
   Hammer, Focus, Waves, Award, PenTool, Clock, Printer, 
   ScanLine, Microscope, FileSearch, Hexagon,
   BarChart3, Scale, TrendingUp, Building2, ArrowLeft, XCircle,
-  MessageSquare, Bot, Send, ChevronDown
+  MessageSquare, Bot, Send, ChevronDown, MessageCircle
 } from 'lucide-react';
 import SlidingFintechReport from './components/SlidingFintechReport';
 
@@ -915,15 +915,41 @@ function RiskDashModule({setModule, setShowFintechReport}){
                   </div>
                </div>
                
-               <div className="panel" style={{background:'rgba(245,158,11,0.05)', display:'flex', alignItems:'center', gap:20, padding:30, border:'2px solid var(--primary)'}}>
-                 <FileSearch size={48} style={{color:'var(--primary)'}} />
-                 <div style={{flex:1}}>
-                   <h3 style={{fontSize:18, color:'var(--primary)', marginBottom:4}}>Nihai Stratejik Rapor Hazır</h3>
-                   <p style={{color:'var(--text-muted)', fontSize:13}}>Tüm katmanlar başarıyla analiz edildi. Detaylı SWOT, nakit akış projeksiyonu ve pazar analizi raporunuzda mevcuttur.</p>
+               {!unlocked ? (
+                 <div className="panel" style={{background:'rgba(239,68,68,0.05)', display:'flex', flexWrap:'wrap', alignItems:'center', gap:20, padding:30, border:'2px solid var(--danger)', position:'relative', overflow:'hidden'}}>
+                    <div style={{flex:1, minWidth:280}}>
+                       <div style={{display:'flex', alignItems:'center', gap:12, marginBottom:12}}>
+                          <Lock size={32} style={{color:'var(--danger)'}} />
+                          <h3 style={{fontSize:20, color:'var(--danger)', fontWeight:900, letterSpacing:1}}>DETAYLI RAPOR KİLİTLENDİ</h3>
+                       </div>
+                       <p style={{color:'var(--text)', fontSize:13, lineHeight:1.6, opacity:0.8, marginBottom:20}}>
+                          {form.vknTckn} nolu VKN için hazırlanan **Kuantum Derin Analiz Raporu**, veri gizliliği ve ticari istihbarat protokolleri gereği şifrelenmiştir. Raporu görüntülemek için yetkili erişim anahtarı gereklidir.
+                       </p>
+                       <div style={{display:'flex', gap:10}}>
+                          <input className="inp" style={{width:160, marginBottom:0, textAlign:'center', letterSpacing:2}} placeholder="ANAHTAR" value={pass} onChange={e=>setPass(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handleUnlock()}/>
+                          <button className="btn-main" style={{width:'auto', padding:'0 20px', background:'var(--danger)'}} onClick={handleUnlock}>ANAHTARI ÇÖZ</button>
+                       </div>
+                    </div>
+                    <div style={{flex:1, minWidth:280, display:'flex', flexDirection:'column', gap:12, alignItems:'center', background:'rgba(5,5,5,0.4)', padding:20, borderRadius:16, border:'1px solid var(--border)'}}>
+                       <div style={{fontSize:11, color:'var(--text-muted)', fontWeight:800}}>YETKİLİ ERİŞİM MERKEZİ</div>
+                       <MessageCircle size={40} style={{color:'var(--success)'}} />
+                       <button className="btn-main" style={{background:'var(--success)', border:'none'}} onClick={handleUnlock}>
+                          WHATSAPP'TAN ŞİFRE AL
+                       </button>
+                       <div style={{fontSize:10, opacity:0.5}}>İşlem ID: {Math.random().toString(36).substr(2,9).toUpperCase()}</div>
+                    </div>
                  </div>
-                 <button className="btn-main" style={{width:'auto', padding:'12px 24px'}} onClick={() => setShowFintechReport(true)}>KUANTUM RAPORU İZLE</button>
-               </div>
-               <button className="nav-btn" onClick={reset} style={{width:'100%', justifyContent:'center'}}>Yeni Derin Tarama</button>
+               ) : (
+                 <div className="panel" style={{background:'rgba(245,158,11,0.05)', display:'flex', alignItems:'center', gap:20, padding:30, border:'2px solid var(--primary)', animation:'fadeUp 0.5s ease'}}>
+                   <FileSearch size={48} style={{color:'var(--primary)'}} />
+                   <div style={{flex:1}}>
+                     <h3 style={{fontSize:18, color:'var(--primary)', marginBottom:4}}>Nihai Stratejik Rapor Erişime Açıldı</h3>
+                     <p style={{color:'var(--text-muted)', fontSize:13}}>Tüm katmanlar başarıyla analiz edildi. Detaylı SWOT, nakit akış projeksiyonu ve pazar analizi raporunuzda mevcuttur.</p>
+                   </div>
+                   <button className="btn-main" style={{width:'auto', padding:'12px 24px'}} onClick={() => setShowFintechReport(true)}>KUANTUM RAPORU İZLE</button>
+                 </div>
+               )}
+               <button className="nav-btn" onClick={reset} style={{width:'100%', justifyContent:'center'}}>Yeni Derin Tarama Başlat</button>
             </div>
           )}
         </div>
