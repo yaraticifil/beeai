@@ -1,0 +1,7 @@
+{
+  "version": 2,
+  "public": false,
+  "buildCommand": "cd apps/dashboard && npm install && npm run build",
+  "outputDirectory": "apps/dashboard/dist",
+  "framework": "vite"
+}
