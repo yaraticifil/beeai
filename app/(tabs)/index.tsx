@@ -145,6 +145,23 @@ export default function PanelScreen() {
           </View>
         </View>
 
+        {user.activities && user.activities.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Son Hareketler</Text>
+            <GlassCard style={styles.activityCard}>
+              {user.activities.slice(0, 3).map((act, idx) => (
+                <View key={act.id} style={[styles.activityItem, idx === 0 && { borderTopWidth: 0 }]}>
+                   <View style={styles.activityDot} />
+                   <View style={{ flex: 1 }}>
+                     <Text style={styles.activityMsg}>{act.message}</Text>
+                     <Text style={styles.activityTime}>{new Date(act.time).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</Text>
+                   </View>
+                </View>
+              ))}
+            </GlassCard>
+          </View>
+        )}
+
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Hızlı İşlemler</Text>
           <ActionItem
@@ -181,7 +198,10 @@ export default function PanelScreen() {
                   <View style={styles.xpBarBackground}>
                     <View style={[styles.xpBarFill, { width: `${b.xp}%` }]} />
                   </View>
-                  <Text style={styles.beeLevel}>Seviye {b.level}</Text>
+                  <View style={styles.beeInfoRow}>
+                    <Text style={styles.beeLevel}>Sv {b.level}</Text>
+                    <Text style={styles.beeStatus}>• Aktif</Text>
+                  </View>
                 </GlassCard>
               </Animated.View>
             ))}
@@ -236,6 +256,12 @@ const styles = StyleSheet.create({
   statValue: { fontSize: 18, fontFamily: "Poppins_800ExtraBold", color: Colors.slate },
   statLabel: { fontSize: 10, fontFamily: "Poppins_600SemiBold", color: Colors.textMuted },
 
+  activityCard: { padding: 0, overflow: 'hidden' },
+  activityItem: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 16, borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.05)' },
+  activityDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.gold },
+  activityMsg: { fontSize: 12, fontFamily: "Poppins_600SemiBold", color: Colors.slate },
+  activityTime: { fontSize: 10, fontFamily: "Poppins_400Regular", color: Colors.textMuted, marginTop: 2 },
+
   actionItem: {
     backgroundColor: Colors.white,
     borderRadius: 24,
@@ -268,5 +294,7 @@ const styles = StyleSheet.create({
   beeName: { fontSize: 13, fontFamily: 'Poppins_700Bold', color: Colors.slate, marginBottom: 8 },
   xpBarBackground: { width: '100%', height: 4, backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: 2, marginBottom: 4 },
   xpBarFill: { height: 4, backgroundColor: Colors.primary, borderRadius: 2 },
+  beeInfoRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   beeLevel: { fontSize: 10, fontFamily: 'Poppins_600SemiBold', color: Colors.textMuted },
+  beeStatus: { fontSize: 10, fontFamily: 'Poppins_600SemiBold', color: Colors.primary },
 });

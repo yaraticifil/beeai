@@ -121,6 +121,7 @@ export interface User {
   bees: BeeAgent[];
   checks: CheckItem[];
   offerRequests: OfferRequest[];
+  activities: { id: string; type: string; message: string; time: number }[];
   coupons: Coupon[];
   flowerSeeds: number;
   doubleNextHoney: boolean;
@@ -327,6 +328,7 @@ interface UserContextValue {
   startOfferCollection: (checkId: string) => Promise<void>;
   ensureOfferProgress: (checkId: string) => Promise<void>;
   requestRevision: (checkId: string) => Promise<boolean>;
+  pickOffer: (checkId: string, offerId: string) => Promise<void>;
 
   // Pilot: pulse
   getDailyPulse: () => DailyPulse;
@@ -355,6 +357,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
           bees: parsed.bees && parsed.bees.length ? parsed.bees : makeBeeAgents(),
           checks: parsed.checks || [],
           offerRequests: parsed.offerRequests || [],
+          activities: parsed.activities || [],
           coupons: parsed.coupons || [],
           flowerSeeds: parsed.flowerSeeds || 0,
           doubleNextHoney: parsed.doubleNextHoney || false,
@@ -382,6 +385,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       bees: makeBeeAgents(),
       checks: [],
       offerRequests: [],
+      activities: [],
       coupons: [],
       flowerSeeds: 1,
       doubleNextHoney: false,
@@ -570,7 +574,19 @@ export function UserProvider({ children }: { children: ReactNode }) {
       lane,
     };
 
-    const updated: User = { ...user, checks: [check, ...(user.checks || [])] };
+    const updated: User = {
+      ...user,
+      checks: [check, ...(user.checks || [])],
+      activities: [
+        {
+          id: `act_${Date.now()}`,
+          type: "check_add",
+          message: `${check.issuerName} firmasına ait çek eklendi.`,
+          time: Date.now(),
+        },
+        ...(user.activities || []),
+      ].slice(0, 10),
+    };
     await saveUser(updated);
     return id;
   };
@@ -693,7 +709,19 @@ export function UserProvider({ children }: { children: ReactNode }) {
       offers: [],
     };
 
-    await saveUser({ ...user, offerRequests: [req, ...(user.offerRequests || [])] });
+    await saveUser({
+      ...user,
+      offerRequests: [req, ...(user.offerRequests || [])],
+      activities: [
+        {
+          id: `act_${Date.now()}`,
+          type: "offer_start",
+          message: "15 dakikalık teklif toplama süreci başlatıldı.",
+          time: Date.now(),
+        },
+        ...(user.activities || []),
+      ].slice(0, 10),
+    });
   };
 
   const ensureOfferProgress: UserContextValue["ensureOfferProgress"] = async (checkId) => {
@@ -754,8 +782,47 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const updatedReq: OfferRequest = { ...req, revisionUsed: true, offers: revised, status: "ready" };
     const updatedRequests = [...user.offerRequests];
     updatedRequests[idx] = updatedReq;
-    await saveUser({ ...user, offerRequests: updatedRequests });
+    await saveUser({
+      ...user,
+      offerRequests: updatedRequests,
+      activities: [
+        {
+          id: `act_${Date.now()}`,
+          type: "revision",
+          message: "Teklifler için revize talebi iletildi.",
+          time: Date.now(),
+        },
+        ...(user.activities || []),
+      ].slice(0, 10),
+    });
     return true;
+  };
+
+  const pickOffer: UserContextValue["pickOffer"] = async (checkId, offerId) => {
+    if (!user) return;
+    const req = (user.offerRequests || []).find((r) => r.checkId === checkId);
+    if (!req) return;
+
+    const offer = req.offers.find((o) => o.id === offerId);
+    if (!offer) return;
+
+    const updatedRequests = (user.offerRequests || []).filter((r) => r.checkId !== checkId);
+    const updatedChecks = (user.checks || []).filter((c) => c.id !== checkId);
+
+    await saveUser({
+      ...user,
+      checks: updatedChecks,
+      offerRequests: updatedRequests,
+      activities: [
+        {
+          id: `act_${Date.now()}`,
+          type: "pick_offer",
+          message: `${offer.partnerCode} teklifi seçildi, işlem tamamlanıyor.`,
+          time: Date.now(),
+        },
+        ...(user.activities || []),
+      ].slice(0, 10),
+    });
   };
 
   const getDailyPulse = (): DailyPulse => {
@@ -787,6 +854,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       startOfferCollection,
       ensureOfferProgress,
       requestRevision,
+      pickOffer,
       getDailyPulse,
       setPulseMode,
     }),

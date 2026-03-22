@@ -7,7 +7,6 @@ export default function LabsLayout() {
       screenOptions={{
         headerShown: true,
         headerTitle: "Pilot Labs",
-        headerBackTitleVisible: false,
       }}
     >
       <Stack.Screen name="index" options={{ title: "Pilot Labs" }} />
