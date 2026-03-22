@@ -796,23 +796,33 @@ function RiskDashModule({setModule, setShowFintechReport}){
       <BackBar setModule={setModule} title="Kuantum Risk Analiz Merkezi — (Kral Dairesi)"/>
       <div className="panel" style={{display:'flex',flexDirection:'column',gap:20,flex:1,minHeight:640, position:'relative', overflow:'hidden'}}>
         
+        {/* ── TEASER PHASE: Kayan Rapor Gösteriş Ekranı */}
         {phase==='teaser' && (
-          <div style={{position:'absolute', inset:0, zIndex:100, background:'rgba(5,5,5,0.95)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:20}}>
-            <div style={{position:'absolute', inset:0, opacity:0.15, pointerEvents:'none', overflow:'hidden'}}>
-               <SlidingFintechReport isTeaser={true} />
+          <div style={{position:'absolute', inset:0, zIndex:100, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:20, overflow:'hidden'}}>
+            {/* Full-screen kayan rapor — tüm ekranı kaplıyor, GÖSTERİŞ için */}
+            <div style={{position:'absolute', inset:0, opacity:0.35, pointerEvents:'none', overflow:'hidden'}}>
+              <SlidingFintechReport isTeaser={true} />
             </div>
-            <div style={{textAlign:'center', zIndex:101, padding:'40px 60px', backdropFilter:'blur(20px)', borderRadius:32, border:'1px solid var(--border)', background:'rgba(10,8,5,0.85)', boxShadow:'0 0 50px rgba(245,158,11,0.1)'}}>
-              <Hexagon size={80} style={{color:'var(--primary)', marginBottom:24, filter:'drop-shadow(0 0 20px var(--primary))'}} />
-              <h2 style={{fontSize:28, color:'var(--primary)', fontWeight:900, letterSpacing:4, marginBottom:16, textTransform:'uppercase'}}>Kuantum Fragman: Gücümüzün Zirvesi</h2>
-              <p style={{color:'var(--text)', fontSize:16, maxWidth:500, lineHeight:1.8, marginBottom:32, opacity:0.8}}>
-                BEEAI Veri Madenciliği ve Kuantum Risk Motoru, on milyonlarca kurumsal veriyi saniyeler içinde işleyerek size nihai gerçeği sunar. 
-                Siz sormadan biz cevabı buluruz.
+            {/* Üstündeki çağrı kutusu */}
+            <div style={{textAlign:'center', zIndex:101, padding:'40px 60px', backdropFilter:'blur(24px)', borderRadius:32, border:'1px solid rgba(245,158,11,0.3)', background:'rgba(5,4,2,0.88)', boxShadow:'0 0 80px rgba(245,158,11,0.15)', maxWidth:580}}>
+              <div style={{width:72, height:72, borderRadius:'50%', background:'rgba(245,158,11,0.1)', border:'2px solid var(--primary)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 24px'}}>
+                <Hexagon size={40} style={{color:'var(--primary)'}} />
+              </div>
+              <h2 style={{fontSize:26, color:'var(--primary)', fontWeight:900, letterSpacing:3, marginBottom:12, textTransform:'uppercase'}}>Kral Dairesi Risk İstihbaratı</h2>
+              <p style={{color:'rgba(255,255,255,0.7)', fontSize:14, lineHeight:1.8, marginBottom:8}}>
+                Yanınızda akan rapor, BeeAI'ın gerçek veri işleme gücünün canlı yansımasıdır.
               </p>
-              <button className="btn-main" style={{padding:'18px 50px', width:'auto', fontSize:18, letterSpacing:2}} onClick={()=>setPhase('form')}>LİMİTSİZ ERİŞİMİ BAŞLAT</button>
+              <p style={{color:'rgba(255,255,255,0.5)', fontSize:12, lineHeight:1.6, marginBottom:32}}>
+                TCMB, KKB, Protesto ve 180+ veri kaynağından saniyeler içinde derlenen kurumsal risk profili.
+              </p>
+              <button className="btn-main" style={{padding:'16px 50px', width:'auto', fontSize:16, letterSpacing:2}} onClick={()=>setPhase('form')}>
+                VKN SORGULA — ÜCRETSİZ
+              </button>
             </div>
           </div>
         )}
 
+        {/* ── FORM & ANALİZ GRID */}
         <div style={{display:'grid',gridTemplateColumns:'340px 1fr',gap:24,flex:1}}>
           {phase==='form'&&(
             <div style={{display:'flex',flexDirection:'column',gap:16, animation:'fadeUp 0.5s ease'}}>
@@ -820,15 +830,12 @@ function RiskDashModule({setModule, setShowFintechReport}){
               <div className="panel" style={{display:'flex',flexDirection:'column',gap:12, background:'rgba(255,255,255,0.02)'}}>
                 <label style={{fontSize:11,color:'var(--text-muted)', textTransform:'uppercase'}}>Hedef VKN / TCKN</label>
                 <input className="inp" style={{fontSize:22, letterSpacing:4, fontFamily:'monospace', textAlign:'center', padding:16}} placeholder="0000000000" value={form.vknTckn} onChange={e=>setForm({...form,vknTckn:e.target.value})}/>
-                
                 <p style={{fontSize:11, color:'var(--text-muted)', fontStyle:'italic', background:'rgba(245,158,11,0.1)', padding:12, borderRadius:8, borderLeft:'4px solid var(--primary)'}}>
                    <Sparkles size={14} style={{display:'inline', verticalAlign:'middle', marginRight:6}}/>
                    BeeAI Arıları, VKN bilgisinden yola çıkarak Protesto, Ödeme Performansı ve Risk Endekslerini otomatik olarak haritalandıracaktır.
                 </p>
-
                 <button className="btn-main" style={{marginTop:12, height:60, fontSize:16}} onClick={startAnalysis}>RİSK KOVANINI TETİKLE</button>
               </div>
-
               <div className="panel" style={{padding:16, background:'transparent', borderStyle:'dashed', borderColor:'var(--border)'}}>
                  <h4 style={{fontSize:12, color:'var(--primary)', marginBottom:8}}>TARANACAK KATMANLAR:</h4>
                  <ul style={{listStyle:'none', fontSize:11, color:'var(--text-muted)', display:'flex', flexDirection:'column', gap:6}}>
@@ -868,59 +875,63 @@ function RiskDashModule({setModule, setShowFintechReport}){
              </div>
           )}
 
+          {/* ── RESULT PHASE: Görünen skor + Bulanık detaylar + CTA */}
           {phase==='result'&&result&&(
-            <div style={{display:'flex',flexDirection:'column',gap:16, animation:'fadeUp 0.5s ease', flex:1}}>
-               <div className="panel" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:24, background:'rgba(255,255,255,0.02)'}}>
-                  <div style={{textAlign:'center',padding:20,borderRight:'1px solid var(--border)'}}>
-                    <div style={{fontSize:12,color:'var(--text-muted)',marginBottom:8,textTransform:'uppercase'}}>Kuantum Skor</div>
-                    <div style={{fontSize:64,fontWeight:900,color:result.color,fontFamily:'JetBrains Mono,monospace'}}>{result.score}</div>
-                    <div style={{fontSize:14,fontWeight:800,color:result.color,letterSpacing:2}}>{result.label}</div>
-                  </div>
-                  <div style={{display:'flex',flexDirection:'column',justifyContent:'center',gap:12}}>
-                    {[{l:'VKN',v:form.vknTckn},{l:'Sektörel Güven',v:'%88'},{l:'Ödeme Disiplini',v:'YÜKSEK'}].map(({l,v})=>(
-                      <div key={l} style={{display:'flex',justifyContent:'space-between',fontSize:13,borderBottom:'1px solid var(--border)',paddingBottom:8}}>
-                        <span style={{color:'var(--text-muted)'}}>{l}</span>
-                        <span style={{fontWeight:700,color:'var(--text)'}}>{v}</span>
-                      </div>
-                    ))}
-                  </div>
-               </div>
-               
-               {!unlocked ? (
-                 <div className="panel" style={{background:'rgba(239,68,68,0.05)', display:'flex', flexWrap:'wrap', alignItems:'center', gap:20, padding:30, border:'2px solid var(--danger)', position:'relative', overflow:'hidden'}}>
-                    <div style={{flex:1, minWidth:280}}>
-                       <div style={{display:'flex', alignItems:'center', gap:12, marginBottom:12}}>
-                          <Lock size={32} style={{color:'var(--danger)'}} />
-                          <h3 style={{fontSize:20, color:'var(--danger)', fontWeight:900, letterSpacing:1}}>DETAYLI RAPOR KİLİTLENDİ</h3>
-                       </div>
-                       <p style={{color:'var(--text)', fontSize:13, lineHeight:1.6, opacity:0.8, marginBottom:20}}>
-                          {form.vknTckn} nolu VKN için hazırlanan **Kuantum Derin Analiz Raporu**, veri gizliliği ve ticari istihbarat protokolleri gereği şifrelenmiştir. Raporu görüntülemek için yetkili erişim anahtarı gereklidir.
-                       </p>
-                       <div style={{display:'flex', gap:10}}>
-                          <input className="inp" style={{width:160, marginBottom:0, textAlign:'center', letterSpacing:2}} placeholder="ANAHTAR" value={pass} onChange={e=>setPass(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handleUnlock()}/>
-                          <button className="btn-main" style={{width:'auto', padding:'0 20px', background:'var(--danger)'}} onClick={handleUnlock}>ANAHTARI ÇÖZ</button>
-                       </div>
+            <div style={{display:'flex',flexDirection:'column',gap:16, animation:'fadeUp 0.5s ease', flex:1, position:'relative'}}>
+              
+              {/* SKOR KARTI — görünüyor */}
+              <div className="panel" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:24, background:'rgba(255,255,255,0.02)'}}>
+                <div style={{textAlign:'center',padding:20,borderRight:'1px solid var(--border)'}}>
+                  <div style={{fontSize:12,color:'var(--text-muted)',marginBottom:8,textTransform:'uppercase'}}>Kuantum Risk Skoru</div>
+                  <div style={{fontSize:64,fontWeight:900,color:result.color,fontFamily:'JetBrains Mono,monospace'}}>{result.score}</div>
+                  <div style={{fontSize:14,fontWeight:800,color:result.color,letterSpacing:2}}>{result.label}</div>
+                </div>
+                <div style={{display:'flex',flexDirection:'column',justifyContent:'center',gap:12}}>
+                  {[{l:'VKN/TCKN',v:form.vknTckn},{l:'Analiz Tarihi',v:new Date().toLocaleDateString('tr-TR')},{l:'Tarama Derinliği',v:'180+ KAYNAK'}].map(({l,v})=>(
+                    <div key={l} style={{display:'flex',justifyContent:'space-between',fontSize:13,borderBottom:'1px solid var(--border)',paddingBottom:8}}>
+                      <span style={{color:'var(--text-muted)'}}>{l}</span>
+                      <span style={{fontWeight:700,color:'var(--text)'}}>{v}</span>
                     </div>
-                    <div style={{flex:1, minWidth:280, display:'flex', flexDirection:'column', gap:12, alignItems:'center', background:'rgba(5,5,5,0.4)', padding:20, borderRadius:16, border:'1px solid var(--border)'}}>
-                       <div style={{fontSize:11, color:'var(--text-muted)', fontWeight:800}}>YETKİLİ ERİŞİM MERKEZİ</div>
-                       <MessageCircle size={40} style={{color:'var(--success)'}} />
-                       <button className="btn-main" style={{background:'var(--success)', border:'none'}} onClick={handleUnlock}>
-                          WHATSAPP'TAN ŞİFRE AL
-                       </button>
-                       <div style={{fontSize:10, opacity:0.5}}>İşlem ID: {Math.random().toString(36).substr(2,9).toUpperCase()}</div>
-                    </div>
-                 </div>
-                ) : (
-                  <div className="panel" style={{background:'rgba(245,158,11,0.05)', display:'flex', alignItems:'center', gap:20, padding:30, border:'2px solid var(--primary)', animation:'fadeUp 0.5s ease'}}>
-                    <FileSearch size={48} style={{color:'var(--primary)'}} />
-                    <div style={{flex:1}}>
-                      <h3 style={{fontSize:18, color:'var(--primary)', marginBottom:4}}>Nihai Stratejik Rapor Erişime Açıldı</h3>
-                      <p style={{color:'var(--text-muted)', fontSize:13}}>Tüm katmanlar başarıyla analiz edildi. BeeAI Premium örnek raporu ve ekosistem tanıtımı aktif hale getirildi.</p>
-                    </div>
-                    <button className="btn-main" style={{width:'auto', padding:'12px 24px'}} onClick={() => setShowFintechReport(true)}>TANITIM RAPORUNU İZLE</button>
+                  ))}
+                </div>
+              </div>
+
+              {/* KAYAN RAPOR ARKAPLAN — GÖSTERİŞ, bulanık overlay ile */}
+              <div style={{position:'relative', flex:1, minHeight:320, borderRadius:16, overflow:'hidden', border:'1px solid var(--border)'}}>
+                {/* Kayan Fintech Raporu — tam görünüyor, etkileyici */}
+                <div style={{position:'absolute', inset:0, overflow:'hidden'}}>
+                  <SlidingFintechReport isTeaser={true} />
+                </div>
+                
+                {/* Blur/Kilit Katmanı — sonuçları kapatıyor */}
+                <div style={{position:'absolute', inset:0, backdropFilter:'blur(12px)', background:'rgba(5,4,2,0.65)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:32, gap:20}}>
+                  <Lock size={52} style={{color:'var(--primary)', filter:'drop-shadow(0 0 16px var(--primary))'}} />
+                  <div style={{textAlign:'center'}}>
+                    <h3 style={{fontSize:20, color:'var(--primary)', fontWeight:900, letterSpacing:2, marginBottom:8}}>DETAYLI RAPOR — ERİŞİM GEREKLİ</h3>
+                    <p style={{color:'rgba(255,255,255,0.7)', fontSize:13, lineHeight:1.7, maxWidth:460}}>
+                      <strong style={{color:'var(--primary)'}}>{form.vknTckn}</strong> nolu VKN için hazırlanan Kuantum Derin Analiz Raporu; 
+                      Protesto Detayları, Ödeme Performans Grafiği, SWOT Analizi ve Sektörel Karşılaştırma içermektedir.
+                    </p>
+                    <p style={{color:'rgba(255,255,255,0.45)', fontSize:11, marginTop:8}}>
+                      Tam raporu almak için lütfen BeeAI ile iletişime geçin.
+                    </p>
                   </div>
-                )}
-               <button className="nav-btn" onClick={reset} style={{width:'100%', justifyContent:'center'}}>Yeni Derin Tarama Başlat</button>
+                  <div style={{display:'flex', gap:16, flexWrap:'wrap', justifyContent:'center'}}>
+                    <button 
+                      className="btn-main" 
+                      style={{background:'#25D366', border:'none', padding:'14px 28px', fontSize:14, display:'flex', alignItems:'center', gap:10}}
+                      onClick={()=>{
+                        const msg=`Merhaba, ${form.vknTckn} VKN/TCKN için BeeAI Risk Analiz Raporumu almak istiyorum. Kuantum Skor: ${result.score} (${result.label})`;
+                        window.open(`https://wa.me/905407254626?text=${encodeURIComponent(msg)}`,'_blank');
+                      }}
+                    >
+                      <MessageCircle size={20}/> WHATSAPP'TAN RAPOR TALEP ET
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <button className="nav-btn" onClick={reset} style={{width:'100%', justifyContent:'center'}}>Yeni Sorgulama Başlat</button>
             </div>
           )}
         </div>
