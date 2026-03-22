@@ -7,6 +7,7 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 import Colors from "@/constants/colors";
 import { useUser } from "@/contexts/UserContext";
 import { GlassCard } from "@/components/GlassCard";
+import { TrendChart } from "@/components/TrendChart";
 
 export default function PulseScreen() {
   const insets = useSafeAreaInsets();
@@ -88,6 +89,9 @@ export default function PulseScreen() {
             ) : (
               <Animated.View entering={FadeInDown.springify()} style={styles.bandBox}>
                 <Text style={styles.bandTitle}>90 Gün Ortalama Bandı</Text>
+
+                <TrendChart min={pulse.band90.min} max={pulse.band90.max} />
+
                 <View style={styles.bandValueContainer}>
                     <Text style={styles.bandValue}>%{pulse.band90.min}</Text>
                     <View style={styles.bandDivider} />
@@ -137,9 +141,9 @@ const styles = StyleSheet.create({
 
   moodPill: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, borderWidth: 1 },
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'currentColor' },
-  moodHard: { backgroundColor: "rgba(239,68,68,0.06)", borderColor: "rgba(239,68,68,0.15)", color: '#ef4444' },
-  moodSoft: { backgroundColor: "rgba(34,197,94,0.06)", borderColor: "rgba(34,197,94,0.15)", color: '#22c55e' },
-  moodNormal: { backgroundColor: "rgba(251,191,36,0.06)", borderColor: "rgba(251,191,36,0.15)", color: '#fbbf24' },
+  moodHard: { backgroundColor: "rgba(239,68,68,0.06)", borderColor: "rgba(239,68,68,0.15)", color: Colors.danger },
+  moodSoft: { backgroundColor: "rgba(34,197,94,0.06)", borderColor: "rgba(34,197,94,0.15)", color: Colors.primary },
+  moodNormal: { backgroundColor: "rgba(251,191,36,0.06)", borderColor: "rgba(251,191,36,0.15)", color: Colors.gold },
   moodText: { fontSize: 12, fontFamily: "Poppins_700Bold", color: Colors.slate },
 
   modeRow: { flexDirection: "row", gap: 12, marginBottom: 20 },

@@ -37,8 +37,13 @@ function fmtCountdown(ms: number) {
 
 export default function OffersScreen() {
   const insets = useSafeAreaInsets();
-  const { user, startOfferCollection, ensureOfferProgress, requestRevision } =
-    useUser();
+  const {
+    user,
+    startOfferCollection,
+    ensureOfferProgress,
+    requestRevision,
+    pickOffer,
+  } = useUser();
 
   const [selected, setSelected] = useState<{
     check: CheckItem;
@@ -366,7 +371,18 @@ export default function OffersScreen() {
                                 Net Ödeme: ₺{money(o.netPay)}
                               </Text>
                             </View>
-                            <Pressable style={styles.acceptBtn}>
+                            <Pressable
+                              style={styles.acceptBtn}
+                              onPress={async () => {
+                                if (refreshSelected) {
+                                  await pickOffer(
+                                    refreshSelected.check.id,
+                                    o.id,
+                                  );
+                                  setSelected(null);
+                                }
+                              }}
+                            >
                               <Text style={styles.acceptBtnText}>Onayla</Text>
                             </Pressable>
                           </View>
