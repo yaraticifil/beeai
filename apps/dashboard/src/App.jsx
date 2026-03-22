@@ -289,7 +289,40 @@ export default function App(){
     setModule(newMod);
   }
 
+  const [showTeaser, setShowTeaser] = useState(true);
   const isLanding = module === 'landing';
+
+  // ── APP TEASER (İlk Fragman) ──────────────────────────────────────
+  if(showTeaser){
+    return (
+      <>
+        <GlobalStyles/>
+        <div className="bg-grid"/>
+        <Particles/>
+        <div style={{minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:40,position:'relative',overflow:'hidden'}}>
+          <style>{`
+            @keyframes slideCheckIn{from{transform:translateY(40px) rotate(-4deg);opacity:0;}to{transform:translateY(0) rotate(-2deg);opacity:1;}}
+            @keyframes fadeInUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+          `}</style>
+          {/* Ana çek görseli — İlk etkileyici unsur */}
+          <div style={{position:'relative',marginBottom:48,animation:'slideCheckIn 0.9s ease both'}}>
+            <img src="sample-check.png" alt="BeeAI Çek Analiz" style={{width:400,maxWidth:'88vw',borderRadius:16,boxShadow:'0 8px 60px rgba(245,158,11,0.35)',border:'1px solid rgba(245,158,11,0.25)',transform:'rotate(-2deg)'}}/>
+            <div style={{position:'absolute',inset:0,borderRadius:16,background:'linear-gradient(135deg,transparent 50%,rgba(245,158,11,0.08))'}} />
+          </div>
+          {/* Başlık ve buton */}
+          <div style={{textAlign:'center',animation:'fadeInUp 0.9s ease 0.4s both'}}>
+            <div style={{fontSize:10,letterSpacing:8,color:'var(--primary)',fontWeight:700,marginBottom:16,textTransform:'uppercase'}}>Çek Analiz, Risk & Faktoring</div>
+            <h1 style={{fontSize:76,fontWeight:900,letterSpacing:-3,lineHeight:1,background:'linear-gradient(135deg, #f59e0b, #fcd34d, #f59e0b)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',marginBottom:16}}>BeeAI</h1>
+            <p style={{fontSize:14,color:'rgba(255,255,255,0.45)',marginBottom:48,lineHeight:1.7}}>Sahte çek tespiti · Risk analizi · Faktoring erişimi</p>
+            <button className="btn-main" style={{padding:'18px 64px',fontSize:16,letterSpacing:3}} onClick={()=>setShowTeaser(false)}>
+              PLATFORMA GİR
+            </button>
+          </div>
+          <div style={{position:'absolute',bottom:24,fontSize:10,color:'rgba(255,255,255,0.15)',letterSpacing:3}}>BeeAI © 2026</div>
+        </div>
+      </>
+    );
+  }
 
   return(
     <>
@@ -315,7 +348,7 @@ export default function App(){
             {module==='petek'     && <DecisionModule setModule={changeModule}/>}
           </main>
           <footer className="shell-footer" style={{marginTop:32}}>
-            <div>© 2026 BEEAI — Kuantum Kriminal Faktoring Ekosistemi</div>
+            <div>© 2026 BEEAI — Çek Analiz, Risk ve Faktoring Ekosistemi</div>
             <div className="mono" style={{fontSize:11}}>Session: {session} | Storage: <span style={{color:'var(--primary)'}}>In-Memory</span></div>
           </footer>
         </div>
@@ -337,7 +370,7 @@ function Header({module,setModule}){
     <header className="shell-header" style={{flexWrap:'wrap',gap:12}}>
       <div className="brand">
         <div className="brand-pill"><Hexagon size={16} style={{display:'inline', marginRight:6, marginBottom:-3}}/> BEEAI</div>
-        <div className="brand-sub">Kuantum Kriminal & Risk Yönetimi</div>
+        <div className="brand-sub">Çek Analiz & Risk Yönetimi</div>
       </div>
       <nav style={{display:'flex',gap:8,flexWrap:'wrap'}}>
         {nav.map(({id,Icon,label})=>(
@@ -378,7 +411,7 @@ function LandingPage({setModule,session}){
 
       {/* TITLE */}
       <div style={{textAlign:'center',marginBottom:40}}>
-        <div style={{fontSize:11,letterSpacing:8,color:'var(--primary)',fontWeight:700,marginBottom:8,textTransform:'uppercase'}}>Kuantum Çek Analiz Ekosistemi</div>
+        <div style={{fontSize:11,letterSpacing:8,color:'var(--primary)',fontWeight:700,marginBottom:8,textTransform:'uppercase'}}>Çek Analiz ve Risk Ekosistemi</div>
         <h1 style={{fontSize:64,fontWeight:900,letterSpacing:-2,lineHeight:1,background:'linear-gradient(135deg, #f59e0b, #fcd34d, #f59e0b)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>BeeAI</h1>
       </div>
 
@@ -438,7 +471,7 @@ function LandingPage({setModule,session}){
         </button>
       </div>
 
-      <div style={{position:'absolute',bottom:20,fontSize:10,color:'rgba(255,255,255,.2)',letterSpacing:2}}>Session: {session} · BeeAI v2.1 (Performance Edition)</div>
+      <div style={{position:'absolute',bottom:20,fontSize:10,color:'rgba(255,255,255,.2)',letterSpacing:2}}>BeeAI v2.1 — Çek Analiz Ekosistemi</div>
     </div>
   );
 }
@@ -505,7 +538,7 @@ function CheckAnalysis({setModule,analyses,setAnalyses, setShowFintechReport}){
       await sleep(500);
       const sig=detectSignature(canvas,ctx);
       if(sig.detected){addLog('success',`✓ İmza tespit edildi. Kalite: %${sig.quality}`);}
-      addLog('info','🔬 Kuantum forensik analizini başlatmak için butona basın.');
+      addLog('info','🔬 Forensik analizini başlatmak için butona basın.');
     };
     reader.readAsDataURL(f);
   };
@@ -757,7 +790,7 @@ function RiskDashModule({setModule, setShowFintechReport}){
     'Kredi Kayıt Bürosu (KKB) Güncel Endeksleri çekiliyor...',
     'Son 24 aylık ödeme performans grafiği haritalanıyor...',
     'Sektörel Benchmark karşılaştırması yapılıyor...',
-    'Kuantum Risk Skoru nihai halini alıyor...'
+    'Risk Skoru nihai halini alıyor...'
   ];
 
   const calcScore=()=>{
@@ -793,7 +826,7 @@ function RiskDashModule({setModule, setShowFintechReport}){
 
   return(
     <div style={{animation:'fadeUp .4s ease', height:'100%'}}>
-      <BackBar setModule={setModule} title="Kuantum Risk Analiz Merkezi — (Kral Dairesi)"/>
+      <BackBar setModule={setModule} title="BeeAI Risk Analiz Merkezi"/>
       <div className="panel" style={{display:'flex',flexDirection:'column',gap:20,flex:1,minHeight:640, position:'relative', overflow:'hidden'}}>
         
         {/* ── TEASER PHASE: Kayan Rapor Gösteriş Ekranı */}
@@ -808,7 +841,7 @@ function RiskDashModule({setModule, setShowFintechReport}){
               <div style={{width:72, height:72, borderRadius:'50%', background:'rgba(245,158,11,0.1)', border:'2px solid var(--primary)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 24px'}}>
                 <Hexagon size={40} style={{color:'var(--primary)'}} />
               </div>
-              <h2 style={{fontSize:26, color:'var(--primary)', fontWeight:900, letterSpacing:3, marginBottom:12, textTransform:'uppercase'}}>Kral Dairesi Risk İstihbaratı</h2>
+              <h2 style={{fontSize:26, color:'var(--primary)', fontWeight:900, letterSpacing:3, marginBottom:12, textTransform:'uppercase'}}>BeeAI Risk İstihbaratı</h2>
               <p style={{color:'rgba(255,255,255,0.7)', fontSize:14, lineHeight:1.8, marginBottom:8}}>
                 Yanınızda akan rapor, BeeAI'ın gerçek veri işleme gücünün canlı yansımasıdır.
               </p>
@@ -870,7 +903,7 @@ function RiskDashModule({setModule, setShowFintechReport}){
           {(phase==='form' || phase==='analyzing') && !result && (
              <div className="panel" style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',flexDirection:'column',textAlign:'center',padding:60,border:'1px dashed var(--border)', background:'rgba(255,255,255,0.01)'}}>
                <Activity size={64} style={{color:'var(--border)',marginBottom:24}}/>
-               <h3 style={{fontSize:20,color:'var(--primary)',marginBottom:12}}>Kral Dairesi — Stratejik Risk Motoru</h3>
+               <h3 style={{fontSize:20,color:'var(--primary)',marginBottom:12}}>BeeAI Risk Analiz Motoru</h3>
                <p style={{fontSize:14,color:'var(--text-muted)',lineHeight:1.6, maxWidth:400}}>VKN bilgisini girin ve BeeAI ekosisteminin veri gücünü izleyin. Sistemimiz tüm bankacılık ve ticaret verilerini anlık olarak analiz eder.</p>
              </div>
           )}
@@ -882,7 +915,7 @@ function RiskDashModule({setModule, setShowFintechReport}){
               {/* SKOR KARTI — görünüyor */}
               <div className="panel" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:24, background:'rgba(255,255,255,0.02)'}}>
                 <div style={{textAlign:'center',padding:20,borderRight:'1px solid var(--border)'}}>
-                  <div style={{fontSize:12,color:'var(--text-muted)',marginBottom:8,textTransform:'uppercase'}}>Kuantum Risk Skoru</div>
+                  <div style={{fontSize:12,color:'var(--text-muted)',marginBottom:8,textTransform:'uppercase'}}>Risk Analiz Skoru</div>
                   <div style={{fontSize:64,fontWeight:900,color:result.color,fontFamily:'JetBrains Mono,monospace'}}>{result.score}</div>
                   <div style={{fontSize:14,fontWeight:800,color:result.color,letterSpacing:2}}>{result.label}</div>
                 </div>
@@ -1194,11 +1227,11 @@ function RateModule({setModule}){
     await sleep(1000);
     
     setAnimState('queen');
-    addLog('warning','Kraliçe Arı çekin üzerine konumlandı. Veri çekimi başlıyor.');
-    speakAuthority("Kraliçe Arı veri merkezinde konumlandı.");
+    addLog('warning','BeeAI Arıları çekin üzerine konumlandı. Veri çekimi başlıyor.');
+    speakAuthority("BeeAI Arıları veri merkezinde konumlandı.");
     await sleep(1500);
     
-    addLog('info','Kraliçe Arı: %4.0 ile %5.5 bandı arasında optimum teklif oranları aranıyor...');
+    addLog('info','BeeAI Arıları: %4.0 ile %5.5 bandı arasında optimum teklif oranları aranıyor...');
     
     const faks="Garanti,İş,TEB,Fiba,QNB,Deniz,Halk,Yapı Kredi,Vakıf,Ziraat,Alternatif,Burgan".split(',');
     
@@ -1211,15 +1244,15 @@ function RateModule({setModule}){
       const fakeRate = (4.0 + Math.random()*1.5).toFixed(2);
       const bank = faks[i%faks.length];
       
-      addLog('success',`3 İsçi Arı döndü: ${bank} Faktoring'den %${fakeRate} teklif kraliçenin ekranına düştü.`);
+      addLog('success',`3 İşçi Arı döndü: ${bank} Faktoring'den %${fakeRate} teklif ekrana düştü.`);
       
-      if(i===4) addLog('info','Kraliçe Arı: Kalkan %40 oranında tamamlandı. Taramaya devam ediliyor...');
-      if(i===8) addLog('info','Kraliçe Arı: Oran rekabeti kızışıyor. Bankalar arası ping süreleri optimize ediliyor...');
+      if(i===4) addLog('info','BeeAI Arıları: Kalkan %40 oranında tamamlandı. Taramaya devam ediliyor...');
+      if(i===8) addLog('info','BeeAI Arıları: Oran rekabeti kızışıyor. Bankalar arası ping süreleri optimize ediliyor...');
     }
     
     setProgress(100);
     addLog('success','60 Saniyelik Tarama Süreci Bitti. Kalkan tamamlandı.');
-    await sleep(1000); addLog('info','Kraliçe Arı en verimli 3 teklifi seçti. Rapor kilitleniyor...');
+    await sleep(1000); addLog('info','BeeAI Arıları en verimli 3 teklifi seçti. Rapor kilitleniyor...');
     
     const amt=parseFloat(form.amount.replace(/[^0-9]/g,''))||100000;
     setOffers([
@@ -1235,7 +1268,7 @@ function RateModule({setModule}){
 
   return(
     <div style={{animation:'fadeUp .4s ease', height:'100%'}}>
-      <BackBar setModule={setModule} title="BEEAI Bereket — Kraliçe Optimizasyonu & Likidite Kalkanı"/>
+      <BackBar setModule={setModule} title="BEEAI Bereket — Faktoring Optimizasyonu & Likidite"/>
 
       <div className="panel" style={{display:'flex',flexDirection:'column',gap:20,flex:1,minHeight:640, position:'relative', overflow:'hidden'}}>
         
@@ -1249,7 +1282,7 @@ function RateModule({setModule}){
             
             <div style={{textAlign:'center', zIndex:101, padding:'40px 60px', backdropFilter:'blur(24px)', borderRadius:32, border:'1px solid var(--border)', background:'rgba(5,20,15,0.85)'}}>
               <ShieldCheck size={80} style={{color:'var(--success)', marginBottom:24, filter:'drop-shadow(0 0 15px var(--success))'}} />
-              <h2 style={{fontSize:28, color:'var(--success)', fontWeight:900, letterSpacing:4, marginBottom:16, textTransform:'uppercase'}}>Kraliçe Likidite Kalkanı</h2>
+              <h2 style={{fontSize:28, color:'var(--success)', fontWeight:900, letterSpacing:4, marginBottom:16, textTransform:'uppercase'}}>BeeAI Bereket — Faktoring</h2>
               <p style={{color:'var(--text)', fontSize:16, maxWidth:500, lineHeight:1.8, marginBottom:32, opacity:0.8}}>
                 Varlıklarınızı en yüksek çarpanla nakde dönüştürmek için 46 finansal kurumu anlık açık artırmaya davet edin. 
                 Sektörün en iyi tekliflerini arı hızıyla masanıza getirelim.
@@ -1357,7 +1390,7 @@ function RateModule({setModule}){
                 
                 {animState === 'queen' && (
                   <>
-                    <div className="queen-bee" title="Kraliçe Arı (Merkez Yapay Zeka)">👑</div>
+                    <div className="queen-bee" title="BeeAI Merkez Yapay Zeka">👑</div>
                     {[...Array(workerCount)].map((_,i)=>{
                        return [...Array(3)].map((__,j)=>{
                           const totalIndex = (i*3) + j;
