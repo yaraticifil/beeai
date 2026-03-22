@@ -273,7 +273,7 @@ export default function App(){
     return saved ? JSON.parse(saved) : [];
   });
   const [session]=useState('BEE-'+Math.random().toString(36).substr(2,9).toUpperCase());
-  const [showWelcome, setShowWelcome] = useState(true);
+  const [showWelcome, setShowWelcome] = useState(false);
   const [showFintechReport, setShowFintechReport] = useState(false);
 
   useEffect(() => {
@@ -356,118 +356,89 @@ function Header({module,setModule}){
 /* ── LANDING PAGE ── */
 function LandingPage({setModule,session}){
   const [hovered,setHovered]=useState(null);
+  const TEASERS_LEFT = [
+    { title: 'KRİMİNAL', desc: 'Sahte çek, Piksel ve Spektral Analiz', icon: Search, id: 'check' },
+    { title: 'RİSK', desc: 'Sektörel İstihbarat & VKN Tarama', icon: ShieldCheck, id: 'risk' }
+  ];
+  const TEASERS_RIGHT = [
+    { title: 'FAKTORİNG', desc: '40+ Firma, Canlı Teklif Havuzu', icon: Activity, id: 'rate' },
+    { title: 'PETEK-X', desc: 'Stratejik 12 Aylık Karar Motoru', icon: Cpu, id: 'petek' }
+  ];
+
   return(
-    <div style={{minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:20,position:'relative'}}>
+    <div style={{minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'40px 20px',position:'relative', overflowX:'hidden'}}>
       <style>{`
         @keyframes floatBee{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
         .wing-hover { position: absolute; cursor: pointer; transition: all 0.3s; z-index: 10; border-radius: 50%; }
         .wing-hover:hover { background: rgba(245,158,11,0.08); box-shadow: 0 0 30px rgba(245,158,11,0.4); backdrop-filter: brightness(1.2) contrast(1.1); }
+        .side-teaser { cursor:pointer; transition:all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); padding:20px; border-radius:16px; border:1px solid transparent; width:100%; max-width:240px; }
+        .side-teaser:hover { background: rgba(245,158,11,0.05); border-color: var(--primary); transform: translateX(10px) scale(1.05); }
+        .side-teaser.right:hover { transform: translateX(-10px) scale(1.05); }
       `}</style>
 
       {/* TITLE */}
-      <div style={{textAlign:'center',marginBottom:16}}>
+      <div style={{textAlign:'center',marginBottom:40}}>
         <div style={{fontSize:11,letterSpacing:8,color:'var(--primary)',fontWeight:700,marginBottom:8,textTransform:'uppercase'}}>Kuantum Çek Analiz Ekosistemi</div>
         <h1 style={{fontSize:64,fontWeight:900,letterSpacing:-2,lineHeight:1,background:'linear-gradient(135deg, #f59e0b, #fcd34d, #f59e0b)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>BeeAI</h1>
       </div>
 
-      {/* PHOTOREALISTIC BEE - CLICKABLE ZONES */}
-      <div style={{position:'relative', width:'100%', maxWidth:760, aspectRatio:'4/3', animation:'floatBee 6s ease-in-out infinite', background:'rgba(245,158,11,0.02)', borderRadius:40}}>
-        <img src="hyper-bee.jpg" alt="BeeAI Core" style={{width:'100%', height:'100%', objectFit:'contain', filter:'drop-shadow(0 20px 40px rgba(245,158,11,0.15))'}} />
+      <div style={{display:'flex', alignItems:'center', justifyContent:'center', gap:40, width:'100%', maxWidth:1400}}>
         
-        {/* Left Wing - Kriminal */}
-        <div 
-          className="wing-hover" 
-          onClick={()=>setModule('check')} 
-          onMouseEnter={()=>setHovered('kriminal')}
-          onMouseLeave={()=>setHovered(null)}
-          style={{left:'8%', top:'12%', width:'38%', height:'48%', transform:'rotate(-15deg)'}} 
-          title="Kriminal - Sahte Çek Analizi"
-        />
+        {/* LEFT TEASERS */}
+        <div style={{display:'flex', flexDirection:'column', gap:30, flex:1, alignItems:'flex-end'}}>
+          {TEASERS_LEFT.map(t => (
+            <div key={t.id} className="side-teaser" onClick={() => setModule(t.id)}>
+              <t.icon size={32} style={{color:'var(--primary)', marginBottom:12}} />
+              <h4 style={{fontSize:14, fontWeight:900, color:'var(--primary)', letterSpacing:2, marginBottom:4}}>{t.title}</h4>
+              <p style={{fontSize:11, color:'var(--text-muted)', lineHeight:1.4}}>{t.desc}</p>
+            </div>
+          ))}
+        </div>
 
-        {/* Right Wing - Risk */}
-        <div 
-          className="wing-hover" 
-          onClick={()=>setModule('risk')} 
-          onMouseEnter={()=>setHovered('risk')}
-          onMouseLeave={()=>setHovered(null)}
-          style={{right:'8%', top:'12%', width:'38%', height:'48%', transform:'rotate(15deg)'}} 
-          title="Risk - Ödeme İstihbaratı"
-        />
+        {/* CENTER BEE */}
+        <div style={{position:'relative', width:600, aspectRatio:'4/3', animation:'floatBee 6s ease-in-out infinite', background:'rgba(245,158,11,0.02)', borderRadius:40}}>
+          <img src="hyper-bee.jpg" alt="BeeAI Core" style={{width:'100%', height:'100%', objectFit:'contain', filter:'drop-shadow(0 20px 40px rgba(245,158,11,0.15))'}} />
+          <div className="wing-hover" onClick={()=>setModule('check')} onMouseEnter={()=>setHovered('KRİMİNAL')} onMouseLeave={()=>setHovered(null)} style={{left:'8%', top:'12%', width:'38%', height:'48%', transform:'rotate(-15deg)'}} />
+          <div className="wing-hover" onClick={()=>setModule('risk')} onMouseEnter={()=>setHovered('RİSK')} onMouseLeave={()=>setHovered(null)} style={{right:'8%', top:'12%', width:'38%', height:'48%', transform:'rotate(15deg)'}} />
+          <div className="wing-hover" onClick={()=>setModule('rate')} onMouseEnter={()=>setHovered('FAKTORİNG')} onMouseLeave={()=>setHovered(null)} style={{left:'40%', top:'50%', width:'20%', height:'40%'}} />
+          <div className="wing-hover" onClick={()=>setModule('petek')} onMouseEnter={()=>setHovered('PETEK-X')} onMouseLeave={()=>setHovered(null)} style={{left:'38%', top:'5%', width:'24%', height:'25%', borderRadius:'40% 40% 50% 50%'}} />
+        </div>
 
-        {/* Center Body - Faktoring */}
-        <div 
-          className="wing-hover" 
-          onClick={()=>setModule('rate')} 
-          onMouseEnter={()=>setHovered('faktoring')}
-          onMouseLeave={()=>setHovered(null)}
-          style={{left:'40%', top:'50%', width:'20%', height:'40%'}} 
-          title="Faktoring - Canlı Piyasa Teklifleri"
-        />
+        {/* RIGHT TEASERS */}
+        <div style={{display:'flex', flexDirection:'column', gap:30, flex:1, alignItems:'flex-start'}}>
+          {TEASERS_RIGHT.map(t => (
+            <div key={t.id} className="side-teaser right" onClick={() => setModule(t.id)}>
+              <t.icon size={32} style={{color:'var(--primary)', marginBottom:12}} />
+              <h4 style={{fontSize:14, fontWeight:900, color:'var(--primary)', letterSpacing:2, marginBottom:4}}>{t.title}</h4>
+              <p style={{fontSize:11, color:'var(--text-muted)', lineHeight:1.4}}>{t.desc}</p>
+            </div>
+          ))}
+        </div>
 
-        {/* Head/Eyes - PETEK-X */}
-        <div 
-          className="wing-hover" 
-          onClick={()=>setModule('petek')} 
-          onMouseEnter={()=>setHovered('petek')}
-          onMouseLeave={()=>setHovered(null)}
-          style={{left:'38%', top:'5%', width:'24%', height:'25%', borderRadius:'40% 40% 50% 50%'}} 
-          title="PETEK-X - Stratejik Karar Üssü"
-        />
       </div>
 
       {/* DYNAMIC LABELS */}
-      <div style={{height:60, marginTop:16, textAlign:'center'}}>
-        {hovered === 'kriminal' && (
+      <div style={{height:60, marginTop:40, textAlign:'center'}}>
+        {hovered && (
           <div style={{animation:'fadeUp 0.3s ease'}}>
-            <div style={{fontSize:16,fontWeight:800,color:'var(--primary)'}}>KRİMİNAL MODÜLÜ</div>
-            <div style={{fontSize:12,color:'var(--text-muted)',marginTop:4}}>Uçtan uca adli sahtecilik analizi ve tespiti</div>
-          </div>
-        )}
-        {hovered === 'risk' && (
-          <div style={{animation:'fadeUp 0.3s ease'}}>
-            <div style={{fontSize:16,fontWeight:800,color:'var(--danger)'}}>RİSK MODÜLÜ</div>
-            <div style={{fontSize:12,color:'var(--text-muted)',marginTop:4}}>Yapay zeka destekli ödeme performansı istihbaratı</div>
-          </div>
-        )}
-        {hovered === 'faktoring' && (
-          <div style={{animation:'fadeUp 0.3s ease'}}>
-            <div style={{fontSize:16,fontWeight:800,color:'var(--success)'}}>BEEAI BEREKET (FAKTORİNG)</div>
-            <div style={{fontSize:12,color:'var(--text-muted)',marginTop:4}}>40+ Faktoring firmasından anlık canlı teklifler</div>
-          </div>
-        )}
-        {hovered === 'petek' && (
-          <div style={{animation:'fadeUp 0.3s ease'}}>
-            <div style={{fontSize:16,fontWeight:800,color:'var(--primary)', textShadow:'0 0 10px var(--primary)'}}>PETEK-X: STRATEJİK KARAR ÜSSÜ</div>
-            <div style={{fontSize:12,color:'var(--text-muted)',marginTop:4}}>Kovan zekası ile 12 aylık finansal gelecek projeksiyonu</div>
+            <div style={{fontSize:20,fontWeight:900,color:'var(--primary)', letterSpacing:2, textTransform:'uppercase'}}>{hovered} KATMANI AKTİF</div>
+            <div style={{fontSize:12,color:'var(--text-muted)',marginTop:4, opacity:0.7}}>Detaylı analiz için görsele veya yan menülere tıklayın</div>
           </div>
         )}
         {!hovered && (
-          <div style={{fontSize:12,color:'var(--text-muted)',marginTop:12, letterSpacing:1}}>
-            Modüllere erişmek için arının ilgili bölümlerine tıklayın
+          <div style={{fontSize:12,color:'var(--text-muted)', letterSpacing:1, opacity:0.5}}>
+            Modüllere erişmek için arının ilgili bölümlerine veya yan menülere tıklayın
           </div>
         )}
       </div>
 
-      {/* PETEK-X BOTTOM TEASER */}
-      <div style={{marginTop:40, width:'100%', maxWidth:800, display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:20, animation:'fadeUp 1s ease'}}>
-         <div className="panel" style={{textAlign:'center', padding:16, borderTop:'3px solid #a855f7', background:'rgba(168,85,247,0.03)'}}>
-            <div style={{fontSize:10, color:'#a855f7', fontWeight:900, marginBottom:8}}>GELECEK RADARI</div>
-            <div style={{fontSize:14, fontWeight:700}}>Aktif Simülasyonlar</div>
-            <div style={{fontSize:24, fontWeight:900, color:'#a855f7', marginTop:8}}>1,284</div>
-         </div>
-         <div className="panel" style={{textAlign:'center', padding:16, borderTop:'3px solid var(--primary)', cursor:'pointer'}} onClick={()=>setModule('petek')}>
-            <Cpu size={24} style={{color:'var(--primary)', marginBottom:8}} />
-            <div style={{fontSize:12, fontWeight:800, letterSpacing:2}}>PETEK-X ÜSSÜNE GİR</div>
-            <div style={{fontSize:9, color:'var(--text-muted)', marginTop:4}}>Kovan Zekası Çevrimiçi</div>
-         </div>
-         <div className="panel" style={{textAlign:'center', padding:16, borderTop:'3px solid var(--success)', background:'rgba(16,185,129,0.03)'}}>
-            <div style={{fontSize:10, color:'var(--success)', fontWeight:900, marginBottom:8}}>SİMÜLASYON GÜVENİ</div>
-            <div style={{fontSize:14, fontWeight:700}}>Kritik Doğruluk</div>
-            <div style={{fontSize:24, fontWeight:900, color:'var(--success)', marginTop:8}}>%98.2</div>
-         </div>
+      <div style={{marginTop:40, display:'flex', gap:20}}>
+        <button className="nav-btn" onClick={() => setModule('vault')} style={{background:'rgba(245,158,11,0.1)', border:'1px solid var(--primary)', padding:'10px 24px'}}>
+           <Database size={16} style={{marginRight:8}}/> KOVAN DEPOSUNA GİT
+        </button>
       </div>
 
-      <div style={{position:'absolute',bottom:20,fontSize:10,color:'rgba(255,255,255,.2)',letterSpacing:2}}>Session: {session} · BeeAI v2.0</div>
+      <div style={{position:'absolute',bottom:20,fontSize:10,color:'rgba(255,255,255,.2)',letterSpacing:2}}>Session: {session} · BeeAI v2.1 (Performance Edition)</div>
     </div>
   );
 }
@@ -939,16 +910,16 @@ function RiskDashModule({setModule, setShowFintechReport}){
                        <div style={{fontSize:10, opacity:0.5}}>İşlem ID: {Math.random().toString(36).substr(2,9).toUpperCase()}</div>
                     </div>
                  </div>
-               ) : (
-                 <div className="panel" style={{background:'rgba(245,158,11,0.05)', display:'flex', alignItems:'center', gap:20, padding:30, border:'2px solid var(--primary)', animation:'fadeUp 0.5s ease'}}>
-                   <FileSearch size={48} style={{color:'var(--primary)'}} />
-                   <div style={{flex:1}}>
-                     <h3 style={{fontSize:18, color:'var(--primary)', marginBottom:4}}>Nihai Stratejik Rapor Erişime Açıldı</h3>
-                     <p style={{color:'var(--text-muted)', fontSize:13}}>Tüm katmanlar başarıyla analiz edildi. Detaylı SWOT, nakit akış projeksiyonu ve pazar analizi raporunuzda mevcuttur.</p>
-                   </div>
-                   <button className="btn-main" style={{width:'auto', padding:'12px 24px'}} onClick={() => setShowFintechReport(true)}>KUANTUM RAPORU İZLE</button>
-                 </div>
-               )}
+                ) : (
+                  <div className="panel" style={{background:'rgba(245,158,11,0.05)', display:'flex', alignItems:'center', gap:20, padding:30, border:'2px solid var(--primary)', animation:'fadeUp 0.5s ease'}}>
+                    <FileSearch size={48} style={{color:'var(--primary)'}} />
+                    <div style={{flex:1}}>
+                      <h3 style={{fontSize:18, color:'var(--primary)', marginBottom:4}}>Nihai Stratejik Rapor Erişime Açıldı</h3>
+                      <p style={{color:'var(--text-muted)', fontSize:13}}>Tüm katmanlar başarıyla analiz edildi. BeeAI Premium örnek raporu ve ekosistem tanıtımı aktif hale getirildi.</p>
+                    </div>
+                    <button className="btn-main" style={{width:'auto', padding:'12px 24px'}} onClick={() => setShowFintechReport(true)}>TANITIM RAPORUNU İZLE</button>
+                  </div>
+                )}
                <button className="nav-btn" onClick={reset} style={{width:'100%', justifyContent:'center'}}>Yeni Derin Tarama Başlat</button>
             </div>
           )}
