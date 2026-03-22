@@ -371,8 +371,8 @@ function LandingPage({setModule,session}){
       </div>
 
       {/* PHOTOREALISTIC BEE - CLICKABLE ZONES */}
-      <div style={{position:'relative', width:'100%', maxWidth:760, aspectRatio:'4/3', animation:'floatBee 6s ease-in-out infinite'}}>
-        <img src="/hyper-bee.jpg" alt="BeeAI Core" style={{width:'100%', height:'100%', objectFit:'contain', filter:'drop-shadow(0 20px 40px rgba(245,158,11,0.15))'}} />
+      <div style={{position:'relative', width:'100%', maxWidth:760, aspectRatio:'4/3', animation:'floatBee 6s ease-in-out infinite', background:'rgba(245,158,11,0.02)', borderRadius:40}}>
+        <img src="hyper-bee.jpg" alt="BeeAI Core" style={{width:'100%', height:'100%', objectFit:'contain', filter:'drop-shadow(0 20px 40px rgba(245,158,11,0.15))'}} />
         
         {/* Left Wing - Kriminal */}
         <div 
