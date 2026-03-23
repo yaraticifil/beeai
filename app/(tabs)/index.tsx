@@ -1,15 +1,14 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect } from "react";
 import { View, Text, StyleSheet, ScrollView, Pressable, Platform, Dimensions, Alert } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import * as Haptics from "expo-haptics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Animated, { FadeInDown, FadeInUp, Layout } from "react-native-reanimated";
+import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 import Colors from "@/constants/colors";
 import { useUser } from "@/contexts/UserContext";
 import { GlassCard } from "@/components/GlassCard";
-
-const { width } = Dimensions.get("window");
 
 function StatCard({ label, value, icon, delay = 0 }: { label: string; value: string; icon: keyof typeof Ionicons.glyphMap; delay?: number }) {
   return (
@@ -38,9 +37,16 @@ function ActionItem({
   onPress: () => void;
   delay?: number;
 }) {
+  const handlePress = () => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    onPress();
+  };
+
   return (
     <Animated.View entering={FadeInDown.delay(delay).springify()}>
-      <Pressable style={({ pressed }) => [styles.actionItem, pressed && { opacity: 0.8 }]} onPress={onPress}>
+      <Pressable style={({ pressed }) => [styles.actionItem, pressed && { opacity: 0.8 }]} onPress={handlePress}>
         <View style={styles.actionIcon}>
           <Ionicons name={icon} size={22} color={Colors.white} />
         </View>
