@@ -13,7 +13,15 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import Animated, { FadeInDown, Layout } from "react-native-reanimated";
+import Animated, {
+  FadeInDown,
+  Layout,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  withSequence,
+  useSharedValue,
+} from "react-native-reanimated";
 import Colors from "@/constants/colors";
 import { useUser, CheckItem, OfferRequest } from "@/contexts/UserContext";
 import { GlassCard } from "@/components/GlassCard";
@@ -50,6 +58,22 @@ export default function OffersScreen() {
     req?: OfferRequest;
   } | null>(null);
   const [now, setNow] = useState(Date.now());
+  const beeRotation = useSharedValue(0);
+
+  const beeAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${beeRotation.value}deg` }],
+  }));
+
+  useEffect(() => {
+    beeRotation.value = withRepeat(
+      withSequence(
+        withTiming(-10, { duration: 150 }),
+        withTiming(10, { duration: 150 }),
+      ),
+      -1,
+      true,
+    );
+  }, []);
 
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
@@ -392,14 +416,24 @@ export default function OffersScreen() {
                         </GlassCard>
                       ))}
 
-                      {refreshSelected.req.offers.length === 0 && (
-                        <View style={styles.waitBox}>
-                          <ActivityIndicator color={Colors.gold} size="small" />
-                          <Text style={styles.waitText}>
-                            Arılar teklif topluyor…
-                          </Text>
-                        </View>
-                      )}
+                      {refreshSelected.req.offers.length < 3 &&
+                        refreshSelected.req.status === "collecting" && (
+                          <View style={styles.waitBox}>
+                            <Animated.View
+                              style={[{ marginBottom: 10 }, beeAnimatedStyle]}
+                            >
+                              <Text style={{ fontSize: 32 }}>🐝</Text>
+                            </Animated.View>
+                            <ActivityIndicator
+                              color={Colors.gold}
+                              size="small"
+                            />
+                            <Text style={styles.waitText}>
+                              Arılar {refreshSelected.req.offers.length + 1}.
+                              teklifi getiriyor…
+                            </Text>
+                          </View>
+                        )}
                     </View>
 
                     <View style={styles.actionsRow}>

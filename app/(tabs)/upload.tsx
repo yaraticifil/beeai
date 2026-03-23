@@ -18,25 +18,51 @@ export default function UploadScreen() {
   const [issuerName, setIssuerName] = useState("");
   const [bankName, setBankName] = useState("");
   const [amount, setAmount] = useState("");
-  const [dueDate, setDueDate] = useState(""); // YYYY-MM-DD
+  const [dueDate, setDueDate] = useState(""); // DD.MM.YYYY
 
   const formatCurrency = (val: string) => {
-    // Remove all non-digits
-    const clean = val.replace(/\D/g, "");
-    if (!clean) return "";
-    // Add dots as thousand separators
-    return clean.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    let clean = val.replace(/\./g, ""); // Remove thousand separators
+    clean = clean.replace(/[^\d,]/g, ""); // Remove anything not digit or comma
+
+    const parts = clean.split(",");
+    let intPart = parts[0];
+    const decimalPart = parts[1];
+
+    intPart = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+
+    if (decimalPart !== undefined) {
+      return intPart + "," + decimalPart.slice(0, 2);
+    }
+    return intPart;
   };
 
   const handleAmountChange = (val: string) => {
     setAmount(formatCurrency(val));
   };
+
+  const formatDate = (val: string) => {
+    const clean = val.replace(/\D/g, "").slice(0, 8);
+    let formatted = clean;
+    if (clean.length > 2) {
+      formatted = clean.slice(0, 2) + "." + clean.slice(2);
+    }
+    if (clean.length > 4) {
+      formatted = formatted.slice(0, 5) + "." + formatted.slice(5);
+    }
+    return formatted;
+  };
+
+  const handleDateChange = (val: string) => {
+    setDueDate(formatDate(val));
+  };
+
   const [imageUri, setImageUri] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(false);
 
   const canSubmit = useMemo(() => {
     const a = Number(amount.replace(/\./g, "").replace(",", "."));
-    return checkNo.trim() && issuerName.trim() && dueDate.trim() && Number.isFinite(a) && a > 0;
+    const isDateValid = dueDate.length === 10;
+    return checkNo.trim() && issuerName.trim() && isDateValid && Number.isFinite(a) && a > 0;
   }, [checkNo, issuerName, amount, dueDate]);
 
   const pickImage = async () => {
@@ -55,13 +81,18 @@ export default function UploadScreen() {
   const handleSubmit = async () => {
     if (loading) return;
     setLoading(true);
+
+    // Convert DD.MM.YYYY to YYYY-MM-DD
+    const parts = dueDate.split(".");
+    const isoDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+
     const a = Number(amount.replace(/\./g, "").replace(",", "."));
     const id = await addCheck({
       checkNo,
       issuerName,
       bankName,
       amount: a,
-      dueDate,
+      dueDate: isoDate,
       imageUri,
       source: "manual",
     });
@@ -120,7 +151,7 @@ export default function UploadScreen() {
                    <Field label="Tutar (TRY)" value={amount} onChangeText={handleAmountChange} placeholder="185.000" keyboardType="numeric" />
                  </View>
                  <View style={{ flex: 1 }}>
-                   <Field label="Vade" value={dueDate} onChangeText={setDueDate} placeholder="2026-06-01" />
+                   <Field label="Vade" value={dueDate} onChangeText={handleDateChange} placeholder="31.12.2025" keyboardType="numeric" />
                  </View>
               </View>
             </View>
