@@ -175,6 +175,18 @@ function toISODate(d: Date): string {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+function parseTurkishDateToISO(trDate: string): string {
+  // input: DD.MM.YYYY
+  const parts = trDate.split(".");
+  if (parts.length === 3) {
+    const [d, m, y] = parts;
+    if (d.length === 2 && m.length === 2 && y.length === 4) {
+      return `${y}-${m}-${d}`;
+    }
+  }
+  return trDate; // fallback if it's already YYYY-MM-DD or invalid
+}
+
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
@@ -544,10 +556,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const addCheck: UserContextValue["addCheck"] = async (input) => {
     if (!user) return null;
 
-    const amount = Number(input.amount);
+    // input.amount can be a string like "1.250,50" or a number
+    const amount = typeof input.amount === "string"
+      ? Number(input.amount.replace(/\./g, "").replace(",", "."))
+      : Number(input.amount);
+
     if (!input.checkNo?.trim() || !input.issuerName?.trim() || !input.dueDate?.trim() || !Number.isFinite(amount)) return null;
 
-    const fingerprint = computeFingerprint(input.checkNo, input.issuerName, amount, input.dueDate);
+    const isoDueDate = parseTurkishDateToISO(input.dueDate);
+    const fingerprint = computeFingerprint(input.checkNo, input.issuerName, amount, isoDueDate);
     const existing = (user.checks || []).find((c) => c.dna?.fingerprint === fingerprint);
 
     const lane: CheckItem["lane"] = amount <= 250000 ? "pilot-micro" : "standard";
@@ -562,7 +579,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       bankName: input.bankName?.trim(),
       amount,
       currency: "TRY",
-      dueDate: input.dueDate,
+      dueDate: isoDueDate,
       imageUri: input.imageUri,
       dna: {
         fingerprint,
@@ -663,7 +680,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
       const amount = Number(String(amountStr).replace(/\./g, "").replace(",", "."));
       if (!checkNo || !issuerName || !dueDate || !Number.isFinite(amount)) continue;
 
-      const fp = computeFingerprint(checkNo, issuerName, amount, dueDate);
+      const isoDueDate = parseTurkishDateToISO(String(dueDate).trim());
+      const fp = computeFingerprint(checkNo, issuerName, amount, isoDueDate);
       const dup = [...newChecks, ...existing].find((c) => c.dna?.fingerprint === fp);
 
       const lane: CheckItem["lane"] = amount <= 250000 ? "pilot-micro" : "standard";
@@ -678,7 +696,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         bankName: String(bankName || "").trim(),
         amount,
         currency: "TRY",
-        dueDate: String(dueDate).trim(),
+        dueDate: isoDueDate,
         dna: { fingerprint: fp, seenBefore: !!dup, duplicateOf: dup?.id, tamperHint: "none" },
         issuerPulseScore: computeIssuerPulseScore(String(issuerName)),
         lane,

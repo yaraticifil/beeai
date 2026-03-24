@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { View, Text, StyleSheet, TextInput, Pressable, ScrollView, Alert, Platform, Dimensions } from "react-native";
+import { View, Text, StyleSheet, TextInput, Pressable, ScrollView, Alert, Platform } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -18,18 +18,50 @@ export default function UploadScreen() {
   const [issuerName, setIssuerName] = useState("");
   const [bankName, setBankName] = useState("");
   const [amount, setAmount] = useState("");
-  const [dueDate, setDueDate] = useState(""); // YYYY-MM-DD
+  const [dueDate, setDueDate] = useState(""); // DD.MM.YYYY
 
   const formatCurrency = (val: string) => {
-    // Remove all non-digits
-    const clean = val.replace(/\D/g, "");
-    if (!clean) return "";
-    // Add dots as thousand separators
-    return clean.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    // Remove everything except digits and comma
+    let clean = val.replace(/[^\d,]/g, "");
+
+    // Ensure only one comma
+    const commaIndex = clean.indexOf(",");
+    if (commaIndex !== -1) {
+      clean = clean.slice(0, commaIndex + 1) + clean.slice(commaIndex + 1).replace(/,/g, "");
+    }
+
+    const parts = clean.split(",");
+    let integerPart = parts[0];
+    const decimalPart = parts[1];
+
+    // Add dots to integer part
+    integerPart = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+
+    if (decimalPart !== undefined) {
+      return integerPart + "," + decimalPart.slice(0, 2);
+    }
+    return integerPart;
   };
 
   const handleAmountChange = (val: string) => {
     setAmount(formatCurrency(val));
+  };
+
+  const formatDate = (val: string) => {
+    const clean = val.replace(/\D/g, "");
+    if (!clean) return "";
+    let formatted = clean;
+    if (clean.length > 2) {
+      formatted = clean.slice(0, 2) + "." + clean.slice(2);
+    }
+    if (clean.length > 4) {
+      formatted = formatted.slice(0, 5) + "." + formatted.slice(5, 9);
+    }
+    return formatted.slice(0, 10);
+  };
+
+  const handleDueDateChange = (val: string) => {
+    setDueDate(formatDate(val));
   };
   const [imageUri, setImageUri] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(false);
@@ -55,12 +87,11 @@ export default function UploadScreen() {
   const handleSubmit = async () => {
     if (loading) return;
     setLoading(true);
-    const a = Number(amount.replace(/\./g, "").replace(",", "."));
     const id = await addCheck({
       checkNo,
       issuerName,
       bankName,
-      amount: a,
+      amount: amount as any,
       dueDate,
       imageUri,
       source: "manual",
@@ -120,7 +151,7 @@ export default function UploadScreen() {
                    <Field label="Tutar (TRY)" value={amount} onChangeText={handleAmountChange} placeholder="185.000" keyboardType="numeric" />
                  </View>
                  <View style={{ flex: 1 }}>
-                   <Field label="Vade" value={dueDate} onChangeText={setDueDate} placeholder="2026-06-01" />
+                   <Field label="Vade" value={dueDate} onChangeText={handleDueDateChange} placeholder="31.12.2025" keyboardType="numeric" />
                  </View>
               </View>
             </View>
