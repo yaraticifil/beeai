@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable, Platform, Dimensions, Alert } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Pressable, Platform, Alert } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -76,8 +76,15 @@ export default function PanelScreen() {
 
   const pulse = getDailyPulse();
   const checksCount = user.checks?.length || 0;
+  const totalAmount = (user.checks || []).reduce((sum, c) => sum + c.amount, 0);
   const activeReqs = (user.offerRequests || []).filter((r) => r.status === "collecting").length;
   const offersReady = (user.offerRequests || []).filter((r) => r.status === "ready").length;
+
+  const formatTotal = (num: number) => {
+    if (num >= 1000000) return (num / 1000000).toFixed(1) + "M";
+    if (num >= 1000) return (num / 1000).toFixed(0) + "K";
+    return String(num);
+  };
 
   const topInset = Platform.OS === "web" ? 60 : insets.top;
 
@@ -146,8 +153,11 @@ export default function PanelScreen() {
           <Text style={styles.sectionTitle}>Canlı Durum</Text>
           <View style={styles.statGrid}>
             <StatCard label="Toplam Çek" value={String(checksCount)} icon="document-attach" delay={100} />
-            <StatCard label="Toplanıyor" value={String(activeReqs)} icon="time" delay={200} />
-            <StatCard label="Hazır" value={String(offersReady)} icon="flash" delay={300} />
+            <StatCard label="Toplam Tutar" value={`₺${formatTotal(totalAmount)}`} icon="wallet" delay={200} />
+          </View>
+          <View style={[styles.statGrid, { marginTop: 12 }]}>
+            <StatCard label="Toplanıyor" value={String(activeReqs)} icon="time" delay={300} />
+            <StatCard label="Hazır" value={String(offersReady)} icon="flash" delay={400} />
           </View>
         </View>
 
