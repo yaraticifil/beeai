@@ -1,9 +1,10 @@
 import React, { useMemo, useState } from "react";
-import { View, Text, StyleSheet, TextInput, Pressable, ScrollView, Alert, Platform, Dimensions } from "react-native";
+import { View, Text, StyleSheet, TextInput, Pressable, ScrollView, Alert, Platform } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import Colors from "@/constants/colors";
@@ -18,7 +19,7 @@ export default function UploadScreen() {
   const [issuerName, setIssuerName] = useState("");
   const [bankName, setBankName] = useState("");
   const [amount, setAmount] = useState("");
-  const [dueDate, setDueDate] = useState(""); // YYYY-MM-DD
+  const [dueDate, setDueDate] = useState(""); // DD.MM.YYYY masked
 
   const formatCurrency = (val: string) => {
     // Remove all non-digits
@@ -31,12 +32,24 @@ export default function UploadScreen() {
   const handleAmountChange = (val: string) => {
     setAmount(formatCurrency(val));
   };
+
+  const handleDateChange = (val: string) => {
+    const clean = val.replace(/\D/g, "").slice(0, 8);
+    let masked = clean;
+    if (clean.length > 4) {
+      masked = `${clean.slice(0, 2)}.${clean.slice(2, 4)}.${clean.slice(4)}`;
+    } else if (clean.length > 2) {
+      masked = `${clean.slice(0, 2)}.${clean.slice(2)}`;
+    }
+    setDueDate(masked);
+  };
+
   const [imageUri, setImageUri] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(false);
 
   const canSubmit = useMemo(() => {
     const a = Number(amount.replace(/\./g, "").replace(",", "."));
-    return checkNo.trim() && issuerName.trim() && dueDate.trim() && Number.isFinite(a) && a > 0;
+    return checkNo.trim() && issuerName.trim() && dueDate.length === 10 && Number.isFinite(a) && a > 0;
   }, [checkNo, issuerName, amount, dueDate]);
 
   const pickImage = async () => {
@@ -55,13 +68,22 @@ export default function UploadScreen() {
   const handleSubmit = async () => {
     if (loading) return;
     setLoading(true);
+
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
+
     const a = Number(amount.replace(/\./g, "").replace(",", "."));
+    // Convert DD.MM.YYYY to YYYY-MM-DD
+    const parts = dueDate.split(".");
+    const isoDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+
     const id = await addCheck({
       checkNo,
       issuerName,
       bankName,
       amount: a,
-      dueDate,
+      dueDate: isoDate,
       imageUri,
       source: "manual",
     });
@@ -120,7 +142,7 @@ export default function UploadScreen() {
                    <Field label="Tutar (TRY)" value={amount} onChangeText={handleAmountChange} placeholder="185.000" keyboardType="numeric" />
                  </View>
                  <View style={{ flex: 1 }}>
-                   <Field label="Vade" value={dueDate} onChangeText={setDueDate} placeholder="2026-06-01" />
+                   <Field label="Vade" value={dueDate} onChangeText={handleDateChange} placeholder="31.12.2025" keyboardType="numeric" />
                  </View>
               </View>
             </View>

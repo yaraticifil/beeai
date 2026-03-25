@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable, Platform, Dimensions, Alert } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Pressable, Platform, useWindowDimensions, Alert } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -10,15 +10,28 @@ import Colors from "@/constants/colors";
 import { useUser } from "@/contexts/UserContext";
 import { GlassCard } from "@/components/GlassCard";
 
+function formatAmount(num: number) {
+  if (num >= 1000000) {
+    const val = num / 1000000;
+    return (val % 1 === 0 ? val.toFixed(0) : val.toFixed(1)) + "M";
+  }
+  if (num >= 1000) {
+    const val = num / 1000;
+    return (val % 1 === 0 ? val.toFixed(0) : val.toFixed(1)) + "K";
+  }
+  return num.toString();
+}
+
 function StatCard({ label, value, icon, delay = 0 }: { label: string; value: string; icon: keyof typeof Ionicons.glyphMap; delay?: number }) {
+  const { width } = useWindowDimensions();
   return (
-    <Animated.View entering={FadeInDown.delay(delay).springify()} style={{ flex: 1 }}>
+    <Animated.View entering={FadeInDown.delay(delay).springify()} style={{ width: (width - 52) / 2 }}>
       <GlassCard style={styles.statCard}>
         <View style={styles.statIconContainer}>
           <Ionicons name={icon} size={18} color={Colors.gold} />
         </View>
         <Text style={styles.statValue}>{value}</Text>
-        <Text style={styles.statLabel}>{label}</Text>
+        <Text style={styles.statLabel} numberOfLines={1}>{label}</Text>
       </GlassCard>
     </Animated.View>
   );
@@ -66,7 +79,8 @@ export default function PanelScreen() {
 
   useEffect(() => {
     if (user) checkDailySpins();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   useEffect(() => {
     if (!user) router.replace("/");
@@ -75,7 +89,8 @@ export default function PanelScreen() {
   if (!user) return null;
 
   const pulse = getDailyPulse();
-  const checksCount = user.checks?.length || 0;
+  const checksCount = user?.checks?.length || 0;
+  const totalAmount = (user?.checks || []).reduce((acc, c) => acc + c.amount, 0);
   const activeReqs = (user.offerRequests || []).filter((r) => r.status === "collecting").length;
   const offersReady = (user.offerRequests || []).filter((r) => r.status === "ready").length;
 
@@ -146,8 +161,9 @@ export default function PanelScreen() {
           <Text style={styles.sectionTitle}>Canlı Durum</Text>
           <View style={styles.statGrid}>
             <StatCard label="Toplam Çek" value={String(checksCount)} icon="document-attach" delay={100} />
-            <StatCard label="Toplanıyor" value={String(activeReqs)} icon="time" delay={200} />
-            <StatCard label="Hazır" value={String(offersReady)} icon="flash" delay={300} />
+            <StatCard label="Toplam Tutar" value={formatAmount(totalAmount)} icon="wallet" delay={200} />
+            <StatCard label="Toplanıyor" value={String(activeReqs)} icon="time" delay={300} />
+            <StatCard label="Hazır" value={String(offersReady)} icon="flash" delay={400} />
           </View>
         </View>
 
@@ -256,7 +272,7 @@ const styles = StyleSheet.create({
   section: { marginBottom: 24 },
   sectionTitle: { fontSize: 16, fontFamily: "Poppins_800ExtraBold", color: Colors.slate, marginBottom: 14 },
 
-  statGrid: { flexDirection: "row", gap: 12 },
+  statGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12, justifyContent: 'space-between' },
   statCard: { alignItems: "center", paddingVertical: 14, paddingHorizontal: 8 },
   statIconContainer: { width: 32, height: 32, borderRadius: 10, backgroundColor: Colors.goldLight, alignItems: "center", justifyContent: "center", marginBottom: 8 },
   statValue: { fontSize: 18, fontFamily: "Poppins_800ExtraBold", color: Colors.slate },
