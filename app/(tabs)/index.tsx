@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable, Platform, Dimensions, Alert } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Pressable, Platform, Alert, useWindowDimensions } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -10,14 +10,14 @@ import Colors from "@/constants/colors";
 import { useUser } from "@/contexts/UserContext";
 import { GlassCard } from "@/components/GlassCard";
 
-function StatCard({ label, value, icon, delay = 0 }: { label: string; value: string; icon: keyof typeof Ionicons.glyphMap; delay?: number }) {
+function StatCard({ label, value, icon, delay = 0, width }: { label: string; value: string; icon: keyof typeof Ionicons.glyphMap; delay?: number; width?: number }) {
   return (
-    <Animated.View entering={FadeInDown.delay(delay).springify()} style={{ flex: 1 }}>
+    <Animated.View entering={FadeInDown.delay(delay).springify()} style={{ width }}>
       <GlassCard style={styles.statCard}>
         <View style={styles.statIconContainer}>
           <Ionicons name={icon} size={18} color={Colors.gold} />
         </View>
-        <Text style={styles.statValue}>{value}</Text>
+        <Text style={styles.statValue} numberOfLines={1}>{value}</Text>
         <Text style={styles.statLabel}>{label}</Text>
       </GlassCard>
     </Animated.View>
@@ -60,13 +60,26 @@ function ActionItem({
   );
 }
 
+function formatKiloMega(val: number) {
+  if (val >= 1000000) {
+    const m = val / 1000000;
+    return m % 1 === 0 ? `${m}M` : `${m.toFixed(1)}M`;
+  }
+  if (val >= 1000) {
+    const k = val / 1000;
+    return k % 1 === 0 ? `${k}K` : `${k.toFixed(1)}K`;
+  }
+  return String(val);
+}
+
 export default function PanelScreen() {
   const insets = useSafeAreaInsets();
+  const { width: windowWidth } = useWindowDimensions();
   const { user, logout, checkDailySpins, getDailyPulse } = useUser();
 
   useEffect(() => {
     if (user) checkDailySpins();
-  }, []);
+  }, [user, checkDailySpins]);
 
   useEffect(() => {
     if (!user) router.replace("/");
@@ -76,10 +89,12 @@ export default function PanelScreen() {
 
   const pulse = getDailyPulse();
   const checksCount = user.checks?.length || 0;
+  const totalAmount = (user.checks || []).reduce((acc, c) => acc + c.amount, 0);
   const activeReqs = (user.offerRequests || []).filter((r) => r.status === "collecting").length;
   const offersReady = (user.offerRequests || []).filter((r) => r.status === "ready").length;
 
   const topInset = Platform.OS === "web" ? 60 : insets.top;
+  const cardWidth = (Math.min(windowWidth, 600) - 40 - 12) / 2;
 
   const handleLogout = () => {
     Alert.alert("Çıkış Yap", "Kovan hesabınızdan çıkmak istiyor musunuz?", [
@@ -145,9 +160,10 @@ export default function PanelScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Canlı Durum</Text>
           <View style={styles.statGrid}>
-            <StatCard label="Toplam Çek" value={String(checksCount)} icon="document-attach" delay={100} />
-            <StatCard label="Toplanıyor" value={String(activeReqs)} icon="time" delay={200} />
-            <StatCard label="Hazır" value={String(offersReady)} icon="flash" delay={300} />
+            <StatCard label="Toplam Çek" value={String(checksCount)} icon="document-attach" delay={100} width={cardWidth} />
+            <StatCard label="Toplam Tutar" value={formatKiloMega(totalAmount)} icon="wallet" delay={150} width={cardWidth} />
+            <StatCard label="Toplanıyor" value={String(activeReqs)} icon="time" delay={200} width={cardWidth} />
+            <StatCard label="Hazır" value={String(offersReady)} icon="flash" delay={250} width={cardWidth} />
           </View>
         </View>
 
@@ -256,7 +272,7 @@ const styles = StyleSheet.create({
   section: { marginBottom: 24 },
   sectionTitle: { fontSize: 16, fontFamily: "Poppins_800ExtraBold", color: Colors.slate, marginBottom: 14 },
 
-  statGrid: { flexDirection: "row", gap: 12 },
+  statGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
   statCard: { alignItems: "center", paddingVertical: 14, paddingHorizontal: 8 },
   statIconContainer: { width: 32, height: 32, borderRadius: 10, backgroundColor: Colors.goldLight, alignItems: "center", justifyContent: "center", marginBottom: 8 },
   statValue: { fontSize: 18, fontFamily: "Poppins_800ExtraBold", color: Colors.slate },
