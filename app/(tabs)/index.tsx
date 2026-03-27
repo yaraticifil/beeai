@@ -1,5 +1,5 @@
-import React, { useEffect } from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable, Platform, Dimensions, Alert } from "react-native";
+import React, { useEffect, useMemo } from "react";
+import { View, Text, StyleSheet, ScrollView, Pressable, Platform, Alert } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -11,15 +11,23 @@ import { useUser } from "@/contexts/UserContext";
 import { GlassCard } from "@/components/GlassCard";
 
 function StatCard({ label, value, icon, delay = 0 }: { label: string; value: string; icon: keyof typeof Ionicons.glyphMap; delay?: number }) {
+  const handlePress = () => {
+    if (Platform.OS !== "web") {
+      Haptics.selectionAsync();
+    }
+  };
+
   return (
     <Animated.View entering={FadeInDown.delay(delay).springify()} style={{ flex: 1 }}>
-      <GlassCard style={styles.statCard}>
-        <View style={styles.statIconContainer}>
-          <Ionicons name={icon} size={18} color={Colors.gold} />
-        </View>
-        <Text style={styles.statValue}>{value}</Text>
-        <Text style={styles.statLabel}>{label}</Text>
-      </GlassCard>
+      <Pressable onPress={handlePress}>
+        <GlassCard style={styles.statCard}>
+          <View style={styles.statIconContainer}>
+            <Ionicons name={icon} size={18} color={Colors.gold} />
+          </View>
+          <Text style={styles.statValue}>{value}</Text>
+          <Text style={styles.statLabel}>{label}</Text>
+        </GlassCard>
+      </Pressable>
     </Animated.View>
   );
 }
@@ -72,9 +80,22 @@ export default function PanelScreen() {
     if (!user) router.replace("/");
   }, [user]);
 
+  const pulse = getDailyPulse();
+
+  const marketTip = useMemo(() => {
+    if (!user) return "";
+    switch (pulse.mood) {
+      case "sert":
+        return "Piyasa bugün seçici. Sadece yüksek puanlı keşidecilerin çeklerini yüklemenizi öneririz.";
+      case "yumuşak":
+        return "Fırsat günü! Arılar bugün revize turlarında çok daha iyi oranlar yakalayabilir.";
+      default:
+        return "Dengeli bir gün. Çeklerinizi yükleyip 15 dakikalık akışı hemen başlatabilirsiniz.";
+    }
+  }, [pulse.mood, user]);
+
   if (!user) return null;
 
-  const pulse = getDailyPulse();
   const checksCount = user.checks?.length || 0;
   const activeReqs = (user.offerRequests || []).filter((r) => r.status === "collecting").length;
   const offersReady = (user.offerRequests || []).filter((r) => r.status === "ready").length;
@@ -142,6 +163,16 @@ export default function PanelScreen() {
         contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
         showsVerticalScrollIndicator={false}
       >
+        <Animated.View entering={FadeInDown.delay(50).springify()}>
+          <GlassCard style={styles.tipCard} intensity={15}>
+            <View style={styles.tipHeader}>
+              <Ionicons name="bulb-outline" size={18} color={Colors.gold} />
+              <Text style={styles.tipTitle}>Günün Tavsiyesi</Text>
+            </View>
+            <Text style={styles.tipText}>{marketTip}</Text>
+          </GlassCard>
+        </Animated.View>
+
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Canlı Durum</Text>
           <View style={styles.statGrid}>
@@ -233,6 +264,10 @@ const styles = StyleSheet.create({
   pulseNote: { color: "rgba(255,255,255,0.85)", fontSize: 12, lineHeight: 18, fontFamily: "Poppins_400Regular" },
 
   scroll: { flex: 1, paddingHorizontal: 20, marginTop: 14 },
+  tipCard: { padding: 16, borderRadius: 20, marginBottom: 20, backgroundColor: 'rgba(251, 191, 36, 0.05)' },
+  tipHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
+  tipTitle: { fontSize: 13, fontFamily: 'Poppins_700Bold', color: Colors.gold },
+  tipText: { fontSize: 12, fontFamily: 'Poppins_400Regular', color: Colors.textSecondary, lineHeight: 18 },
   section: { marginBottom: 24 },
   sectionTitle: { fontSize: 16, fontFamily: "Poppins_800ExtraBold", color: Colors.slate, marginBottom: 14 },
 

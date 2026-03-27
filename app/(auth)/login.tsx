@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   ScrollView,
+  Image,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -97,33 +98,21 @@ export default function LoginScreen() {
             <Ionicons name="chevron-back" size={24} color={Colors.white} />
           </Pressable>
 
-          <View style={styles.header}>
-            <View style={styles.logoBadge}>
-               <Text style={styles.bee}>🐝</Text>
-            </View>
-            <Text style={styles.title}>Hoş Geldin</Text>
-            <Text style={styles.subtitle}>
-              Kovan kapılarını senin için açıyoruz
-            </Text>
+          <View style={styles.heroSection}>
+            <Image
+              source={require("@/assets/images/greeting.png")}
+              style={styles.heroImage}
+              resizeMode="contain"
+            />
           </View>
 
-          <GlassCard style={styles.offerCard} intensity={20}>
-              <View style={styles.offerRow}>
-                <View style={styles.jarContainer}>
-                   <Text style={styles.offerJar}>🍯</Text>
-                </View>
-                <View style={styles.offerContent}>
-                  <View style={styles.offerTitleRow}>
-                    <Text style={styles.offerTitle}>Pilot Özel Limit</Text>
-                    <View style={styles.offerBadge}>
-                      <Text style={styles.offerBadgeText}>AKTİF</Text>
-                    </View>
-                  </View>
-                  <Text style={styles.offerAmount}>₺500k+</Text>
-                  <Text style={styles.offerSub}>AI ajanları ile anında sorgulama</Text>
-                </View>
-              </View>
-          </GlassCard>
+          <View style={styles.brandHeader}>
+            <Text style={styles.brandSub}>ÇEK ANALİZ, RİSK & FAKTORİNG</Text>
+            <Text style={styles.brandTitle}>ArıAI</Text>
+            <Text style={styles.brandDesc}>
+              Sahte çekme kusuru · Risk analizi · Faktoring erişimi
+            </Text>
+          </View>
 
           <Animated.View
             style={[
@@ -196,8 +185,8 @@ export default function LoginScreen() {
                   <ActivityIndicator color={Colors.slate} />
                 ) : (
                   <View style={styles.btnContent}>
-                    <Text style={styles.loginText}>Giriş Yap</Text>
-                    <Ionicons name="chevron-forward" size={20} color={Colors.slate} />
+                    <Text style={styles.loginText}>PLATFORMA GİR</Text>
+                    <Ionicons name="flash" size={20} color={Colors.slate} />
                   </View>
                 )}
             </Pressable>
@@ -226,23 +215,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 20,
   },
-  header: { alignItems: "flex-start", marginBottom: 32 },
-  logoBadge: { width: 64, height: 64, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', justifyContent: 'center', marginBottom: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
-  bee: { fontSize: 32 },
-  title: { fontSize: 32, fontFamily: "Poppins_800ExtraBold", color: Colors.white, marginBottom: 6 },
-  subtitle: { fontSize: 15, fontFamily: "Poppins_400Regular", color: "rgba(255,255,255,0.6)" },
+  heroSection: { alignItems: "center", justifyContent: "center", marginBottom: 10 },
+  heroImage: { width: width * 0.9, height: width * 0.7 },
 
-  offerCard: { marginBottom: 32 },
-  offerRow: { flexDirection: "row", alignItems: "center", gap: 16 },
-  jarContainer: { width: 56, height: 56, borderRadius: 18, backgroundColor: 'rgba(251, 191, 36, 0.1)', alignItems: 'center', justifyContent: 'center' },
-  offerJar: { fontSize: 32 },
-  offerContent: { flex: 1 },
-  offerTitleRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 2 },
-  offerTitle: { fontSize: 13, fontFamily: "Poppins_600SemiBold", color: "rgba(255,255,255,0.9)" },
-  offerBadge: { backgroundColor: Colors.gold, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
-  offerBadgeText: { fontSize: 8, fontFamily: "Poppins_800ExtraBold", color: Colors.slate },
-  offerAmount: { fontSize: 24, fontFamily: "Poppins_800ExtraBold", color: Colors.gold, marginBottom: 2 },
-  offerSub: { fontSize: 11, fontFamily: "Poppins_400Regular", color: "rgba(255,255,255,0.5)" },
+  brandHeader: { alignItems: "center", marginBottom: 32 },
+  brandSub: { fontSize: 12, fontFamily: "Poppins_700Bold", color: Colors.gold, letterSpacing: 2, marginBottom: 8 },
+  brandTitle: { fontSize: 48, fontFamily: "Poppins_800ExtraBold", color: Colors.gold, marginBottom: 4 },
+  brandDesc: { fontSize: 12, fontFamily: "Poppins_400Regular", color: "rgba(255,255,255,0.5)", textAlign: 'center' },
 
   form: { gap: 20, marginBottom: 32 },
   inputGroup: { gap: 8 },

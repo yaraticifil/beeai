@@ -18,16 +18,9 @@ import Animated, { FadeInDown, Layout } from "react-native-reanimated";
 import Colors from "@/constants/colors";
 import { useUser, CheckItem, OfferRequest } from "@/contexts/UserContext";
 import { GlassCard } from "@/components/GlassCard";
+import { money } from "@/shared/utils/format";
 
 const { width, height } = Dimensions.get("window");
-
-function money(n: number) {
-  try {
-    return n.toLocaleString("tr-TR");
-  } catch {
-    return String(n);
-  }
-}
 
 function fmtCountdown(ms: number) {
   const t = Math.max(0, Math.floor(ms / 1000));

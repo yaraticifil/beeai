@@ -10,6 +10,7 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 import Colors from "@/constants/colors";
 import { useUser } from "@/contexts/UserContext";
 import { GlassCard } from "@/components/GlassCard";
+import { formatCurrency, parseCurrency } from "@/shared/utils/format";
 
 export default function UploadScreen() {
   const insets = useSafeAreaInsets();
@@ -21,14 +22,6 @@ export default function UploadScreen() {
   const [amount, setAmount] = useState("");
   const [dueDate, setDueDate] = useState(""); // YYYY-MM-DD
 
-  const formatCurrency = (val: string) => {
-    // Remove all non-digits
-    const clean = val.replace(/\D/g, "");
-    if (!clean) return "";
-    // Add dots as thousand separators
-    return clean.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-  };
-
   const handleAmountChange = (val: string) => {
     setAmount(formatCurrency(val));
   };
@@ -36,7 +29,7 @@ export default function UploadScreen() {
   const [loading, setLoading] = useState(false);
 
   const canSubmit = useMemo(() => {
-    const a = Number(amount.replace(/\./g, "").replace(",", "."));
+    const a = parseCurrency(amount);
     return checkNo.trim() && issuerName.trim() && dueDate.trim() && Number.isFinite(a) && a > 0;
   }, [checkNo, issuerName, amount, dueDate]);
 
@@ -62,7 +55,7 @@ export default function UploadScreen() {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
     setLoading(true);
-    const a = Number(amount.replace(/\./g, "").replace(",", "."));
+    const a = parseCurrency(amount);
     const id = await addCheck({
       checkNo,
       issuerName,

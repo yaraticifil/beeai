@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Pressable, ScrollView, TextInput, Alert, Platfo
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import Colors from "@/constants/colors";
 import { ERPType, useUser } from "@/contexts/UserContext";
@@ -21,8 +22,15 @@ function ERPCard({
   onPress: () => void;
   icon?: any;
 }) {
+  const handlePress = () => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    onPress();
+  };
+
   return (
-    <Pressable style={({ pressed }) => [styles.erpCard, pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] }]} onPress={onPress}>
+    <Pressable style={({ pressed }) => [styles.erpCard, pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] }]} onPress={handlePress}>
       <View style={styles.erpRow}>
         <View style={styles.erpIcon}>
           <Ionicons name={icon} size={22} color={Colors.gold} />
@@ -58,6 +66,9 @@ export default function IntegrationScreen() {
 
   const runCsv = async () => {
     if (!canImport) return;
+    if (Platform.OS !== "web") {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
     const n = await importFromCsv(csv);
     Alert.alert("CSV Aktarım", `${n} çek içeri alındı. Arılar analize başladı.`);
   };
