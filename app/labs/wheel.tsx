@@ -48,13 +48,13 @@ export default function WheelScreen() {
     if (!user || isSpinning) return;
 
     if (user.spinCount <= 0) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       return;
     }
 
     setIsSpinning(true);
     setShowResult(false);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     const result = await spin();
 
@@ -71,16 +71,16 @@ export default function WheelScreen() {
       setIsSpinning(false);
       setLastResult(result);
       setShowResult(true);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     });
   };
 
   const handleBuyExtra = async () => {
     const success = await spendHoney(20);
     if (success) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } else {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     }
   };
 
@@ -131,17 +131,17 @@ export default function WheelScreen() {
               const ty = WHEEL_SIZE / 2 - textRadius * Math.cos(rad);
 
               return (
-                <View key={i}>
+                <View key={i} pointerEvents="none">
                   <View
                     style={[
                       styles.segmentSlice,
                       {
                         width: WHEEL_SIZE,
                         height: WHEEL_SIZE / 2,
-                        transformOrigin: `${WHEEL_SIZE / 2}px ${WHEEL_SIZE / 2}px`,
                         transform: [
-                          { translateY: 0 },
-                          { rotate: `${angle}deg` },
+                          { translateY: WHEEL_SIZE / 4 },
+                          { rotate: `${angle - 90 + SEGMENT_ANGLE / 2}deg` },
+                          { translateY: -WHEEL_SIZE / 4 },
                         ],
                         backgroundColor: seg.color,
                         borderTopLeftRadius: WHEEL_SIZE / 2,
@@ -152,7 +152,7 @@ export default function WheelScreen() {
                   <View
                     style={[
                       styles.segmentLabel,
-                      { left: tx - 35, top: ty - 10 },
+                      { left: tx - 35, top: ty - 10, transform: [{ rotate: `${angle}deg` }] },
                     ]}
                   >
                     <Text style={styles.segmentText} numberOfLines={1}>
@@ -344,12 +344,6 @@ const styles = StyleSheet.create({
     textShadowColor: "rgba(0,0,0,0.3)",
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
-  },
-  segment: {
-    position: "absolute",
-    width: 0,
-    height: 0,
-    backgroundColor: "transparent",
   },
   wheelCenter: {
     position: "absolute",
