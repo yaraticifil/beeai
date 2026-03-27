@@ -1,9 +1,10 @@
 import React, { useMemo, useState } from "react";
-import { View, Text, StyleSheet, TextInput, Pressable, ScrollView, Alert, Platform, Dimensions } from "react-native";
+import { View, Text, StyleSheet, TextInput, Pressable, ScrollView, Alert, Platform } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import Colors from "@/constants/colors";
@@ -40,6 +41,9 @@ export default function UploadScreen() {
   }, [checkNo, issuerName, amount, dueDate]);
 
   const pickImage = async () => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
       Alert.alert("İzin Gerekli", "Galeri izni veriniz.");
@@ -54,6 +58,9 @@ export default function UploadScreen() {
 
   const handleSubmit = async () => {
     if (loading) return;
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
     setLoading(true);
     const a = Number(amount.replace(/\./g, "").replace(",", "."));
     const id = await addCheck({

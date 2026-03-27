@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -31,41 +31,6 @@ const SEGMENTS = [
 
 const NUM_SEGMENTS = SEGMENTS.length;
 const SEGMENT_ANGLE = 360 / NUM_SEGMENTS;
-
-function WheelSegment({
-  segment,
-  index,
-}: {
-  segment: (typeof SEGMENTS)[0];
-  index: number;
-}) {
-  const angle = index * SEGMENT_ANGLE;
-  const radius = WHEEL_SIZE / 2;
-  const centerAngle = angle + SEGMENT_ANGLE / 2;
-  const textRadius = radius * 0.65;
-  const rad = (centerAngle * Math.PI) / 180;
-  const tx = radius + textRadius * Math.sin(rad);
-  const ty = radius - textRadius * Math.cos(rad);
-
-  return (
-    <View
-      style={[
-        styles.segment,
-        {
-          transform: [{ rotate: `${angle}deg` }],
-          borderTopColor: segment.color,
-          borderRightColor: "transparent",
-          borderLeftColor: "transparent",
-          borderTopWidth: radius,
-          borderRightWidth: radius * Math.tan((SEGMENT_ANGLE * Math.PI) / 360),
-          borderLeftWidth: radius * Math.tan((SEGMENT_ANGLE * Math.PI) / 360),
-          left: radius - radius * Math.tan((SEGMENT_ANGLE * Math.PI) / 360),
-          top: 0,
-        },
-      ]}
-    />
-  );
-}
 
 export default function WheelScreen() {
   const insets = useSafeAreaInsets();
@@ -118,11 +83,6 @@ export default function WheelScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     }
   };
-
-  const spin1 = spinAnim.interpolate({
-    inputRange: [0, 360],
-    outputRange: ["0deg", "360deg"],
-  });
 
   const rotate = spinAnim.interpolate({
     inputRange: [0, currentRotation || 360],

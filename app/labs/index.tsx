@@ -1,8 +1,9 @@
 import React from "react";
-import { View, Text, StyleSheet, Pressable, ScrollView } from "react-native";
+import { View, Text, StyleSheet, Pressable, ScrollView, Platform } from "react-native";
 import { router } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Colors from "@/constants/colors";
 
@@ -17,8 +18,15 @@ function LabCard({
   icon: keyof typeof Ionicons.glyphMap;
   onPress: () => void;
 }) {
+  const handlePress = () => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    onPress();
+  };
+
   return (
-    <Pressable style={({ pressed }) => [styles.card, pressed && { opacity: 0.85 }]} onPress={onPress}>
+    <Pressable style={({ pressed }) => [styles.card, pressed && { opacity: 0.85 }]} onPress={handlePress}>
       <View style={styles.cardRow}>
         <View style={styles.iconWrap}>
           <Ionicons name={icon} size={22} color={Colors.primary} />

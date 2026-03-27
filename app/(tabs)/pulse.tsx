@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Pressable, ScrollView, Platform } from "react-n
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import Colors from "@/constants/colors";
 import { useUser } from "@/contexts/UserContext";
@@ -14,6 +15,13 @@ export default function PulseScreen() {
 
   const pulse = getDailyPulse();
   const mode = user?.settings?.pulseMode || "weather";
+
+  const handleSetPulseMode = (m: PulseMode) => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    setPulseMode(m);
+  };
 
   const moodLabel = useMemo(() => {
     if (pulse.mood === "sert") return "Sert";
@@ -58,7 +66,7 @@ export default function PulseScreen() {
 
             <View style={styles.modeRow}>
               <Pressable
-                onPress={() => setPulseMode("weather")}
+                onPress={() => handleSetPulseMode("weather")}
                 style={[styles.modeBtn, mode === "weather" && styles.modeBtnActive]}
               >
                 <Ionicons name="cloud-outline" size={18} color={mode === "weather" ? Colors.slate : Colors.gold} />
@@ -66,7 +74,7 @@ export default function PulseScreen() {
               </Pressable>
 
               <Pressable
-                onPress={() => setPulseMode("band")}
+                onPress={() => handleSetPulseMode("band")}
                 style={[styles.modeBtn, mode === "band" && styles.modeBtnActive]}
               >
                 <Ionicons name="analytics-outline" size={18} color={mode === "band" ? Colors.slate : Colors.gold} />

@@ -13,6 +13,7 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import Animated, { FadeInDown, Layout } from "react-native-reanimated";
 import Colors from "@/constants/colors";
 import { useUser, CheckItem, OfferRequest } from "@/contexts/UserContext";
@@ -81,11 +82,17 @@ export default function OffersScreen() {
   const getReq = React.useCallback((checkId: string) => reqMap.get(checkId), [reqMap]);
 
   const open = (check: CheckItem) => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
     const req = getReq(check.id);
     setSelected({ check, req });
   };
 
   const start = async (check: CheckItem) => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
     await startOfferCollection(check.id);
     await ensureOfferProgress(check.id);
     open(check);
@@ -389,6 +396,9 @@ export default function OffersScreen() {
                     <View style={styles.actionsRow}>
                       <Pressable
                         onPress={async () => {
+                          if (Platform.OS !== "web") {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          }
                           await ensureOfferProgress(refreshSelected.check.id);
                         }}
                         style={({ pressed }) => [
@@ -406,6 +416,9 @@ export default function OffersScreen() {
 
                       <Pressable
                         onPress={async () => {
+                          if (Platform.OS !== "web") {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                          }
                           await requestRevision(refreshSelected.check.id);
                         }}
                         disabled={
