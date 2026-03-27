@@ -1,9 +1,10 @@
 import React, { useMemo, useState } from "react";
-import { View, Text, StyleSheet, TextInput, Pressable, ScrollView, Alert, Platform, Dimensions } from "react-native";
+import { View, Text, StyleSheet, TextInput, Pressable, ScrollView, Alert, Platform } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import Colors from "@/constants/colors";
@@ -18,25 +19,49 @@ export default function UploadScreen() {
   const [issuerName, setIssuerName] = useState("");
   const [bankName, setBankName] = useState("");
   const [amount, setAmount] = useState("");
-  const [dueDate, setDueDate] = useState(""); // YYYY-MM-DD
+  const [dueDate, setDueDate] = useState(""); // DD.MM.YYYY
 
   const formatCurrency = (val: string) => {
-    // Remove all non-digits
-    const clean = val.replace(/\D/g, "");
+    // Remove all non-digits except comma
+    let clean = val.replace(/[^\d,]/g, "");
     if (!clean) return "";
-    // Add dots as thousand separators
-    return clean.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+
+    const parts = clean.split(",");
+    const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    const decimalPart = parts[1] !== undefined ? "," + parts[1].slice(0, 2) : "";
+
+    return integerPart + decimalPart;
   };
 
   const handleAmountChange = (val: string) => {
     setAmount(formatCurrency(val));
   };
+
+  const formatDate = (val: string) => {
+    const clean = val.replace(/\D/g, "").slice(0, 8);
+    let output = "";
+    if (clean.length > 0) {
+      output += clean.slice(0, 2);
+      if (clean.length > 2) {
+        output += "." + clean.slice(2, 4);
+        if (clean.length > 4) {
+          output += "." + clean.slice(4, 8);
+        }
+      }
+    }
+    return output;
+  };
+
+  const handleDateChange = (val: string) => {
+    setDueDate(formatDate(val));
+  };
+
   const [imageUri, setImageUri] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(false);
 
   const canSubmit = useMemo(() => {
     const a = Number(amount.replace(/\./g, "").replace(",", "."));
-    return checkNo.trim() && issuerName.trim() && dueDate.trim() && Number.isFinite(a) && a > 0;
+    return checkNo.trim() && issuerName.trim() && dueDate.length === 10 && Number.isFinite(a) && a > 0;
   }, [checkNo, issuerName, amount, dueDate]);
 
   const pickImage = async () => {
@@ -54,14 +79,26 @@ export default function UploadScreen() {
 
   const handleSubmit = async () => {
     if (loading) return;
+    if (Platform.OS !== "web") {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
     setLoading(true);
+
     const a = Number(amount.replace(/\./g, "").replace(",", "."));
+
+    // Convert DD.MM.YYYY to YYYY-MM-DD
+    let isoDate = dueDate;
+    if (dueDate.includes(".")) {
+      const [d, m, y] = dueDate.split(".");
+      isoDate = `${y}-${m}-${d}`;
+    }
+
     const id = await addCheck({
       checkNo,
       issuerName,
       bankName,
       amount: a,
-      dueDate,
+      dueDate: isoDate,
       imageUri,
       source: "manual",
     });
@@ -120,7 +157,7 @@ export default function UploadScreen() {
                    <Field label="Tutar (TRY)" value={amount} onChangeText={handleAmountChange} placeholder="185.000" keyboardType="numeric" />
                  </View>
                  <View style={{ flex: 1 }}>
-                   <Field label="Vade" value={dueDate} onChangeText={setDueDate} placeholder="2026-06-01" />
+                   <Field label="Vade" value={dueDate} onChangeText={handleDateChange} placeholder="31.12.2025" keyboardType="numeric" />
                  </View>
               </View>
             </View>
