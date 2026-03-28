@@ -172,7 +172,7 @@ export default function ShopScreen() {
 
   const handleBuy = (item: ShopItem) => {
     if (!user || user.honeyPoints < item.cost) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       return;
     }
     if (user.purchasedItems.includes(item.id)) return;
@@ -190,7 +190,7 @@ export default function ShopScreen() {
               await updateUser({
                 purchasedItems: [...user.purchasedItems, item.id],
               });
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
               Alert.alert("Tebrikler!", `${item.name} başarıyla satın alındı!`);
             }
           },

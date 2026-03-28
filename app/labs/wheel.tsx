@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useMemo } from "react";
 import {
   View,
   Text,
@@ -14,11 +14,13 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import Svg, { Path, G, Text as SvgText } from "react-native-svg";
 import Colors from "@/constants/colors";
 import { useUser } from "@/contexts/UserContext";
 
 const { width } = Dimensions.get("window");
 const WHEEL_SIZE = Math.min(width - 60, 320);
+const RADIUS = WHEEL_SIZE / 2;
 
 const SEGMENTS = [
   { label: "10-50 Bal", color: "#fbbf24", textColor: "#fff" },
@@ -31,41 +33,6 @@ const SEGMENTS = [
 
 const NUM_SEGMENTS = SEGMENTS.length;
 const SEGMENT_ANGLE = 360 / NUM_SEGMENTS;
-
-function WheelSegment({
-  segment,
-  index,
-}: {
-  segment: (typeof SEGMENTS)[0];
-  index: number;
-}) {
-  const angle = index * SEGMENT_ANGLE;
-  const radius = WHEEL_SIZE / 2;
-  const centerAngle = angle + SEGMENT_ANGLE / 2;
-  const textRadius = radius * 0.65;
-  const rad = (centerAngle * Math.PI) / 180;
-  const tx = radius + textRadius * Math.sin(rad);
-  const ty = radius - textRadius * Math.cos(rad);
-
-  return (
-    <View
-      style={[
-        styles.segment,
-        {
-          transform: [{ rotate: `${angle}deg` }],
-          borderTopColor: segment.color,
-          borderRightColor: "transparent",
-          borderLeftColor: "transparent",
-          borderTopWidth: radius,
-          borderRightWidth: radius * Math.tan((SEGMENT_ANGLE * Math.PI) / 360),
-          borderLeftWidth: radius * Math.tan((SEGMENT_ANGLE * Math.PI) / 360),
-          left: radius - radius * Math.tan((SEGMENT_ANGLE * Math.PI) / 360),
-          top: 0,
-        },
-      ]}
-    />
-  );
-}
 
 export default function WheelScreen() {
   const insets = useSafeAreaInsets();
@@ -83,13 +50,13 @@ export default function WheelScreen() {
     if (!user || isSpinning) return;
 
     if (user.spinCount <= 0) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       return;
     }
 
     setIsSpinning(true);
     setShowResult(false);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     const result = await spin();
 
@@ -106,29 +73,61 @@ export default function WheelScreen() {
       setIsSpinning(false);
       setLastResult(result);
       setShowResult(true);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     });
   };
 
   const handleBuyExtra = async () => {
     const success = await spendHoney(20);
     if (success) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } else {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     }
   };
-
-  const spin1 = spinAnim.interpolate({
-    inputRange: [0, 360],
-    outputRange: ["0deg", "360deg"],
-  });
 
   const rotate = spinAnim.interpolate({
     inputRange: [0, currentRotation || 360],
     outputRange: ["0deg", `${currentRotation || 360}deg`],
-    extrapolate: "extend",
   });
+
+  const renderSegments = useMemo(() => {
+    return SEGMENTS.map((seg, i) => {
+      const startAngle = i * SEGMENT_ANGLE;
+      const endAngle = (i + 1) * SEGMENT_ANGLE;
+
+      const x1 = RADIUS + RADIUS * Math.cos((Math.PI * (startAngle - 90)) / 180);
+      const y1 = RADIUS + RADIUS * Math.sin((Math.PI * (startAngle - 90)) / 180);
+      const x2 = RADIUS + RADIUS * Math.cos((Math.PI * (endAngle - 90)) / 180);
+      const y2 = RADIUS + RADIUS * Math.sin((Math.PI * (endAngle - 90)) / 180);
+
+      const pathData = `M${RADIUS},${RADIUS} L${x1},${y1} A${RADIUS},${RADIUS} 0 0,1 ${x2},${y2} Z`;
+
+      const textAngle = startAngle + SEGMENT_ANGLE / 2;
+      const textRadius = RADIUS * 0.7;
+      const tx = RADIUS + textRadius * Math.cos((Math.PI * (textAngle - 90)) / 180);
+      const ty = RADIUS + textRadius * Math.sin((Math.PI * (textAngle - 90)) / 180);
+
+      return (
+        <G key={i}>
+          <Path d={pathData} fill={seg.color} stroke="#fff" strokeWidth="2" />
+          <G transform={`rotate(${textAngle}, ${tx}, ${ty})`}>
+             <SvgText
+                x={tx}
+                y={ty}
+                fill="#fff"
+                fontSize="10"
+                fontWeight="bold"
+                textAnchor="middle"
+                alignmentBaseline="middle"
+              >
+                {seg.label}
+              </SvgText>
+          </G>
+        </G>
+      );
+    });
+  }, []);
 
   if (!user) return null;
 
@@ -149,59 +148,22 @@ export default function WheelScreen() {
       <ScrollView
         contentContainerStyle={[styles.scrollContent, { paddingBottom: 120 }]}
         showsVerticalScrollIndicator={false}
-        contentInsetAdjustmentBehavior="automatic"
       >
         <View style={styles.wheelContainer}>
           <Animated.View
             style={[
-              styles.wheel,
+              styles.wheelWrapper,
               {
                 width: WHEEL_SIZE,
                 height: WHEEL_SIZE,
-                borderRadius: WHEEL_SIZE / 2,
                 transform: [{ rotate: rotate }],
               },
             ]}
           >
-            {SEGMENTS.map((seg, i) => {
-              const angle = i * SEGMENT_ANGLE;
-              const rad = ((angle + SEGMENT_ANGLE / 2) * Math.PI) / 180;
-              const textRadius = (WHEEL_SIZE / 2) * 0.62;
-              const tx = WHEEL_SIZE / 2 + textRadius * Math.sin(rad);
-              const ty = WHEEL_SIZE / 2 - textRadius * Math.cos(rad);
+            <Svg width={WHEEL_SIZE} height={WHEEL_SIZE} viewBox={`0 0 ${WHEEL_SIZE} ${WHEEL_SIZE}`}>
+              {renderSegments}
+            </Svg>
 
-              return (
-                <View key={i}>
-                  <View
-                    style={[
-                      styles.segmentSlice,
-                      {
-                        width: WHEEL_SIZE,
-                        height: WHEEL_SIZE / 2,
-                        transformOrigin: `${WHEEL_SIZE / 2}px ${WHEEL_SIZE / 2}px`,
-                        transform: [
-                          { translateY: 0 },
-                          { rotate: `${angle}deg` },
-                        ],
-                        backgroundColor: seg.color,
-                        borderTopLeftRadius: WHEEL_SIZE / 2,
-                        borderTopRightRadius: WHEEL_SIZE / 2,
-                      },
-                    ]}
-                  />
-                  <View
-                    style={[
-                      styles.segmentLabel,
-                      { left: tx - 35, top: ty - 10 },
-                    ]}
-                  >
-                    <Text style={styles.segmentText} numberOfLines={1}>
-                      {seg.label}
-                    </Text>
-                  </View>
-                </View>
-              );
-            })}
             <View style={styles.wheelCenter}>
               <Text style={styles.wheelCenterEmoji}>🍯</Text>
             </View>
@@ -354,42 +316,14 @@ const styles = StyleSheet.create({
     position: "relative",
     marginBottom: 8,
   },
-  wheel: {
-    overflow: "hidden",
-    position: "relative",
-    backgroundColor: "#f3f4f6",
+  wheelWrapper: {
+    borderRadius: RADIUS,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.15,
     shadowRadius: 20,
     elevation: 8,
-  },
-  segmentSlice: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    overflow: "hidden",
-    opacity: 0.92,
-  },
-  segmentLabel: {
-    position: "absolute",
-    width: 70,
-    alignItems: "center",
-  },
-  segmentText: {
-    fontSize: 9,
-    fontFamily: "Poppins_700Bold",
-    color: "#fff",
-    textAlign: "center",
-    textShadowColor: "rgba(0,0,0,0.3)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
-  },
-  segment: {
-    position: "absolute",
-    width: 0,
-    height: 0,
-    backgroundColor: "transparent",
+    backgroundColor: "#fff",
   },
   wheelCenter: {
     position: "absolute",
