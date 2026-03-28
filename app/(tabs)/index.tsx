@@ -10,7 +10,19 @@ import Colors from "@/constants/colors";
 import { useUser } from "@/contexts/UserContext";
 import { GlassCard } from "@/components/GlassCard";
 
-function StatCard({ label, value, icon, delay = 0 }: { label: string; value: string; icon: keyof typeof Ionicons.glyphMap; delay?: number }) {
+function StatCard({
+  label,
+  value,
+  icon,
+  delay = 0,
+  trend
+}: {
+  label: string;
+  value: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  delay?: number;
+  trend?: string;
+}) {
   return (
     <Animated.View entering={FadeInDown.delay(delay).springify()} style={{ flex: 1 }}>
       <GlassCard style={styles.statCard}>
@@ -18,7 +30,15 @@ function StatCard({ label, value, icon, delay = 0 }: { label: string; value: str
           <Ionicons name={icon} size={18} color={Colors.gold} />
         </View>
         <Text style={styles.statValue}>{value}</Text>
-        <Text style={styles.statLabel}>{label}</Text>
+        <View style={styles.labelRow}>
+          <Text style={styles.statLabel}>{label}</Text>
+          {trend && (
+            <View style={styles.trendBadge}>
+              <Ionicons name="trending-up" size={10} color={Colors.primary} />
+              <Text style={styles.trendText}>{trend}</Text>
+            </View>
+          )}
+        </View>
       </GlassCard>
     </Animated.View>
   );
@@ -161,7 +181,13 @@ export default function PanelScreen() {
           <View style={styles.statGrid}>
             <View style={styles.statRow}>
                <StatCard label="Toplam Çek" value={String(checksCount)} icon="document-attach" delay={100} />
-               <StatCard label="Toplam Tutar" value={formatTotalAmount(totalAmount)} icon="wallet" delay={150} />
+               <StatCard
+                 label="Toplam Tutar"
+                 value={formatTotalAmount(totalAmount)}
+                 icon="wallet"
+                 delay={150}
+                 trend="+2.4%"
+               />
             </View>
             <View style={styles.statRow}>
                <StatCard label="Toplanıyor" value={String(activeReqs)} icon="time" delay={200} />
@@ -280,7 +306,10 @@ const styles = StyleSheet.create({
   statCard: { alignItems: "center", paddingVertical: 14, paddingHorizontal: 8, minHeight: 100, justifyContent: 'center' },
   statIconContainer: { width: 32, height: 32, borderRadius: 10, backgroundColor: Colors.goldLight, alignItems: "center", justifyContent: "center", marginBottom: 8 },
   statValue: { fontSize: 18, fontFamily: "Poppins_800ExtraBold", color: Colors.slate },
+  labelRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
   statLabel: { fontSize: 10, fontFamily: "Poppins_600SemiBold", color: Colors.textMuted },
+  trendBadge: { flexDirection: 'row', alignItems: 'center', gap: 2, backgroundColor: 'rgba(34,197,94,0.1)', paddingHorizontal: 4, paddingVertical: 1, borderRadius: 4 },
+  trendText: { fontSize: 8, fontFamily: "Poppins_700Bold", color: Colors.primary },
 
   activityCard: { padding: 0, overflow: 'hidden' },
   activityItem: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 16, borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.05)' },
