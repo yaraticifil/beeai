@@ -51,6 +51,7 @@ export default function OffersScreen() {
     req?: OfferRequest;
   } | null>(null);
   const [now, setNow] = useState(Date.now());
+  const [viewMode, setViewMode] = useState<"active" | "history">("active");
 
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
@@ -120,6 +121,21 @@ export default function OffersScreen() {
             15 Dakika Hedefi: En az 3 teklif. Tüm süreç otonom kontrolünde.
           </Text>
         </Animated.View>
+
+        <View style={styles.viewToggle}>
+          <Pressable
+            onPress={() => setViewMode("active")}
+            style={[styles.toggleBtn, viewMode === "active" && styles.toggleBtnActive]}
+          >
+            <Text style={[styles.toggleText, viewMode === "active" && styles.toggleTextActive]}>Aktif</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => setViewMode("history")}
+            style={[styles.toggleBtn, viewMode === "history" && styles.toggleBtnActive]}
+          >
+            <Text style={[styles.toggleText, viewMode === "history" && styles.toggleTextActive]}>Geçmiş</Text>
+          </Pressable>
+        </View>
       </LinearGradient>
 
       <ScrollView
@@ -130,18 +146,19 @@ export default function OffersScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        {checks.length === 0 ? (
-          <Animated.View entering={FadeInDown.delay(100).springify()}>
-            <GlassCard style={styles.emptyCard}>
-              <Text style={styles.emptyEmoji}>🧺</Text>
-              <Text style={styles.emptyTitle}>Henüz kovanınız boş</Text>
-              <Text style={styles.emptyText}>
-                Önce “Çek Yükle” ekranından kovana ilk çekinizi bırakmalısınız.
-              </Text>
-            </GlassCard>
-          </Animated.View>
-        ) : (
-          checks.map((c, idx) => {
+        {viewMode === "active" ? (
+          checks.length === 0 ? (
+            <Animated.View entering={FadeInDown.delay(100).springify()}>
+              <GlassCard style={styles.emptyCard}>
+                <Text style={styles.emptyEmoji}>🧺</Text>
+                <Text style={styles.emptyTitle}>Henüz kovanınız boş</Text>
+                <Text style={styles.emptyText}>
+                  Önce “Çek Yükle” ekranından kovana ilk çekinizi bırakmalısınız.
+                </Text>
+              </GlassCard>
+            </Animated.View>
+          ) : (
+            checks.map((c, idx) => {
             const r = getReq(c.id);
             const status = r?.status || "yok";
             const offersCount = r?.offers?.length || 0;
@@ -155,97 +172,143 @@ export default function OffersScreen() {
                     ? "SÜRE DOLDU"
                     : "BAŞLAT";
 
-            return (
-              <Animated.View
-                key={c.id}
-                entering={FadeInDown.delay(100 + idx * 100).springify()}
-                layout={Layout.springify()}
-              >
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.card,
-                    pressed && { opacity: 0.88 },
-                  ]}
-                  onPress={() => open(c)}
+              return (
+                <Animated.View
+                  key={c.id}
+                  entering={FadeInDown.delay(100 + idx * 100).springify()}
+                  layout={Layout.springify()}
                 >
-                  <View style={styles.cardRow}>
-                    <View style={styles.docIcon}>
-                      <Ionicons
-                        name="document-text"
-                        size={20}
-                        color={Colors.gold}
-                      />
-                    </View>
-
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.cardTitle} numberOfLines={1}>
-                        {c.issuerName}
-                      </Text>
-                      <Text style={styles.cardSub}>
-                        {c.checkNo} • Vade {c.dueDate}
-                      </Text>
-                      <Text style={styles.cardAmount}>₺{money(c.amount)}</Text>
-
-                      {c.dna.seenBefore && (
-                        <View style={styles.warnRow}>
-                          <Ionicons
-                            name="warning"
-                            size={14}
-                            color={Colors.gold}
-                          />
-                          <Text style={styles.warnText}>
-                            Çek DNA: Sistemde kayıtlı
-                          </Text>
-                        </View>
-                      )}
-                    </View>
-
-                    <View
-                      style={[
-                        styles.badge,
-                        status === "ready"
-                          ? styles.badgeReady
-                          : status === "collecting"
-                            ? styles.badgeCollect
-                            : styles.badgeIdle,
-                      ]}
-                    >
-                      <Text style={styles.badgeText}>{badge}</Text>
-                      <View style={styles.badgeCountRow}>
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.card,
+                      pressed && { opacity: 0.88 },
+                    ]}
+                    onPress={() => open(c)}
+                  >
+                    <View style={styles.cardRow}>
+                      <View style={styles.docIcon}>
                         <Ionicons
-                          name="flash"
-                          size={10}
-                          color={
-                            status === "ready"
-                              ? Colors.primary
-                              : Colors.textMuted
-                          }
+                          name="document-text"
+                          size={20}
+                          color={Colors.gold}
                         />
-                        <Text style={styles.badgeSub}>{offersCount}/3</Text>
+                      </View>
+
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.cardTitle} numberOfLines={1}>
+                          {c.issuerName}
+                        </Text>
+                        <Text style={styles.cardSub}>
+                          {c.checkNo} • Vade {c.dueDate}
+                        </Text>
+                        <Text style={styles.cardAmount}>₺{money(c.amount)}</Text>
+
+                        {c.dna.seenBefore && (
+                          <View style={styles.warnRow}>
+                            <Ionicons
+                              name="warning"
+                              size={14}
+                              color={Colors.gold}
+                            />
+                            <Text style={styles.warnText}>
+                              Çek DNA: Sistemde kayıtlı
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+
+                      <View
+                        style={[
+                          styles.badge,
+                          status === "ready"
+                            ? styles.badgeReady
+                            : status === "collecting"
+                              ? styles.badgeCollect
+                              : styles.badgeIdle,
+                        ]}
+                      >
+                        <Text style={styles.badgeText}>{badge}</Text>
+                        <View style={styles.badgeCountRow}>
+                          <Ionicons
+                            name="flash"
+                            size={10}
+                            color={
+                              status === "ready"
+                                ? Colors.primary
+                                : Colors.textMuted
+                            }
+                          />
+                          <Text style={styles.badgeSub}>{offersCount}/3</Text>
+                        </View>
                       </View>
                     </View>
-                  </View>
 
-                  {!r && (
-                    <Pressable
-                      style={({ pressed }) => [
-                        styles.startBtn,
-                        pressed && { opacity: 0.9 },
-                      ]}
-                      onPress={() => start(c)}
-                    >
-                      <Text style={styles.startText}>15dk Akışı Başlat</Text>
-                      <Ionicons
-                        name="arrow-forward"
-                        size={16}
-                        color={Colors.slate}
-                      />
-                    </Pressable>
-                  )}
-                </Pressable>
+                    {!r && (
+                      <Pressable
+                        style={({ pressed }) => [
+                          styles.startBtn,
+                          pressed && { opacity: 0.9 },
+                        ]}
+                        onPress={() => start(c)}
+                      >
+                        <Text style={styles.startText}>15dk Akışı Başlat</Text>
+                        <Ionicons
+                          name="arrow-forward"
+                          size={16}
+                          color={Colors.slate}
+                        />
+                      </Pressable>
+                    )}
+                  </Pressable>
+                </Animated.View>
+              );
+            })
+          )
+        ) : (
+          (user?.completedTransactions || []).length === 0 ? (
+            <Animated.View entering={FadeInDown.delay(100).springify()}>
+              <GlassCard style={styles.emptyCard}>
+                <Text style={styles.emptyEmoji}>📜</Text>
+                <Text style={styles.emptyTitle}>Henüz geçmiş yok</Text>
+                <Text style={styles.emptyText}>
+                  Tamamladığınız işlemler burada listelenir.
+                </Text>
+              </GlassCard>
+            </Animated.View>
+          ) : (
+            (user?.completedTransactions || []).map((t, idx) => (
+              <Animated.View
+                key={t.id}
+                entering={FadeInDown.delay(100 + idx * 100).springify()}
+              >
+                <GlassCard style={styles.historyCard}>
+                  <View style={styles.historyTop}>
+                    <View style={styles.historyCheckInfo}>
+                      <Text style={styles.historyIssuer}>{t.check.issuerName}</Text>
+                      <Text style={styles.historySub}>{t.check.checkNo} • ₺{money(t.check.amount)}</Text>
+                    </View>
+                    <View style={styles.historyBadge}>
+                      <Ionicons name="checkmark-circle" size={12} color={Colors.primary} />
+                      <Text style={styles.historyBadgeText}>TAMAMLANDI</Text>
+                    </View>
+                  </View>
+                  <View style={styles.historyDetails}>
+                    <View style={styles.historyPartner}>
+                      <Text style={styles.historyPartnerLabel}>Partner:</Text>
+                      <Text style={styles.historyPartnerValue}>{t.offer.partnerCode}</Text>
+                    </View>
+                    <View style={styles.historyPartner}>
+                      <Text style={styles.historyPartnerLabel}>Net Ödeme:</Text>
+                      <Text style={styles.historyNetValue}>₺{money(t.offer.netPay)}</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.historyDate}>
+                    {new Date(t.completedAt).toLocaleDateString("tr-TR")} {new Date(t.completedAt).toLocaleTimeString("tr-TR", { hour: '2-digit', minute: '2-digit' })}
+                  </Text>
+                </GlassCard>
               </Animated.View>
-            );
-          })
+            ))
+          )
         )}
       </ScrollView>
 
@@ -480,7 +543,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   header: {
     paddingHorizontal: 20,
-    paddingBottom: 30,
+    paddingBottom: 24,
     borderBottomLeftRadius: 36,
     borderBottomRightRadius: 36,
   },
@@ -491,9 +554,35 @@ const styles = StyleSheet.create({
     fontFamily: "Poppins_400Regular",
     color: "rgba(255,255,255,0.7)",
     lineHeight: 20,
+    marginBottom: 20,
   },
 
-  scroll: { flex: 1, paddingHorizontal: 20, marginTop: -20 },
+  viewToggle: {
+    flexDirection: "row",
+    backgroundColor: "rgba(0,0,0,0.2)",
+    borderRadius: 14,
+    padding: 4,
+    gap: 4,
+  },
+  toggleBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: "center",
+    borderRadius: 10,
+  },
+  toggleBtnActive: {
+    backgroundColor: Colors.gold,
+  },
+  toggleText: {
+    fontSize: 12,
+    fontFamily: "Poppins_700Bold",
+    color: "rgba(255,255,255,0.6)",
+  },
+  toggleTextActive: {
+    color: Colors.slate,
+  },
+
+  scroll: { flex: 1, paddingHorizontal: 20, marginTop: -14 },
   card: {
     backgroundColor: Colors.white,
     borderRadius: 24,
@@ -622,6 +711,78 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     textAlign: "center",
     lineHeight: 20,
+  },
+
+  historyCard: {
+    padding: 16,
+    marginBottom: 12,
+  },
+  historyTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 12,
+  },
+  historyCheckInfo: {
+    flex: 1,
+  },
+  historyIssuer: {
+    fontSize: 14,
+    fontFamily: "Poppins_700Bold",
+    color: Colors.slate,
+  },
+  historySub: {
+    fontSize: 11,
+    fontFamily: "Poppins_400Regular",
+    color: Colors.textMuted,
+    marginTop: 2,
+  },
+  historyBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(34,197,94,0.1)",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  historyBadgeText: {
+    fontSize: 8,
+    fontFamily: "Poppins_800ExtraBold",
+    color: Colors.primary,
+  },
+  historyDetails: {
+    backgroundColor: "rgba(0,0,0,0.03)",
+    borderRadius: 12,
+    padding: 12,
+    gap: 6,
+    marginBottom: 10,
+  },
+  historyPartner: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  historyPartnerLabel: {
+    fontSize: 11,
+    fontFamily: "Poppins_400Regular",
+    color: Colors.textMuted,
+  },
+  historyPartnerValue: {
+    fontSize: 11,
+    fontFamily: "Poppins_700Bold",
+    color: Colors.slate,
+  },
+  historyNetValue: {
+    fontSize: 13,
+    fontFamily: "Poppins_800ExtraBold",
+    color: Colors.primary,
+  },
+  historyDate: {
+    fontSize: 9,
+    fontFamily: "Poppins_400Regular",
+    color: Colors.textMuted,
+    textAlign: "right",
   },
 
   modalOverlay: {
