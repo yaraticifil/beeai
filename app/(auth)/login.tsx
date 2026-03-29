@@ -16,6 +16,7 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import { useUser } from "@/contexts/UserContext";
@@ -98,6 +99,12 @@ export default function LoginScreen() {
           </Pressable>
 
           <View style={styles.header}>
+            <Image
+              source={require("@/assets/images/greeting.png")}
+              style={styles.heroImage}
+              contentFit="cover"
+              transition={500}
+            />
             <View style={styles.logoBadge}>
                <Text style={styles.bee}>🐝</Text>
             </View>
@@ -227,6 +234,14 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   header: { alignItems: "flex-start", marginBottom: 32 },
+  heroImage: {
+    width: "100%",
+    height: 180,
+    borderRadius: 24,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+  },
   logoBadge: { width: 64, height: 64, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', justifyContent: 'center', marginBottom: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
   bee: { fontSize: 32 },
   title: { fontSize: 32, fontFamily: "Poppins_800ExtraBold", color: Colors.white, marginBottom: 6 },

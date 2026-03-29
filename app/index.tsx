@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, Pressable, Dimensions, Platform } from "react-native";
+import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import Animated, { FadeIn, FadeOut, SlideInRight, SlideOutLeft } from "react-native-reanimated";
+import Animated, { SlideInRight, SlideOutLeft } from "react-native-reanimated";
 import Colors from "@/constants/colors";
 import { useUser } from "@/contexts/UserContext";
-import { GlassCard } from "@/components/GlassCard";
 
-const { width, height } = Dimensions.get("window");
+const { width } = Dimensions.get("window");
 
 const STEPS = [
   {
@@ -16,6 +16,7 @@ const STEPS = [
     title: "Dijital Merkezin Senin Emrinde.",
     text: "BeeAI’de her kullanıcıya premium bir kovan tahsis edilir. Finans dünyasındaki otonom üssüne hoş geldin.",
     emoji: "🏛️",
+    image: require("@/assets/images/intro-hero.jpg"),
   },
   {
     badge: "ARI AJANLAR",
@@ -82,7 +83,16 @@ export default function Entry() {
             exiting={SlideOutLeft.springify()}
             style={styles.animatedStep}
           >
-             <Text style={styles.mainEmoji}>{current.emoji}</Text>
+             {current.image ? (
+               <Image
+                 source={current.image}
+                 style={styles.heroImage}
+                 contentFit="cover"
+                 transition={500}
+               />
+             ) : (
+               <Text style={styles.mainEmoji}>{current.emoji}</Text>
+             )}
              
              <View style={styles.badgeContainer}>
                 <Text style={styles.badgeText}>{current.badge}</Text>
@@ -134,6 +144,14 @@ const styles = StyleSheet.create({
   stepContainer: { flex: 1, justifyContent: 'center' },
   animatedStep: { alignItems: 'flex-start' },
   mainEmoji: { fontSize: 64, marginBottom: 20 },
+  heroImage: {
+    width: width - 48,
+    height: (width - 48) * 1.2,
+    borderRadius: 32,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
   badgeContainer: { backgroundColor: 'rgba(251, 191, 36, 0.1)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(251, 191, 36, 0.2)' },
   badgeText: { color: Colors.gold, fontSize: 11, fontFamily: 'Poppins_700Bold', letterSpacing: 1 },
   titleText: { fontSize: 28, fontFamily: 'Poppins_800ExtraBold', color: Colors.white, marginBottom: 12, lineHeight: 36 },
