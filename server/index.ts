@@ -238,7 +238,7 @@ const init = async () => {
   return app;
 };
 
-const appPromise = init();
+export const appPromise = init();
 
 if (process.env.NODE_ENV !== "production" || !process.env.VERCEL) {
   appPromise.then(async (appInstance) => {
