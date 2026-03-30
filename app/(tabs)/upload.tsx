@@ -10,6 +10,7 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 import Colors from "@/constants/colors";
 import { useUser } from "@/contexts/UserContext";
 import { GlassCard } from "@/components/GlassCard";
+import { formatCurrency, formatDate, parseCurrency } from "@/shared/utils/format";
 
 export default function UploadScreen() {
   const insets = useSafeAreaInsets();
@@ -21,35 +22,8 @@ export default function UploadScreen() {
   const [amount, setAmount] = useState("");
   const [dueDate, setDueDate] = useState(""); // DD.MM.YYYY
 
-  const formatCurrency = (val: string) => {
-    // Remove all non-digits except comma
-    let clean = val.replace(/[^\d,]/g, "");
-    if (!clean) return "";
-
-    const parts = clean.split(",");
-    const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-    const decimalPart = parts[1] !== undefined ? "," + parts[1].slice(0, 2) : "";
-
-    return integerPart + decimalPart;
-  };
-
   const handleAmountChange = (val: string) => {
     setAmount(formatCurrency(val));
-  };
-
-  const formatDate = (val: string) => {
-    const clean = val.replace(/\D/g, "").slice(0, 8);
-    let output = "";
-    if (clean.length > 0) {
-      output += clean.slice(0, 2);
-      if (clean.length > 2) {
-        output += "." + clean.slice(2, 4);
-        if (clean.length > 4) {
-          output += "." + clean.slice(4, 8);
-        }
-      }
-    }
-    return output;
   };
 
   const handleDateChange = (val: string) => {
@@ -60,7 +34,7 @@ export default function UploadScreen() {
   const [loading, setLoading] = useState(false);
 
   const canSubmit = useMemo(() => {
-    const a = Number(amount.replace(/\./g, "").replace(",", "."));
+    const a = parseCurrency(amount);
     return checkNo.trim() && issuerName.trim() && dueDate.length === 10 && Number.isFinite(a) && a > 0;
   }, [checkNo, issuerName, amount, dueDate]);
 
@@ -84,7 +58,7 @@ export default function UploadScreen() {
     }
     setLoading(true);
 
-    const a = Number(amount.replace(/\./g, "").replace(",", "."));
+    const a = parseCurrency(amount);
 
     // Convert DD.MM.YYYY to YYYY-MM-DD
     let isoDate = dueDate;
