@@ -225,26 +225,37 @@ function setupErrorHandler(app: express.Application) {
   });
 }
 
-(async () => {
+const init = async () => {
   setupCors(app);
   setupBodyParsing(app);
   setupRequestLogging(app);
 
   configureExpoAndLanding(app);
 
-  const server = await registerRoutes(app);
+  await registerRoutes(app);
 
   setupErrorHandler(app);
+  return app;
+};
 
-  const port = parseInt(process.env.PORT || "5000", 10);
-  server.listen(
-    {
-      port,
-      host: "0.0.0.0",
-      reusePort: true,
-    },
-    () => {
-      log(`express server serving on port ${port}`);
-    },
-  );
-})();
+const appPromise = init();
+
+if (process.env.NODE_ENV !== "production" || !process.env.VERCEL) {
+  appPromise.then(async (appInstance) => {
+    const http = await import("http");
+    const server = http.createServer(appInstance);
+    const port = parseInt(process.env.PORT || "5000", 10);
+    server.listen(
+      {
+        port,
+        host: "0.0.0.0",
+        reusePort: true,
+      },
+      () => {
+        log(`express server serving on port ${port}`);
+      },
+    );
+  });
+}
+
+export default app;
