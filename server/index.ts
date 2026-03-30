@@ -116,7 +116,10 @@ function serveExpoManifest(platform: string, res: Response) {
     "manifest.json",
   );
 
-  if (!fs.existsSync(manifestPath)) {
+  // For Vercel, also check the dist folder
+  const vManifestPath = path.resolve(process.cwd(), "dist", "manifest.json");
+
+  if (!fs.existsSync(manifestPath) && !fs.existsSync(vManifestPath)) {
     return res
       .status(404)
       .json({ error: `Manifest not found for platform: ${platform}` });
@@ -126,7 +129,8 @@ function serveExpoManifest(platform: string, res: Response) {
   res.setHeader("expo-sfv-version", "0");
   res.setHeader("content-type", "application/json");
 
-  const manifest = fs.readFileSync(manifestPath, "utf-8");
+  const finalPath = fs.existsSync(manifestPath) ? manifestPath : vManifestPath;
+  const manifest = fs.readFileSync(finalPath, "utf-8");
   res.send(manifest);
 }
 
@@ -167,7 +171,12 @@ function configureExpoAndLanding(app: express.Application) {
     "templates",
     "landing-page.html",
   );
-  const landingPageTemplate = fs.readFileSync(templatePath, "utf-8");
+
+  // Use a fallback for the template if not found at the exact path
+  let landingPageTemplate = "";
+  if (fs.existsSync(templatePath)) {
+    landingPageTemplate = fs.readFileSync(templatePath, "utf-8");
+  }
   const appName = getAppName();
 
   log("Serving static Expo files with dynamic manifest routing");
@@ -200,6 +209,7 @@ function configureExpoAndLanding(app: express.Application) {
 
   app.use("/assets", express.static(path.resolve(process.cwd(), "assets")));
   app.use(express.static(path.resolve(process.cwd(), "static-build")));
+  app.use(express.static(path.resolve(process.cwd(), "dist")));
 
   log("Expo routing: Checking expo-platform header on / and /manifest");
 }
