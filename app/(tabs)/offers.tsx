@@ -43,6 +43,7 @@ export default function OffersScreen() {
     check: CheckItem;
     req?: OfferRequest;
   } | null>(null);
+  const [view, setView] = useState<"active" | "history">("active");
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
@@ -115,6 +116,23 @@ export default function OffersScreen() {
         </Animated.View>
       </LinearGradient>
 
+      <View style={styles.toggleContainer}>
+        <GlassCard style={styles.toggleBg} intensity={10} overlayStyle={styles.toggleOverlay}>
+          <Pressable
+            style={[styles.toggleBtn, view === "active" && styles.toggleBtnActive]}
+            onPress={() => setView("active")}
+          >
+            <Text style={[styles.toggleText, view === "active" && styles.toggleTextActive]}>Aktif</Text>
+          </Pressable>
+          <Pressable
+            style={[styles.toggleBtn, view === "history" && styles.toggleBtnActive]}
+            onPress={() => setView("history")}
+          >
+            <Text style={[styles.toggleText, view === "history" && styles.toggleTextActive]}>Geçmiş</Text>
+          </Pressable>
+        </GlassCard>
+      </View>
+
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={{
@@ -123,122 +141,169 @@ export default function OffersScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        {checks.length === 0 ? (
-          <Animated.View entering={FadeInDown.delay(100).springify()}>
-            <GlassCard style={styles.emptyCard}>
-              <Text style={styles.emptyEmoji}>🧺</Text>
-              <Text style={styles.emptyTitle}>Henüz kovanınız boş</Text>
-              <Text style={styles.emptyText}>
-                Önce “Çek Yükle” ekranından kovana ilk çekinizi bırakmalısınız.
-              </Text>
-            </GlassCard>
-          </Animated.View>
-        ) : (
-          checks.map((c, idx) => {
-            const r = getReq(c.id);
-            const status = r?.status || "yok";
-            const offersCount = r?.offers?.length || 0;
+        {view === "active" ? (
+          checks.length === 0 ? (
+            <Animated.View entering={FadeInDown.delay(100).springify()}>
+              <GlassCard style={styles.emptyCard}>
+                <Text style={styles.emptyEmoji}>🧺</Text>
+                <Text style={styles.emptyTitle}>Henüz kovanınız boş</Text>
+                <Text style={styles.emptyText}>
+                  Önce “Çek Yükle” ekranından kovana ilk çekinizi bırakmalısınız.
+                </Text>
+              </GlassCard>
+            </Animated.View>
+          ) : (
+            checks.map((c, idx) => {
+              const r = getReq(c.id);
+              const status = r?.status || "yok";
+              const offersCount = r?.offers?.length || 0;
 
-            const badge =
-              status === "collecting"
-                ? "TOPLANIYOR"
-                : status === "ready"
-                  ? "HAZIR"
-                  : status === "expired"
-                    ? "SÜRE DOLDU"
-                    : "BAŞLAT";
+              const badge =
+                status === "collecting"
+                  ? "TOPLANIYOR"
+                  : status === "ready"
+                    ? "HAZIR"
+                    : status === "expired"
+                      ? "SÜRE DOLDU"
+                      : "BAŞLAT";
 
-            return (
-              <Animated.View
-                key={c.id}
-                entering={FadeInDown.delay(100 + idx * 100).springify()}
-                layout={Layout.springify()}
-              >
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.card,
-                    pressed && { opacity: 0.88 },
-                  ]}
-                  onPress={() => open(c)}
+              return (
+                <Animated.View
+                  key={c.id}
+                  entering={FadeInDown.delay(100 + idx * 100).springify()}
+                  layout={Layout.springify()}
                 >
-                  <View style={styles.cardRow}>
-                    <View style={styles.docIcon}>
-                      <Ionicons
-                        name="document-text"
-                        size={20}
-                        color={Colors.gold}
-                      />
-                    </View>
-
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.cardTitle} numberOfLines={1}>
-                        {c.issuerName}
-                      </Text>
-                      <Text style={styles.cardSub}>
-                        {c.checkNo} • Vade {c.dueDate}
-                      </Text>
-                      <Text style={styles.cardAmount}>₺{money(c.amount)}</Text>
-
-                      {c.dna.seenBefore && (
-                        <View style={styles.warnRow}>
-                          <Ionicons
-                            name="warning"
-                            size={14}
-                            color={Colors.gold}
-                          />
-                          <Text style={styles.warnText}>
-                            Çek DNA: Sistemde kayıtlı
-                          </Text>
-                        </View>
-                      )}
-                    </View>
-
-                    <View
-                      style={[
-                        styles.badge,
-                        status === "ready"
-                          ? styles.badgeReady
-                          : status === "collecting"
-                            ? styles.badgeCollect
-                            : styles.badgeIdle,
-                      ]}
-                    >
-                      <Text style={styles.badgeText}>{badge}</Text>
-                      <View style={styles.badgeCountRow}>
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.card,
+                      pressed && { opacity: 0.88 },
+                    ]}
+                    onPress={() => open(c)}
+                  >
+                    <View style={styles.cardRow}>
+                      <View style={styles.docIcon}>
                         <Ionicons
-                          name="flash"
-                          size={10}
-                          color={
-                            status === "ready"
-                              ? Colors.primary
-                              : Colors.textMuted
-                          }
+                          name="document-text"
+                          size={20}
+                          color={Colors.gold}
                         />
-                        <Text style={styles.badgeSub}>{offersCount}/3</Text>
+                      </View>
+
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.cardTitle} numberOfLines={1}>
+                          {c.issuerName}
+                        </Text>
+                        <Text style={styles.cardSub}>
+                          {c.checkNo} • Vade {c.dueDate}
+                        </Text>
+                        <Text style={styles.cardAmount}>₺{money(c.amount)}</Text>
+
+                        {c.dna.seenBefore && (
+                          <View style={styles.warnRow}>
+                            <Ionicons
+                              name="warning"
+                              size={14}
+                              color={Colors.gold}
+                            />
+                            <Text style={styles.warnText}>
+                              Çek DNA: Sistemde kayıtlı
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+
+                      <View
+                        style={[
+                          styles.badge,
+                          status === "ready"
+                            ? styles.badgeReady
+                            : status === "collecting"
+                              ? styles.badgeCollect
+                              : styles.badgeIdle,
+                        ]}
+                      >
+                        <Text style={styles.badgeText}>{badge}</Text>
+                        <View style={styles.badgeCountRow}>
+                          <Ionicons
+                            name="flash"
+                            size={10}
+                            color={
+                              status === "ready"
+                                ? Colors.primary
+                                : Colors.textMuted
+                            }
+                          />
+                          <Text style={styles.badgeSub}>{offersCount}/3</Text>
+                        </View>
                       </View>
                     </View>
-                  </View>
 
-                  {!r && (
-                    <Pressable
-                      style={({ pressed }) => [
-                        styles.startBtn,
-                        pressed && { opacity: 0.9 },
-                      ]}
-                      onPress={() => start(c)}
-                    >
-                      <Text style={styles.startText}>15dk Akışı Başlat</Text>
-                      <Ionicons
-                        name="arrow-forward"
-                        size={16}
-                        color={Colors.slate}
-                      />
-                    </Pressable>
-                  )}
-                </Pressable>
+                    {!r && (
+                      <Pressable
+                        style={({ pressed }) => [
+                          styles.startBtn,
+                          pressed && { opacity: 0.9 },
+                        ]}
+                        onPress={() => start(c)}
+                      >
+                        <Text style={styles.startText}>15dk Akışı Başlat</Text>
+                        <Ionicons
+                          name="arrow-forward"
+                          size={16}
+                          color={Colors.slate}
+                        />
+                      </Pressable>
+                    )}
+                  </Pressable>
+                </Animated.View>
+              );
+            })
+          )
+        ) : (
+          (user?.completedTransactions || []).length === 0 ? (
+            <Animated.View entering={FadeInDown.delay(100).springify()}>
+              <GlassCard style={styles.emptyCard}>
+                <Text style={styles.emptyEmoji}>📜</Text>
+                <Text style={styles.emptyTitle}>Henüz geçmiş işlem yok</Text>
+                <Text style={styles.emptyText}>
+                  Tamamladığınız işlemler burada listelenir.
+                </Text>
+              </GlassCard>
+            </Animated.View>
+          ) : (
+            (user?.completedTransactions || []).map((trx, idx) => (
+              <Animated.View
+                key={trx.id}
+                entering={FadeInDown.delay(100 + idx * 100).springify()}
+              >
+                <GlassCard style={styles.historyCard}>
+                  <View style={styles.historyHeader}>
+                    <View style={styles.partnerInfo}>
+                      <View style={[styles.partnerDot, { backgroundColor: Colors.primary }]} />
+                      <Text style={styles.historyPartner}>{trx.offer.partnerCode}</Text>
+                    </View>
+                    <Text style={styles.historyDate}>
+                      {new Date(trx.completedAt).toLocaleDateString("tr-TR")}
+                    </Text>
+                  </View>
+                  <View style={styles.historyContent}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.historyIssuer} numberOfLines={1}>{trx.check.issuerName}</Text>
+                      <Text style={styles.historySub}>{trx.check.checkNo} • ₺{money(trx.check.amount)}</Text>
+                    </View>
+                    <View style={{ alignItems: "flex-end" }}>
+                      <Text style={styles.historyNet}>₺{money(trx.offer.netPay)}</Text>
+                      <Text style={styles.historyRate}>%{trx.offer.discountRate} Oran</Text>
+                    </View>
+                  </View>
+                  <View style={styles.historyBadge}>
+                    <Ionicons name="checkmark-circle" size={12} color={Colors.primary} />
+                    <Text style={styles.historyBadgeText}>İŞLEM TAMAMLANDI</Text>
+                  </View>
+                </GlassCard>
               </Animated.View>
-            );
-          })
+            ))
+          )
         )}
       </ScrollView>
 
@@ -486,7 +551,38 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
 
-  scroll: { flex: 1, paddingHorizontal: 20, marginTop: -20 },
+  toggleContainer: {
+    paddingHorizontal: 20,
+    marginTop: -25,
+    marginBottom: 10,
+  },
+  toggleBg: {
+    borderRadius: 16,
+    backgroundColor: "rgba(15, 23, 42, 0.4)",
+  },
+  toggleOverlay: {
+    flexDirection: "row",
+    padding: 4,
+  },
+  toggleBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: "center",
+    borderRadius: 12,
+  },
+  toggleBtnActive: {
+    backgroundColor: Colors.gold,
+  },
+  toggleText: {
+    fontSize: 13,
+    fontFamily: "Poppins_700Bold",
+    color: "rgba(255,255,255,0.6)",
+  },
+  toggleTextActive: {
+    color: Colors.slate,
+  },
+
+  scroll: { flex: 1, paddingHorizontal: 20, marginTop: 10 },
   card: {
     backgroundColor: Colors.white,
     borderRadius: 24,
@@ -812,5 +908,73 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.3)",
     textAlign: "center",
     lineHeight: 14,
+  },
+
+  historyCard: {
+    padding: 16,
+    marginBottom: 12,
+    borderRadius: 24,
+  },
+  historyHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(0,0,0,0.05)",
+  },
+  historyPartner: {
+    fontSize: 12,
+    fontFamily: "Poppins_700Bold",
+    color: Colors.slate,
+  },
+  historyDate: {
+    fontSize: 11,
+    fontFamily: "Poppins_400Regular",
+    color: Colors.textMuted,
+  },
+  historyContent: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  historyIssuer: {
+    fontSize: 14,
+    fontFamily: "Poppins_700Bold",
+    color: Colors.slate,
+  },
+  historySub: {
+    fontSize: 11,
+    fontFamily: "Poppins_400Regular",
+    color: Colors.textMuted,
+    marginTop: 2,
+  },
+  historyNet: {
+    fontSize: 15,
+    fontFamily: "Poppins_800ExtraBold",
+    color: Colors.primary,
+  },
+  historyRate: {
+    fontSize: 10,
+    fontFamily: "Poppins_600SemiBold",
+    color: Colors.textMuted,
+    marginTop: 2,
+  },
+  historyBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 12,
+    backgroundColor: "rgba(34,197,94,0.08)",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    alignSelf: "flex-start",
+  },
+  historyBadgeText: {
+    fontSize: 9,
+    fontFamily: "Poppins_800ExtraBold",
+    color: Colors.primary,
   },
 });

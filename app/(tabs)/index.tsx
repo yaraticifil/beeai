@@ -173,8 +173,13 @@ export default function PanelScreen() {
         <Animated.View entering={FadeInDown.delay(300).springify()} style={styles.section}>
           <GlassCard style={styles.tipCard}>
              <View style={styles.tipHeader}>
-                <Ionicons name="bulb" size={18} color={Colors.gold} />
-                <Text style={styles.tipTitle}>Günün Tavsiyesi</Text>
+                <View style={styles.tipAvatar}>
+                  <Text style={styles.tipEmoji}>📊</Text>
+                </View>
+                <View>
+                  <Text style={styles.tipAuthor}>Nabız Arı</Text>
+                  <Text style={styles.tipTitle}>Günün Tavsiyesi</Text>
+                </View>
              </View>
              <Text style={styles.tipText}>
                {pulse.mood === 'sert'
@@ -347,8 +352,11 @@ const styles = StyleSheet.create({
   actionSub: { fontSize: 11, fontFamily: "Poppins_400Regular", color: Colors.textMuted, marginTop: 2 },
 
   tipCard: { padding: 16, borderLeftWidth: 4, borderLeftColor: Colors.gold, backgroundColor: Colors.white },
-  tipHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
-  tipTitle: { fontSize: 14, fontFamily: 'Poppins_700Bold', color: Colors.slate },
+  tipHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
+  tipAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: Colors.slate, alignItems: 'center', justifyContent: 'center' },
+  tipEmoji: { fontSize: 16 },
+  tipAuthor: { fontSize: 10, fontFamily: 'Poppins_700Bold', color: Colors.gold, textTransform: 'uppercase', letterSpacing: 0.5 },
+  tipTitle: { fontSize: 14, fontFamily: 'Poppins_800ExtraBold', color: Colors.slate, marginTop: -2 },
   tipText: { fontSize: 12, fontFamily: 'Poppins_400Regular', color: Colors.textSecondary, lineHeight: 18 },
 
   beesScroll: { marginHorizontal: -20, paddingHorizontal: 20 },

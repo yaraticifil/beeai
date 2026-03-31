@@ -5,6 +5,7 @@ import { BlurView } from 'expo-blur';
 interface GlassCardProps {
   children: React.ReactNode;
   style?: ViewStyle;
+  overlayStyle?: ViewStyle;
   intensity?: number;
   tint?: 'light' | 'dark' | 'default';
   borderOpacity?: number;
@@ -13,6 +14,7 @@ interface GlassCardProps {
 export const GlassCard: React.FC<GlassCardProps> = ({
   children,
   style,
+  overlayStyle,
   intensity = 40,
   tint = 'default',
   borderOpacity = 0.4,
@@ -24,7 +26,7 @@ export const GlassCard: React.FC<GlassCardProps> = ({
         tint={tint}
         style={StyleSheet.absoluteFill}
       />
-      <View style={[styles.overlay, { borderColor: `rgba(255, 255, 255, ${borderOpacity})` }]}>
+      <View style={[styles.overlay, { borderColor: `rgba(255, 255, 255, ${borderOpacity})` }, overlayStyle]}>
         {children}
       </View>
     </View>
