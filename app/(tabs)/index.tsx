@@ -9,6 +9,7 @@ import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 import Colors from "@/constants/colors";
 import { useUser } from "@/contexts/UserContext";
 import { GlassCard } from "@/components/GlassCard";
+import { TrendChart } from "@/components/TrendChart";
 
 function StatCard({ label, value, icon, delay = 0 }: { label: string; value: string; icon: keyof typeof Ionicons.glyphMap; delay?: number }) {
   return (
@@ -96,12 +97,18 @@ export default function PanelScreen() {
   const topInset = Platform.OS === "web" ? 60 : insets.top;
 
   const handleLogout = () => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
     Alert.alert("Çıkış Yap", "Kovan hesabınızdan çıkmak istiyor musunuz?", [
       { text: "Vazgeç", style: "cancel" },
       {
         text: "Çıkış Yap",
         style: "destructive",
         onPress: async () => {
+          if (Platform.OS !== "web") {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          }
           await logout();
           router.replace("/");
         },
@@ -146,7 +153,14 @@ export default function PanelScreen() {
               </View>
               <Text style={styles.pointsText}>{user.honeyPoints} 🍯</Text>
             </View>
-            <Text style={styles.pulseNote} numberOfLines={2}>{pulse.note}</Text>
+            <View style={styles.pulseContent}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.pulseNote} numberOfLines={2}>{pulse.note}</Text>
+              </View>
+              <View style={styles.miniChart}>
+                <TrendChart min={pulse.band90.min} max={pulse.band90.max} height={40} />
+              </View>
+            </View>
           </GlassCard>
         </View>
       </LinearGradient>
@@ -156,6 +170,22 @@ export default function PanelScreen() {
         contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
         showsVerticalScrollIndicator={false}
       >
+        <Animated.View entering={FadeInDown.delay(300).springify()} style={styles.section}>
+          <GlassCard style={styles.tipCard}>
+             <View style={styles.tipHeader}>
+                <Ionicons name="bulb" size={18} color={Colors.gold} />
+                <Text style={styles.tipTitle}>Günün Tavsiyesi</Text>
+             </View>
+             <Text style={styles.tipText}>
+               {pulse.mood === 'sert'
+                 ? 'Piyasa sert, yüksek puanlı keşidecilere odaklanarak işlem hızınızı koruyun.'
+                 : pulse.mood === 'yumuşak'
+                 ? 'Rekabetçi bir gün, arılarınızla revize turlarını mutlaka deneyin!'
+                 : 'Dengeli bir gün. Çeklerinizi erkenden kovana bırakın, en iyi teklifi yakalayın.'}
+             </Text>
+          </GlassCard>
+        </Animated.View>
+
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Canlı Durum</Text>
           <View style={styles.statGrid}>
@@ -269,7 +299,9 @@ const styles = StyleSheet.create({
   pulseDot: { width: 6, height: 6, borderRadius: 3 },
   pulseStatus: { color: Colors.white, fontSize: 10, fontFamily: "Poppins_700Bold", letterSpacing: 0.5 },
   pointsText: { color: Colors.gold, fontSize: 16, fontFamily: "Poppins_800ExtraBold" },
+  pulseContent: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   pulseNote: { color: "rgba(255,255,255,0.85)", fontSize: 12, lineHeight: 18, fontFamily: "Poppins_400Regular" },
+  miniChart: { width: 80, height: 40, opacity: 0.8 },
 
   scroll: { flex: 1, paddingHorizontal: 20, marginTop: 14 },
   section: { marginBottom: 24 },
@@ -313,6 +345,11 @@ const styles = StyleSheet.create({
   },
   actionTitle: { fontSize: 15, fontFamily: "Poppins_700Bold", color: Colors.slate },
   actionSub: { fontSize: 11, fontFamily: "Poppins_400Regular", color: Colors.textMuted, marginTop: 2 },
+
+  tipCard: { padding: 16, borderLeftWidth: 4, borderLeftColor: Colors.gold, backgroundColor: Colors.white },
+  tipHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
+  tipTitle: { fontSize: 14, fontFamily: 'Poppins_700Bold', color: Colors.slate },
+  tipText: { fontSize: 12, fontFamily: 'Poppins_400Regular', color: Colors.textSecondary, lineHeight: 18 },
 
   beesScroll: { marginHorizontal: -20, paddingHorizontal: 20 },
   beeCard: { width: 140, marginRight: 12, padding: 14, alignItems: 'center' },
