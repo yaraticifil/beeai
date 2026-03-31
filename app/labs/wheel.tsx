@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
+import Svg, { Path, G, Text as SvgText } from "react-native-svg";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import { useUser } from "@/contexts/UserContext";
@@ -31,41 +32,6 @@ const SEGMENTS = [
 
 const NUM_SEGMENTS = SEGMENTS.length;
 const SEGMENT_ANGLE = 360 / NUM_SEGMENTS;
-
-function WheelSegment({
-  segment,
-  index,
-}: {
-  segment: (typeof SEGMENTS)[0];
-  index: number;
-}) {
-  const angle = index * SEGMENT_ANGLE;
-  const radius = WHEEL_SIZE / 2;
-  const centerAngle = angle + SEGMENT_ANGLE / 2;
-  const textRadius = radius * 0.65;
-  const rad = (centerAngle * Math.PI) / 180;
-  const tx = radius + textRadius * Math.sin(rad);
-  const ty = radius - textRadius * Math.cos(rad);
-
-  return (
-    <View
-      style={[
-        styles.segment,
-        {
-          transform: [{ rotate: `${angle}deg` }],
-          borderTopColor: segment.color,
-          borderRightColor: "transparent",
-          borderLeftColor: "transparent",
-          borderTopWidth: radius,
-          borderRightWidth: radius * Math.tan((SEGMENT_ANGLE * Math.PI) / 360),
-          borderLeftWidth: radius * Math.tan((SEGMENT_ANGLE * Math.PI) / 360),
-          left: radius - radius * Math.tan((SEGMENT_ANGLE * Math.PI) / 360),
-          top: 0,
-        },
-      ]}
-    />
-  );
-}
 
 export default function WheelScreen() {
   const insets = useSafeAreaInsets();
@@ -119,11 +85,6 @@ export default function WheelScreen() {
     }
   };
 
-  const spin1 = spinAnim.interpolate({
-    inputRange: [0, 360],
-    outputRange: ["0deg", "360deg"],
-  });
-
   const rotate = spinAnim.interpolate({
     inputRange: [0, currentRotation || 360],
     outputRange: ["0deg", `${currentRotation || 360}deg`],
@@ -163,45 +124,45 @@ export default function WheelScreen() {
               },
             ]}
           >
-            {SEGMENTS.map((seg, i) => {
-              const angle = i * SEGMENT_ANGLE;
-              const rad = ((angle + SEGMENT_ANGLE / 2) * Math.PI) / 180;
-              const textRadius = (WHEEL_SIZE / 2) * 0.62;
-              const tx = WHEEL_SIZE / 2 + textRadius * Math.sin(rad);
-              const ty = WHEEL_SIZE / 2 - textRadius * Math.cos(rad);
+            <Svg width={WHEEL_SIZE} height={WHEEL_SIZE}>
+              <G x={WHEEL_SIZE / 2} y={WHEEL_SIZE / 2}>
+                {SEGMENTS.map((seg, i) => {
+                  const startAngle = (i * SEGMENT_ANGLE * Math.PI) / 180;
+                  const endAngle = ((i + 1) * SEGMENT_ANGLE * Math.PI) / 180;
+                  const x1 = (WHEEL_SIZE / 2) * Math.sin(startAngle);
+                  const y1 = -(WHEEL_SIZE / 2) * Math.cos(startAngle);
+                  const x2 = (WHEEL_SIZE / 2) * Math.sin(endAngle);
+                  const y2 = -(WHEEL_SIZE / 2) * Math.cos(endAngle);
 
-              return (
-                <View key={i}>
-                  <View
-                    style={[
-                      styles.segmentSlice,
-                      {
-                        width: WHEEL_SIZE,
-                        height: WHEEL_SIZE / 2,
-                        transformOrigin: `${WHEEL_SIZE / 2}px ${WHEEL_SIZE / 2}px`,
-                        transform: [
-                          { translateY: 0 },
-                          { rotate: `${angle}deg` },
-                        ],
-                        backgroundColor: seg.color,
-                        borderTopLeftRadius: WHEEL_SIZE / 2,
-                        borderTopRightRadius: WHEEL_SIZE / 2,
-                      },
-                    ]}
-                  />
-                  <View
-                    style={[
-                      styles.segmentLabel,
-                      { left: tx - 35, top: ty - 10 },
-                    ]}
-                  >
-                    <Text style={styles.segmentText} numberOfLines={1}>
-                      {seg.label}
-                    </Text>
-                  </View>
-                </View>
-              );
-            })}
+                  const midAngle = (startAngle + endAngle) / 2;
+                  const textRadius = (WHEEL_SIZE / 2) * 0.7;
+                  const tx = textRadius * Math.sin(midAngle);
+                  const ty = -textRadius * Math.cos(midAngle);
+                  const textRotate = (midAngle * 180) / Math.PI;
+
+                  return (
+                    <G key={i}>
+                      <Path
+                        d={`M 0 0 L ${x1} ${y1} A ${WHEEL_SIZE / 2} ${WHEEL_SIZE / 2} 0 0 1 ${x2} ${y2} Z`}
+                        fill={seg.color}
+                      />
+                      <SvgText
+                        x={tx}
+                        y={ty}
+                        fill="#fff"
+                        fontSize="9"
+                        fontWeight="800"
+                        textAnchor="middle"
+                        alignmentBaseline="middle"
+                        transform={`rotate(${textRotate}, ${tx}, ${ty})`}
+                      >
+                        {seg.label}
+                      </SvgText>
+                    </G>
+                  );
+                })}
+              </G>
+            </Svg>
             <View style={styles.wheelCenter}>
               <Text style={styles.wheelCenterEmoji}>🍯</Text>
             </View>
