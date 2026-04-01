@@ -127,7 +127,10 @@ function configureExpoAndLanding(app2) {
     "templates",
     "landing-page.html"
   );
-  const landingPageTemplate = fs.readFileSync(templatePath, "utf-8");
+  let landingPageTemplate = "";
+  if (fs.existsSync(templatePath)) {
+    landingPageTemplate = fs.readFileSync(templatePath, "utf-8");
+  }
   const appName = getAppName();
   log("Serving static Expo files with dynamic manifest routing");
   app2.use((req, res, next) => {
@@ -153,6 +156,7 @@ function configureExpoAndLanding(app2) {
   });
   app2.use("/assets", express.static(path.resolve(process.cwd(), "assets")));
   app2.use(express.static(path.resolve(process.cwd(), "static-build")));
+  app2.use(express.static(path.resolve(process.cwd(), "dist")));
   log("Expo routing: Checking expo-platform header on / and /manifest");
 }
 function setupErrorHandler(app2) {
@@ -167,22 +171,35 @@ function setupErrorHandler(app2) {
     return res.status(status).json({ message });
   });
 }
-(async () => {
+var init = async () => {
   setupCors(app);
   setupBodyParsing(app);
   setupRequestLogging(app);
   configureExpoAndLanding(app);
-  const server = await registerRoutes(app);
+  await registerRoutes(app);
   setupErrorHandler(app);
-  const port = parseInt(process.env.PORT || "5000", 10);
-  server.listen(
-    {
-      port,
-      host: "0.0.0.0",
-      reusePort: true
-    },
-    () => {
-      log(`express server serving on port ${port}`);
-    }
-  );
-})();
+  return app;
+};
+var appPromise = init();
+if (process.env.NODE_ENV !== "production" || !process.env.VERCEL) {
+  appPromise.then(async (appInstance) => {
+    const http = await import("http");
+    const server = http.createServer(appInstance);
+    const port = parseInt(process.env.PORT || "5000", 10);
+    server.listen(
+      {
+        port,
+        host: "0.0.0.0",
+        reusePort: true
+      },
+      () => {
+        log(`express server serving on port ${port}`);
+      }
+    );
+  });
+}
+var index_default = app;
+export {
+  appPromise,
+  index_default as default
+};
