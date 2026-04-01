@@ -116,10 +116,7 @@ function serveExpoManifest(platform: string, res: Response) {
     "manifest.json",
   );
 
-  // For Vercel, also check the dist folder
-  const vManifestPath = path.resolve(process.cwd(), "dist", "manifest.json");
-
-  if (!fs.existsSync(manifestPath) && !fs.existsSync(vManifestPath)) {
+  if (!fs.existsSync(manifestPath)) {
     return res
       .status(404)
       .json({ error: `Manifest not found for platform: ${platform}` });
@@ -129,8 +126,7 @@ function serveExpoManifest(platform: string, res: Response) {
   res.setHeader("expo-sfv-version", "0");
   res.setHeader("content-type", "application/json");
 
-  const finalPath = fs.existsSync(manifestPath) ? manifestPath : vManifestPath;
-  const manifest = fs.readFileSync(finalPath, "utf-8");
+  const manifest = fs.readFileSync(manifestPath, "utf-8");
   res.send(manifest);
 }
 
