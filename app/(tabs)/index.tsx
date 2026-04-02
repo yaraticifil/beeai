@@ -78,10 +78,10 @@ export default function PanelScreen() {
 
   const pulse = getDailyPulse();
   const checksCount = user.checks?.length || 0;
-  const activeReqs = (user.offerRequests || []).filter((r) => r.status === "collecting").length;
   const offersReady = (user.offerRequests || []).filter((r) => r.status === "ready").length;
 
   const totalAmount = (user.checks || []).reduce((sum, c) => sum + (c.amount || 0), 0);
+  const totalTrxVolume = (user.completedTransactions || []).reduce((sum, t) => sum + (t.offer.netPay || 0), 0);
 
   const formatTotalAmount = (num: number) => {
     if (num >= 1000000) {
@@ -196,12 +196,12 @@ export default function PanelScreen() {
           <Text style={styles.sectionTitle}>Canlı Durum</Text>
           <View style={styles.statGrid}>
             <View style={styles.statRow}>
-               <StatCard label="Toplam Çek" value={String(checksCount)} icon="document-attach" delay={100} />
-               <StatCard label="Toplam Tutar" value={formatTotalAmount(totalAmount)} icon="wallet" delay={150} />
+               <StatCard label="Aktif Çek" value={String(checksCount)} icon="document-attach" delay={100} />
+               <StatCard label="Aktif Tutar" value={formatTotalAmount(totalAmount)} icon="wallet" delay={150} />
             </View>
             <View style={styles.statRow}>
-               <StatCard label="Toplanıyor" value={String(activeReqs)} icon="time" delay={200} />
-               <StatCard label="Hazır" value={String(offersReady)} icon="flash" delay={250} />
+               <StatCard label="Hazır Teklif" value={String(offersReady)} icon="flash" delay={200} />
+               <StatCard label="İşlem Hacmi" value={formatTotalAmount(totalTrxVolume)} icon="stats-chart" delay={250} />
             </View>
           </View>
         </View>

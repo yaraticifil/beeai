@@ -6,6 +6,7 @@ import { BlurView } from "expo-blur";
 import { Ionicons } from "@expo/vector-icons";
 import { Platform, StyleSheet, View } from "react-native";
 import Colors from "@/constants/colors";
+import { useUser } from "@/contexts/UserContext";
 
 function NativeTabLayout() {
   return (
@@ -35,8 +36,11 @@ function NativeTabLayout() {
 }
 
 function ClassicTabLayout() {
+  const { user } = useUser();
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
+
+  const readyCount = (user?.offerRequests || []).filter(r => r.status === 'ready').length;
 
   return (
     <Tabs
@@ -92,6 +96,13 @@ function ClassicTabLayout() {
         name="offers"
         options={{
           title: "Teklifler",
+          tabBarBadge: readyCount > 0 ? readyCount : undefined,
+          tabBarBadgeStyle: {
+             backgroundColor: Colors.primary,
+             color: Colors.white,
+             fontSize: 10,
+             fontFamily: 'Poppins_700Bold'
+          },
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="flash" size={size} color={color} />
           ),

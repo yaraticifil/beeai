@@ -198,17 +198,20 @@ function computeLevel(points: number): number {
   return Math.floor(points / 100) + 1;
 }
 
-function updateBeeXp(bees: BeeAgent[], role: BeeRole, amount: number): BeeAgent[] {
-  return bees.map((b) => {
+function updateBeeXp(bees: BeeAgent[], role: BeeRole, amount: number): { bees: BeeAgent[]; leveledUp: boolean } {
+  let leveledUp = false;
+  const newBees = bees.map((b) => {
     if (b.role !== role) return b;
     let newXp = b.xp + amount;
     let newLevel = b.level;
     if (newXp >= 100) {
       newXp -= 100;
       newLevel += 1;
+      leveledUp = true;
     }
     return { ...b, xp: newXp, level: newLevel };
   });
+  return { bees: newBees, leveledUp };
 }
 
 function makeBeeAgents(): BeeAgent[] {
@@ -598,19 +601,29 @@ export function UserProvider({ children }: { children: ReactNode }) {
       lane,
     };
 
+    const xpRes = updateBeeXp(user.bees || [], "Kâtip", 15);
+    const activity: any = {
+      id: `act_${Date.now()}`,
+      type: "check_add",
+      message: `Kâtip Arı: ${check.issuerName} firmasına ait çek eklendi.`,
+      time: Date.now(),
+    };
+
+    const newActivities = [activity, ...(user.activities || [])];
+    if (xpRes.leveledUp) {
+      newActivities.unshift({
+        id: `lvl_${Date.now()}`,
+        type: "level_up",
+        message: `Kâtip Arı seviye atladı! (Sv. ${xpRes.bees.find(b => b.role === 'Kâtip')?.level})`,
+        time: Date.now() + 1
+      });
+    }
+
     const updated: User = {
       ...user,
       checks: [check, ...(user.checks || [])],
-      bees: updateBeeXp(user.bees || [], "Kâtip", 15),
-      activities: [
-        {
-          id: `act_${Date.now()}`,
-          type: "check_add",
-          message: `Kâtip Arı: ${check.issuerName} firmasına ait çek eklendi.`,
-          time: Date.now(),
-        },
-        ...(user.activities || []),
-      ].slice(0, 10),
+      bees: xpRes.bees,
+      activities: newActivities.slice(0, 10),
     };
     await saveUser(updated);
     return id;
@@ -734,19 +747,31 @@ export function UserProvider({ children }: { children: ReactNode }) {
       offers: [],
     };
 
+    const xpRes = updateBeeXp(user.bees || [], "İzci", 10);
+    const newActivities = [
+      {
+        id: `act_${Date.now()}`,
+        type: "offer_start",
+        message: "İzci Arı: 15 dakikalık teklif toplama süreci başlatıldı.",
+        time: Date.now(),
+      },
+      ...(user.activities || []),
+    ];
+
+    if (xpRes.leveledUp) {
+      newActivities.unshift({
+        id: `lvl_${Date.now()}`,
+        type: "level_up",
+        message: `İzci Arı seviye atladı! (Sv. ${xpRes.bees.find(b => b.role === 'İzci')?.level})`,
+        time: Date.now() + 1
+      });
+    }
+
     await saveUser({
       ...user,
       offerRequests: [req, ...(user.offerRequests || [])],
-      bees: updateBeeXp(user.bees || [], "İzci", 10),
-      activities: [
-        {
-          id: `act_${Date.now()}`,
-          type: "offer_start",
-          message: "İzci Arı: 15 dakikalık teklif toplama süreci başlatıldı.",
-          time: Date.now(),
-        },
-        ...(user.activities || []),
-      ].slice(0, 10),
+      bees: xpRes.bees,
+      activities: newActivities.slice(0, 10),
     });
   };
 
@@ -808,19 +833,32 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const updatedReq: OfferRequest = { ...req, revisionUsed: true, offers: revised, status: "ready" };
     const updatedRequests = [...user.offerRequests];
     updatedRequests[idx] = updatedReq;
+
+    const xpRes = updateBeeXp(user.bees || [], "Aracı", 20);
+    const newActivities = [
+      {
+        id: `act_${Date.now()}`,
+        type: "revision",
+        message: "Müzakereci Arı: Teklifler için revize talebi iletildi.",
+        time: Date.now(),
+      },
+      ...(user.activities || []),
+    ];
+
+    if (xpRes.leveledUp) {
+      newActivities.unshift({
+        id: `lvl_${Date.now()}`,
+        type: "level_up",
+        message: `Müzakereci Arı seviye atladı! (Sv. ${xpRes.bees.find(b => b.role === 'Aracı')?.level})`,
+        time: Date.now() + 1
+      });
+    }
+
     await saveUser({
       ...user,
       offerRequests: updatedRequests,
-      bees: updateBeeXp(user.bees || [], "Aracı", 20),
-      activities: [
-        {
-          id: `act_${Date.now()}`,
-          type: "revision",
-          message: "Müzakereci Arı: Teklifler için revize talebi iletildi.",
-          time: Date.now(),
-        },
-        ...(user.activities || []),
-      ].slice(0, 10),
+      bees: xpRes.bees,
+      activities: newActivities.slice(0, 10),
     });
     return true;
   };
@@ -846,21 +884,33 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const updatedRequests = (user.offerRequests || []).filter((r) => r.checkId !== checkId);
     const updatedChecks = (user.checks || []).filter((c) => c.id !== checkId);
 
+    const xpRes = updateBeeXp(user.bees || [], "Aracı", 25);
+    const newActivities = [
+      {
+        id: `act_${Date.now()}`,
+        type: "pick_offer",
+        message: `Müzakereci Arı: ${offer.partnerCode} teklifi onaylandı.`,
+        time: Date.now(),
+      },
+      ...(user.activities || []),
+    ];
+
+    if (xpRes.leveledUp) {
+      newActivities.unshift({
+        id: `lvl_${Date.now()}`,
+        type: "level_up",
+        message: `Müzakereci Arı seviye atladı! (Sv. ${xpRes.bees.find(b => b.role === 'Aracı')?.level})`,
+        time: Date.now() + 1
+      });
+    }
+
     await saveUser({
       ...user,
       checks: updatedChecks,
       offerRequests: updatedRequests,
       completedTransactions: [completed, ...(user.completedTransactions || [])],
-      bees: updateBeeXp(user.bees || [], "Aracı", 25),
-      activities: [
-        {
-          id: `act_${Date.now()}`,
-          type: "pick_offer",
-          message: `Müzakereci Arı: ${offer.partnerCode} teklifi onaylandı.`,
-          time: Date.now(),
-        },
-        ...(user.activities || []),
-      ].slice(0, 10),
+      bees: xpRes.bees,
+      activities: newActivities.slice(0, 10),
     });
   };
 
