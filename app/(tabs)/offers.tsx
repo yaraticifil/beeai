@@ -9,6 +9,7 @@ import {
   Platform,
   Dimensions,
   ActivityIndicator,
+  TextInput,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -46,6 +47,11 @@ export default function OffersScreen() {
   } | null>(null);
   const [view, setView] = useState<"active" | "history">("active");
   const [now, setNow] = useState(Date.now());
+
+  // Invoice Modal State
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [invNo, setInvNo] = useState("");
+  const [invAmt, setInvAmt] = useState("");
 
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
@@ -365,19 +371,9 @@ export default function OffersScreen() {
                     <Pressable
                       style={styles.addInvoiceLink}
                       onPress={() => {
-                        Alert.prompt(
-                          "Fatura Ekle",
-                          "Fatura numarasını giriniz:",
-                          [
-                            { text: "Vazgeç", style: "cancel" },
-                            {
-                              text: "Ekle",
-                              onPress: (val) => {
-                                if (val) linkInvoice(refreshSelected.check.id, val);
-                              }
-                            }
-                          ]
-                        );
+                        setInvNo("");
+                        setInvAmt("");
+                        setShowInvoiceModal(true);
                       }}
                     >
                       <Ionicons name="add-circle-outline" size={14} color={Colors.gold} />
@@ -563,6 +559,57 @@ export default function OffersScreen() {
           </Animated.View>
         </View>
       </Modal>
+
+      {showInvoiceModal && refreshSelected && (
+        <View style={[styles.modalOverlay, { zIndex: 2000 }]}>
+           <Pressable style={StyleSheet.absoluteFill} onPress={() => setShowInvoiceModal(false)} />
+           <Animated.View entering={FadeInDown.springify()} style={[styles.invoicePromptModal, { paddingBottom: insets.bottom + 20 }]}>
+              <View style={styles.modalIndicator} />
+              <Text style={styles.invoicePromptTitle}>Fatura Bilgileri</Text>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Fatura No</Text>
+                <TextInput
+                  style={styles.invoiceInput}
+                  value={invNo}
+                  onChangeText={setInvNo}
+                  placeholder="Örn: ABC202500000123"
+                  placeholderTextColor="rgba(255,255,255,0.3)"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Fatura Tutarı (Opsiyonel)</Text>
+                <TextInput
+                  style={styles.invoiceInput}
+                  value={invAmt}
+                  onChangeText={(val) => setInvAmt(val.replace(/[^\d]/g, ""))}
+                  placeholder={String(refreshSelected.check.amount)}
+                  placeholderTextColor="rgba(255,255,255,0.3)"
+                  keyboardType="numeric"
+                />
+              </View>
+
+              <View style={styles.promptActions}>
+                 <Pressable style={styles.promptCancel} onPress={() => setShowInvoiceModal(false)}>
+                    <Text style={styles.promptCancelText}>Vazgeç</Text>
+                 </Pressable>
+                 <Pressable
+                  style={[styles.promptSubmit, !invNo.trim() && { opacity: 0.5 }]}
+                  disabled={!invNo.trim()}
+                  onPress={async () => {
+                    const amt = invAmt ? Number(invAmt) : refreshSelected.check.amount;
+                    await linkInvoice(refreshSelected.check.id, invNo.trim(), amt);
+                    setShowInvoiceModal(false);
+                    if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                  }}
+                >
+                    <Text style={styles.promptSubmitText}>Kaydet</Text>
+                 </Pressable>
+              </View>
+           </Animated.View>
+        </View>
+      )}
     </View>
   );
 }
@@ -1037,4 +1084,30 @@ const styles = StyleSheet.create({
     fontFamily: "Poppins_800ExtraBold",
     color: Colors.primary,
   },
+
+  invoicePromptModal: {
+    backgroundColor: Colors.slate,
+    borderTopLeftRadius: 36,
+    borderTopRightRadius: 36,
+    padding: 24,
+    borderTopWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+  },
+  invoicePromptTitle: { fontSize: 18, fontFamily: 'Poppins_800ExtraBold', color: Colors.white, marginBottom: 20 },
+  inputGroup: { marginBottom: 16 },
+  inputLabel: { fontSize: 11, fontFamily: 'Poppins_700Bold', color: Colors.gold, marginBottom: 8, marginLeft: 4 },
+  invoiceInput: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 16,
+    padding: 16,
+    color: Colors.white,
+    fontFamily: 'Poppins_500Medium',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  promptActions: { flexDirection: 'row', gap: 12, marginTop: 10 },
+  promptCancel: { flex: 1, paddingVertical: 16, alignItems: 'center' },
+  promptCancelText: { color: 'rgba(255,255,255,0.5)', fontFamily: 'Poppins_700Bold' },
+  promptSubmit: { flex: 1.5, backgroundColor: Colors.gold, borderRadius: 16, paddingVertical: 16, alignItems: 'center' },
+  promptSubmitText: { color: Colors.slate, fontFamily: 'Poppins_800ExtraBold' },
 });

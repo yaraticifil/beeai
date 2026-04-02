@@ -198,6 +198,19 @@ function computeLevel(points: number): number {
   return Math.floor(points / 100) + 1;
 }
 
+function updateBeeXp(bees: BeeAgent[], role: BeeRole, amount: number): BeeAgent[] {
+  return bees.map((b) => {
+    if (b.role !== role) return b;
+    let newXp = b.xp + amount;
+    let newLevel = b.level;
+    if (newXp >= 100) {
+      newXp -= 100;
+      newLevel += 1;
+    }
+    return { ...b, xp: newXp, level: newLevel };
+  });
+}
+
 function makeBeeAgents(): BeeAgent[] {
   const now = Date.now();
   return [
@@ -588,11 +601,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const updated: User = {
       ...user,
       checks: [check, ...(user.checks || [])],
+      bees: updateBeeXp(user.bees || [], "Kâtip", 15),
       activities: [
         {
           id: `act_${Date.now()}`,
           type: "check_add",
-          message: `${check.issuerName} firmasına ait çek eklendi.`,
+          message: `Kâtip Arı: ${check.issuerName} firmasına ait çek eklendi.`,
           time: Date.now(),
         },
         ...(user.activities || []),
@@ -723,11 +737,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
     await saveUser({
       ...user,
       offerRequests: [req, ...(user.offerRequests || [])],
+      bees: updateBeeXp(user.bees || [], "İzci", 10),
       activities: [
         {
           id: `act_${Date.now()}`,
           type: "offer_start",
-          message: "15 dakikalık teklif toplama süreci başlatıldı.",
+          message: "İzci Arı: 15 dakikalık teklif toplama süreci başlatıldı.",
           time: Date.now(),
         },
         ...(user.activities || []),
@@ -796,11 +811,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
     await saveUser({
       ...user,
       offerRequests: updatedRequests,
+      bees: updateBeeXp(user.bees || [], "Aracı", 20),
       activities: [
         {
           id: `act_${Date.now()}`,
           type: "revision",
-          message: "Teklifler için revize talebi iletildi.",
+          message: "Müzakereci Arı: Teklifler için revize talebi iletildi.",
           time: Date.now(),
         },
         ...(user.activities || []),
@@ -835,11 +851,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
       checks: updatedChecks,
       offerRequests: updatedRequests,
       completedTransactions: [completed, ...(user.completedTransactions || [])],
+      bees: updateBeeXp(user.bees || [], "Aracı", 25),
       activities: [
         {
           id: `act_${Date.now()}`,
           type: "pick_offer",
-          message: `${offer.partnerCode} teklifi seçildi, işlem tamamlanıyor.`,
+          message: `Müzakereci Arı: ${offer.partnerCode} teklifi onaylandı.`,
           time: Date.now(),
         },
         ...(user.activities || []),
