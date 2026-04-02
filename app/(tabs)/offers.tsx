@@ -9,6 +9,7 @@ import {
   Platform,
   Dimensions,
   ActivityIndicator,
+  TextInput,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -37,13 +38,20 @@ export default function OffersScreen() {
     ensureOfferProgress,
     requestRevision,
     pickOffer,
+    linkInvoice,
   } = useUser();
 
   const [selected, setSelected] = useState<{
     check: CheckItem;
     req?: OfferRequest;
   } | null>(null);
+  const [view, setView] = useState<"active" | "history">("active");
   const [now, setNow] = useState(Date.now());
+
+  // Invoice Modal State
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [invNo, setInvNo] = useState("");
+  const [invAmt, setInvAmt] = useState("");
 
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
@@ -93,8 +101,9 @@ export default function OffersScreen() {
   const refreshSelected = useMemo(() => {
     if (!selected) return null;
     const req = getReq(selected.check.id);
-    return { check: selected.check, req };
-  }, [selected, getReq]);
+    const check = (user?.checks || []).find((c) => c.id === selected.check.id) || selected.check;
+    return { check, req };
+  }, [selected, getReq, user?.checks]);
 
   const topInset = Platform.OS === "web" ? 60 : insets.top;
 
@@ -115,6 +124,23 @@ export default function OffersScreen() {
         </Animated.View>
       </LinearGradient>
 
+      <View style={styles.toggleContainer}>
+        <GlassCard style={styles.toggleBg} intensity={10} overlayStyle={styles.toggleOverlay}>
+          <Pressable
+            style={[styles.toggleBtn, view === "active" && styles.toggleBtnActive]}
+            onPress={() => setView("active")}
+          >
+            <Text style={[styles.toggleText, view === "active" && styles.toggleTextActive]}>Aktif</Text>
+          </Pressable>
+          <Pressable
+            style={[styles.toggleBtn, view === "history" && styles.toggleBtnActive]}
+            onPress={() => setView("history")}
+          >
+            <Text style={[styles.toggleText, view === "history" && styles.toggleTextActive]}>Geçmiş</Text>
+          </Pressable>
+        </GlassCard>
+      </View>
+
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={{
@@ -123,122 +149,169 @@ export default function OffersScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        {checks.length === 0 ? (
-          <Animated.View entering={FadeInDown.delay(100).springify()}>
-            <GlassCard style={styles.emptyCard}>
-              <Text style={styles.emptyEmoji}>🧺</Text>
-              <Text style={styles.emptyTitle}>Henüz kovanınız boş</Text>
-              <Text style={styles.emptyText}>
-                Önce “Çek Yükle” ekranından kovana ilk çekinizi bırakmalısınız.
-              </Text>
-            </GlassCard>
-          </Animated.View>
-        ) : (
-          checks.map((c, idx) => {
-            const r = getReq(c.id);
-            const status = r?.status || "yok";
-            const offersCount = r?.offers?.length || 0;
+        {view === "active" ? (
+          checks.length === 0 ? (
+            <Animated.View entering={FadeInDown.delay(100).springify()}>
+              <GlassCard style={styles.emptyCard}>
+                <Text style={styles.emptyEmoji}>🧺</Text>
+                <Text style={styles.emptyTitle}>Henüz kovanınız boş</Text>
+                <Text style={styles.emptyText}>
+                  Önce “Çek Yükle” ekranından kovana ilk çekinizi bırakmalısınız.
+                </Text>
+              </GlassCard>
+            </Animated.View>
+          ) : (
+            checks.map((c, idx) => {
+              const r = getReq(c.id);
+              const status = r?.status || "yok";
+              const offersCount = r?.offers?.length || 0;
 
-            const badge =
-              status === "collecting"
-                ? "TOPLANIYOR"
-                : status === "ready"
-                  ? "HAZIR"
-                  : status === "expired"
-                    ? "SÜRE DOLDU"
-                    : "BAŞLAT";
+              const badge =
+                status === "collecting"
+                  ? "TOPLANIYOR"
+                  : status === "ready"
+                    ? "HAZIR"
+                    : status === "expired"
+                      ? "SÜRE DOLDU"
+                      : "BAŞLAT";
 
-            return (
-              <Animated.View
-                key={c.id}
-                entering={FadeInDown.delay(100 + idx * 100).springify()}
-                layout={Layout.springify()}
-              >
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.card,
-                    pressed && { opacity: 0.88 },
-                  ]}
-                  onPress={() => open(c)}
+              return (
+                <Animated.View
+                  key={c.id}
+                  entering={FadeInDown.delay(100 + idx * 100).springify()}
+                  layout={Layout.springify()}
                 >
-                  <View style={styles.cardRow}>
-                    <View style={styles.docIcon}>
-                      <Ionicons
-                        name="document-text"
-                        size={20}
-                        color={Colors.gold}
-                      />
-                    </View>
-
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.cardTitle} numberOfLines={1}>
-                        {c.issuerName}
-                      </Text>
-                      <Text style={styles.cardSub}>
-                        {c.checkNo} • Vade {c.dueDate}
-                      </Text>
-                      <Text style={styles.cardAmount}>₺{money(c.amount)}</Text>
-
-                      {c.dna.seenBefore && (
-                        <View style={styles.warnRow}>
-                          <Ionicons
-                            name="warning"
-                            size={14}
-                            color={Colors.gold}
-                          />
-                          <Text style={styles.warnText}>
-                            Çek DNA: Sistemde kayıtlı
-                          </Text>
-                        </View>
-                      )}
-                    </View>
-
-                    <View
-                      style={[
-                        styles.badge,
-                        status === "ready"
-                          ? styles.badgeReady
-                          : status === "collecting"
-                            ? styles.badgeCollect
-                            : styles.badgeIdle,
-                      ]}
-                    >
-                      <Text style={styles.badgeText}>{badge}</Text>
-                      <View style={styles.badgeCountRow}>
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.card,
+                      pressed && { opacity: 0.88 },
+                    ]}
+                    onPress={() => open(c)}
+                  >
+                    <View style={styles.cardRow}>
+                      <View style={styles.docIcon}>
                         <Ionicons
-                          name="flash"
-                          size={10}
-                          color={
-                            status === "ready"
-                              ? Colors.primary
-                              : Colors.textMuted
-                          }
+                          name="document-text"
+                          size={20}
+                          color={Colors.gold}
                         />
-                        <Text style={styles.badgeSub}>{offersCount}/3</Text>
+                      </View>
+
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.cardTitle} numberOfLines={1}>
+                          {c.issuerName}
+                        </Text>
+                        <Text style={styles.cardSub}>
+                          {c.checkNo} • Vade {c.dueDate}
+                        </Text>
+                        <Text style={styles.cardAmount}>₺{money(c.amount)}</Text>
+
+                        {c.dna.seenBefore && (
+                          <View style={styles.warnRow}>
+                            <Ionicons
+                              name="warning"
+                              size={14}
+                              color={Colors.gold}
+                            />
+                            <Text style={styles.warnText}>
+                              Çek DNA: Sistemde kayıtlı
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+
+                      <View
+                        style={[
+                          styles.badge,
+                          status === "ready"
+                            ? styles.badgeReady
+                            : status === "collecting"
+                              ? styles.badgeCollect
+                              : styles.badgeIdle,
+                        ]}
+                      >
+                        <Text style={styles.badgeText}>{badge}</Text>
+                        <View style={styles.badgeCountRow}>
+                          <Ionicons
+                            name="flash"
+                            size={10}
+                            color={
+                              status === "ready"
+                                ? Colors.primary
+                                : Colors.textMuted
+                            }
+                          />
+                          <Text style={styles.badgeSub}>{offersCount}/3</Text>
+                        </View>
                       </View>
                     </View>
-                  </View>
 
-                  {!r && (
-                    <Pressable
-                      style={({ pressed }) => [
-                        styles.startBtn,
-                        pressed && { opacity: 0.9 },
-                      ]}
-                      onPress={() => start(c)}
-                    >
-                      <Text style={styles.startText}>15dk Akışı Başlat</Text>
-                      <Ionicons
-                        name="arrow-forward"
-                        size={16}
-                        color={Colors.slate}
-                      />
-                    </Pressable>
-                  )}
-                </Pressable>
+                    {!r && (
+                      <Pressable
+                        style={({ pressed }) => [
+                          styles.startBtn,
+                          pressed && { opacity: 0.9 },
+                        ]}
+                        onPress={() => start(c)}
+                      >
+                        <Text style={styles.startText}>15dk Akışı Başlat</Text>
+                        <Ionicons
+                          name="arrow-forward"
+                          size={16}
+                          color={Colors.slate}
+                        />
+                      </Pressable>
+                    )}
+                  </Pressable>
+                </Animated.View>
+              );
+            })
+          )
+        ) : (
+          (user?.completedTransactions || []).length === 0 ? (
+            <Animated.View entering={FadeInDown.delay(100).springify()}>
+              <GlassCard style={styles.emptyCard}>
+                <Text style={styles.emptyEmoji}>📜</Text>
+                <Text style={styles.emptyTitle}>Henüz geçmiş işlem yok</Text>
+                <Text style={styles.emptyText}>
+                  Tamamladığınız işlemler burada listelenir.
+                </Text>
+              </GlassCard>
+            </Animated.View>
+          ) : (
+            (user?.completedTransactions || []).map((trx, idx) => (
+              <Animated.View
+                key={trx.id}
+                entering={FadeInDown.delay(100 + idx * 100).springify()}
+              >
+                <GlassCard style={styles.historyCard}>
+                  <View style={styles.historyHeader}>
+                    <View style={styles.partnerInfo}>
+                      <View style={[styles.partnerDot, { backgroundColor: Colors.primary }]} />
+                      <Text style={styles.historyPartner}>{trx.offer.partnerCode}</Text>
+                    </View>
+                    <Text style={styles.historyDate}>
+                      {new Date(trx.completedAt).toLocaleDateString("tr-TR")}
+                    </Text>
+                  </View>
+                  <View style={styles.historyContent}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.historyIssuer} numberOfLines={1}>{trx.check.issuerName}</Text>
+                      <Text style={styles.historySub}>{trx.check.checkNo} • ₺{money(trx.check.amount)}</Text>
+                    </View>
+                    <View style={{ alignItems: "flex-end" }}>
+                      <Text style={styles.historyNet}>₺{money(trx.offer.netPay)}</Text>
+                      <Text style={styles.historyRate}>%{trx.offer.discountRate} Oran</Text>
+                    </View>
+                  </View>
+                  <View style={styles.historyBadge}>
+                    <Ionicons name="checkmark-circle" size={12} color={Colors.primary} />
+                    <Text style={styles.historyBadgeText}>İŞLEM TAMAMLANDI</Text>
+                  </View>
+                </GlassCard>
               </Animated.View>
-            );
-          })
+            ))
+          )
         )}
       </ScrollView>
 
@@ -286,6 +359,27 @@ export default function OffersScreen() {
                     {refreshSelected.check.checkNo} • Vade{" "}
                     {refreshSelected.check.dueDate}
                   </Text>
+
+                  {refreshSelected.check.invoice ? (
+                    <View style={styles.modalInvoiceBadge}>
+                      <Ionicons name="receipt" size={12} color={Colors.gold} />
+                      <Text style={styles.modalInvoiceText}>
+                        Fatura: {refreshSelected.check.invoice.invoiceNo} (₺{money(refreshSelected.check.invoice.invoiceAmount || 0)})
+                      </Text>
+                    </View>
+                  ) : (
+                    <Pressable
+                      style={styles.addInvoiceLink}
+                      onPress={() => {
+                        setInvNo("");
+                        setInvAmt("");
+                        setShowInvoiceModal(true);
+                      }}
+                    >
+                      <Ionicons name="add-circle-outline" size={14} color={Colors.gold} />
+                      <Text style={styles.addInvoiceText}>Fatura Eşleştir</Text>
+                    </Pressable>
+                  )}
                 </GlassCard>
 
                 {!refreshSelected.req ? (
@@ -465,6 +559,57 @@ export default function OffersScreen() {
           </Animated.View>
         </View>
       </Modal>
+
+      {showInvoiceModal && refreshSelected && (
+        <View style={[styles.modalOverlay, { zIndex: 2000 }]}>
+           <Pressable style={StyleSheet.absoluteFill} onPress={() => setShowInvoiceModal(false)} />
+           <Animated.View entering={FadeInDown.springify()} style={[styles.invoicePromptModal, { paddingBottom: insets.bottom + 20 }]}>
+              <View style={styles.modalIndicator} />
+              <Text style={styles.invoicePromptTitle}>Fatura Bilgileri</Text>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Fatura No</Text>
+                <TextInput
+                  style={styles.invoiceInput}
+                  value={invNo}
+                  onChangeText={setInvNo}
+                  placeholder="Örn: ABC202500000123"
+                  placeholderTextColor="rgba(255,255,255,0.3)"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Fatura Tutarı (Opsiyonel)</Text>
+                <TextInput
+                  style={styles.invoiceInput}
+                  value={invAmt}
+                  onChangeText={(val) => setInvAmt(val.replace(/[^\d]/g, ""))}
+                  placeholder={String(refreshSelected.check.amount)}
+                  placeholderTextColor="rgba(255,255,255,0.3)"
+                  keyboardType="numeric"
+                />
+              </View>
+
+              <View style={styles.promptActions}>
+                 <Pressable style={styles.promptCancel} onPress={() => setShowInvoiceModal(false)}>
+                    <Text style={styles.promptCancelText}>Vazgeç</Text>
+                 </Pressable>
+                 <Pressable
+                  style={[styles.promptSubmit, !invNo.trim() && { opacity: 0.5 }]}
+                  disabled={!invNo.trim()}
+                  onPress={async () => {
+                    const amt = invAmt ? Number(invAmt) : refreshSelected.check.amount;
+                    await linkInvoice(refreshSelected.check.id, invNo.trim(), amt);
+                    setShowInvoiceModal(false);
+                    if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                  }}
+                >
+                    <Text style={styles.promptSubmitText}>Kaydet</Text>
+                 </Pressable>
+              </View>
+           </Animated.View>
+        </View>
+      )}
     </View>
   );
 }
@@ -486,7 +631,38 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
 
-  scroll: { flex: 1, paddingHorizontal: 20, marginTop: -20 },
+  toggleContainer: {
+    paddingHorizontal: 20,
+    marginTop: -25,
+    marginBottom: 10,
+  },
+  toggleBg: {
+    borderRadius: 16,
+    backgroundColor: "rgba(15, 23, 42, 0.4)",
+  },
+  toggleOverlay: {
+    flexDirection: "row",
+    padding: 4,
+  },
+  toggleBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: "center",
+    borderRadius: 12,
+  },
+  toggleBtnActive: {
+    backgroundColor: Colors.gold,
+  },
+  toggleText: {
+    fontSize: 13,
+    fontFamily: "Poppins_700Bold",
+    color: "rgba(255,255,255,0.6)",
+  },
+  toggleTextActive: {
+    color: Colors.slate,
+  },
+
+  scroll: { flex: 1, paddingHorizontal: 20, marginTop: 10 },
   card: {
     backgroundColor: Colors.white,
     borderRadius: 24,
@@ -677,6 +853,33 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: "Poppins_400Regular",
     color: "rgba(255,255,255,0.5)",
+    marginBottom: 10,
+  },
+  modalInvoiceBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "rgba(251, 191, 36, 0.1)",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    alignSelf: "flex-start",
+  },
+  modalInvoiceText: {
+    fontSize: 10,
+    fontFamily: "Poppins_600SemiBold",
+    color: Colors.gold,
+  },
+  addInvoiceLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 4,
+  },
+  addInvoiceText: {
+    fontSize: 11,
+    fontFamily: "Poppins_700Bold",
+    color: Colors.gold,
   },
 
   modalPrimary: {
@@ -813,4 +1016,98 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 14,
   },
+
+  historyCard: {
+    padding: 16,
+    marginBottom: 12,
+    borderRadius: 24,
+  },
+  historyHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(0,0,0,0.05)",
+  },
+  historyPartner: {
+    fontSize: 12,
+    fontFamily: "Poppins_700Bold",
+    color: Colors.slate,
+  },
+  historyDate: {
+    fontSize: 11,
+    fontFamily: "Poppins_400Regular",
+    color: Colors.textMuted,
+  },
+  historyContent: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  historyIssuer: {
+    fontSize: 14,
+    fontFamily: "Poppins_700Bold",
+    color: Colors.slate,
+  },
+  historySub: {
+    fontSize: 11,
+    fontFamily: "Poppins_400Regular",
+    color: Colors.textMuted,
+    marginTop: 2,
+  },
+  historyNet: {
+    fontSize: 15,
+    fontFamily: "Poppins_800ExtraBold",
+    color: Colors.primary,
+  },
+  historyRate: {
+    fontSize: 10,
+    fontFamily: "Poppins_600SemiBold",
+    color: Colors.textMuted,
+    marginTop: 2,
+  },
+  historyBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 12,
+    backgroundColor: "rgba(34,197,94,0.08)",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    alignSelf: "flex-start",
+  },
+  historyBadgeText: {
+    fontSize: 9,
+    fontFamily: "Poppins_800ExtraBold",
+    color: Colors.primary,
+  },
+
+  invoicePromptModal: {
+    backgroundColor: Colors.slate,
+    borderTopLeftRadius: 36,
+    borderTopRightRadius: 36,
+    padding: 24,
+    borderTopWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+  },
+  invoicePromptTitle: { fontSize: 18, fontFamily: 'Poppins_800ExtraBold', color: Colors.white, marginBottom: 20 },
+  inputGroup: { marginBottom: 16 },
+  inputLabel: { fontSize: 11, fontFamily: 'Poppins_700Bold', color: Colors.gold, marginBottom: 8, marginLeft: 4 },
+  invoiceInput: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 16,
+    padding: 16,
+    color: Colors.white,
+    fontFamily: 'Poppins_500Medium',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  promptActions: { flexDirection: 'row', gap: 12, marginTop: 10 },
+  promptCancel: { flex: 1, paddingVertical: 16, alignItems: 'center' },
+  promptCancelText: { color: 'rgba(255,255,255,0.5)', fontFamily: 'Poppins_700Bold' },
+  promptSubmit: { flex: 1.5, backgroundColor: Colors.gold, borderRadius: 16, paddingVertical: 16, alignItems: 'center' },
+  promptSubmitText: { color: Colors.slate, fontFamily: 'Poppins_800ExtraBold' },
 });

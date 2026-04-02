@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
-import { View, Text, StyleSheet, Pressable, ScrollView, TextInput, Alert, Platform } from "react-native";
+import { View, Text, StyleSheet, Pressable, ScrollView, TextInput, Alert, Platform, ActivityIndicator } from "react-native";
+import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -43,6 +44,8 @@ function ERPCard({
 export default function IntegrationScreen() {
   const insets = useSafeAreaInsets();
   const { importSampleERP, importFromCsv } = useUser();
+  const [syncing, setSyncing] = useState<string | null>(null);
+  const [progress, setProgress] = useState(0);
 
   const [csv, setCsv] = useState(
     "checkNo;issuer;amount;dueDate;bank\n" +
@@ -52,14 +55,37 @@ export default function IntegrationScreen() {
   const canImport = useMemo(() => csv.trim().split(/\r?\n/).length >= 2, [csv]);
 
   const runSample = async (erp: ERPType) => {
+    if (syncing) return;
+    setSyncing(erp.toUpperCase());
+    setProgress(0);
+
+    // Simulate sync steps
+    for (let i = 1; i <= 5; i++) {
+        await new Promise(r => setTimeout(r, 600));
+        setProgress(i * 20);
+    }
+
     const n = await importSampleERP(erp);
-    Alert.alert("Pilot Aktarım", `${n} çek başarıyla içeri alındı (${erp.toUpperCase()}). Kovan güncellendi.`);
+    setSyncing(null);
+    if (Platform.OS !== 'web') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+    Alert.alert("Senkronizasyon Tamamlandı", `${n} yeni çek verisi otonom olarak kovanınıza aktarıldı.`);
   };
 
   const runCsv = async () => {
-    if (!canImport) return;
+    if (!canImport || syncing) return;
+    setSyncing("CSV");
+    setProgress(0);
+
+    for (let i = 1; i <= 3; i++) {
+        await new Promise(r => setTimeout(r, 400));
+        setProgress(i * 33);
+    }
+
     const n = await importFromCsv(csv);
-    Alert.alert("CSV Aktarım", `${n} çek içeri alındı. Arılar analize başladı.`);
+    setSyncing(null);
+    Alert.alert("Veri Aktarımı", `${n} çek başarıyla işlendi ve kovanınıza eklendi.`);
   };
 
   const topInset = Platform.OS === "web" ? 60 : insets.top;
@@ -81,13 +107,26 @@ export default function IntegrationScreen() {
         contentContainerStyle={{ paddingBottom: insets.bottom + 120, paddingTop: 10 }} 
         showsVerticalScrollIndicator={false}
       >
+        {syncing && (
+            <Animated.View entering={FadeInDown.springify()} style={styles.syncOverlay}>
+                <GlassCard style={styles.syncCard} intensity={25}>
+                    <ActivityIndicator color={Colors.gold} size="large" />
+                    <Text style={styles.syncTitle}>{syncing} Senkronize Ediliyor...</Text>
+                    <View style={styles.progressBar}>
+                        <View style={[styles.progressFill, { width: `${progress}%` }]} />
+                    </View>
+                    <Text style={styles.syncSub}>AI ajanları verileri doğrularıyor</Text>
+                </GlassCard>
+            </Animated.View>
+        )}
+
         <Animated.View entering={FadeInDown.delay(100).springify()}>
           <View style={styles.sectionHeader}>
              <Text style={styles.sectionLabel}>ERP BAĞLANTILARI</Text>
           </View>
-          <ERPCard title="Logo Tiger" subtitle="Aktif bağlantı profili" tag="PİLOT" onPress={() => runSample("tiger")} />
-          <ERPCard title="Mikro Yazılım" subtitle="Aktif bağlantı profili" tag="PİLOT" onPress={() => runSample("mikro")} />
-          <ERPCard title="Netsis" subtitle="Aktif bağlantı profili" tag="PİLOT" onPress={() => runSample("netsis")} />
+          <ERPCard title="Logo Tiger" subtitle={syncing === "TIGER" ? "Eşitleniyor..." : "Aktif bağlantı profili"} tag="PİLOT" onPress={() => runSample("tiger")} />
+          <ERPCard title="Mikro Yazılım" subtitle={syncing === "MIKRO" ? "Eşitleniyor..." : "Aktif bağlantı profili"} tag="PİLOT" onPress={() => runSample("mikro")} />
+          <ERPCard title="Netsis" subtitle={syncing === "NETSIS" ? "Eşitleniyor..." : "Aktif bağlantı profili"} tag="PİLOT" onPress={() => runSample("netsis")} />
           
           <GlassCard style={styles.infoBox}>
             <Ionicons name="information-circle-outline" size={18} color={Colors.gold} />
@@ -195,4 +234,11 @@ const styles = StyleSheet.create({
   tipHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
   tipTitle: { fontSize: 15, fontFamily: "Poppins_700Bold", color: Colors.primary },
   tipText: { fontSize: 12, fontFamily: "Poppins_400Regular", color: "rgba(255,255,255,0.6)", lineHeight: 20 },
+
+  syncOverlay: { marginBottom: 20 },
+  syncCard: { padding: 24, alignItems: 'center', gap: 12 },
+  syncTitle: { fontSize: 14, fontFamily: 'Poppins_700Bold', color: Colors.white },
+  progressBar: { width: '100%', height: 6, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 3, overflow: 'hidden' },
+  progressFill: { height: '100%', backgroundColor: Colors.gold },
+  syncSub: { fontSize: 11, fontFamily: 'Poppins_400Regular', color: 'rgba(255,255,255,0.5)' },
 });

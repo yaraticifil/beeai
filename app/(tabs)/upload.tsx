@@ -14,13 +14,15 @@ import { formatCurrency, formatDate, parseCurrency } from "@/shared/utils/format
 
 export default function UploadScreen() {
   const insets = useSafeAreaInsets();
-  const { addCheck, startOfferCollection } = useUser();
+  const { addCheck, startOfferCollection, linkInvoice } = useUser();
 
   const [checkNo, setCheckNo] = useState("");
   const [issuerName, setIssuerName] = useState("");
   const [bankName, setBankName] = useState("");
   const [amount, setAmount] = useState("");
   const [dueDate, setDueDate] = useState(""); // DD.MM.YYYY
+  const [invoiceNo, setInvoiceNo] = useState("");
+  const [invoiceAmount, setInvoiceAmount] = useState("");
 
   const handleAmountChange = (val: string) => {
     setAmount(formatCurrency(val));
@@ -30,8 +32,13 @@ export default function UploadScreen() {
     setDueDate(formatDate(val));
   };
 
+  const handleInvoiceAmountChange = (val: string) => {
+    setInvoiceAmount(formatCurrency(val));
+  };
+
   const [imageUri, setImageUri] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(false);
+  const [showWhatsApp, setShowWhatsApp] = useState(false);
 
   const canSubmit = useMemo(() => {
     const a = parseCurrency(amount);
@@ -81,6 +88,11 @@ export default function UploadScreen() {
       setLoading(false);
       Alert.alert("Eksik Bilgi", "Çek no, keşideci, tutar ve vade zorunlu.");
       return;
+    }
+
+    if (invoiceNo.trim()) {
+      const invAmt = invoiceAmount ? parseCurrency(invoiceAmount) : a;
+      await linkInvoice(id, invoiceNo.trim(), invAmt);
     }
 
     await startOfferCollection(id);
@@ -134,6 +146,21 @@ export default function UploadScreen() {
                    <Field label="Vade" value={dueDate} onChangeText={handleDateChange} placeholder="31.12.2025" keyboardType="numeric" />
                  </View>
               </View>
+
+              <View style={styles.invoiceSection}>
+                <View style={styles.invoiceHeader}>
+                  <Ionicons name="receipt-outline" size={16} color={Colors.textMuted} />
+                  <Text style={styles.invoiceLabel}>Opsiyonel: Fatura Eşleştir</Text>
+                </View>
+                <View style={styles.row}>
+                   <View style={{ flex: 1 }}>
+                     <Field label="Fatura No" value={invoiceNo} onChangeText={setInvoiceNo} placeholder="Örn: ABC2025..." />
+                   </View>
+                   <View style={{ flex: 1 }}>
+                     <Field label="Fatura Tutarı" value={invoiceAmount} onChangeText={handleInvoiceAmountChange} placeholder="185.000" keyboardType="numeric" />
+                   </View>
+                </View>
+              </View>
             </View>
 
             <Pressable
@@ -156,7 +183,7 @@ export default function UploadScreen() {
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(400).springify()}>
-          <Pressable style={({ pressed }) => [styles.whatsRow, pressed && { opacity: 0.8 }]} onPress={() => Alert.alert("WhatsApp", "Pilot: WhatsApp hattı entegrasyonu (Yakında)")} >
+          <Pressable style={({ pressed }) => [styles.whatsRow, pressed && { opacity: 0.8 }]} onPress={() => setShowWhatsApp(true)} >
             <View style={styles.whatsIcon}>
                <Ionicons name="logo-whatsapp" size={24} color={Colors.white} />
             </View>
@@ -168,6 +195,44 @@ export default function UploadScreen() {
           </Pressable>
         </Animated.View>
       </ScrollView>
+
+      {showWhatsApp && (
+        <View style={styles.modalOverlay}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setShowWhatsApp(false)} />
+          <Animated.View entering={FadeInDown.springify()} style={[styles.modal, { paddingBottom: insets.bottom + 20 }]}>
+            <View style={styles.modalIndicator} />
+            <View style={styles.modalTop}>
+              <View>
+                <Text style={styles.modalTitle}>WhatsApp Destek</Text>
+                <Text style={styles.modalSub}>Evrakları asistanımıza iletin.</Text>
+              </View>
+              <Pressable onPress={() => setShowWhatsApp(false)} style={styles.closeBtn}>
+                <Ionicons name="close" size={20} color={Colors.white} />
+              </Pressable>
+            </View>
+
+            <View style={styles.whatsContent}>
+               <View style={styles.whatsNumberBox}>
+                  <Text style={styles.whatsNumberLabel}>KOVANTİ HATTI</Text>
+                  <Text style={styles.whatsNumber}>+90 5XX XXX XX XX</Text>
+               </View>
+               <Text style={styles.whatsInstructions}>
+                 Çekinizin fotoğrafını ve varsa faturasını bu numaraya WhatsApp üzerinden gönderin. AI ajanlarımız verileri işleyip kovanınıza otomatik ekleyecektir.
+               </Text>
+               <Pressable
+                style={styles.whatsPrimaryBtn}
+                onPress={() => {
+                  setShowWhatsApp(false);
+                  Alert.alert("Yönlendiriliyor", "WhatsApp uygulamasına yönlendiriliyorsunuz...");
+                }}
+               >
+                 <Ionicons name="logo-whatsapp" size={20} color={Colors.white} />
+                 <Text style={styles.whatsPrimaryBtnText}>WhatsApp&apos;ı Aç</Text>
+               </Pressable>
+            </View>
+          </Animated.View>
+        </View>
+      )}
     </View>
   );
 }
@@ -226,6 +291,24 @@ const styles = StyleSheet.create({
   
   form: { gap: 14, marginBottom: 20 },
   row: { flexDirection: 'row', gap: 12 },
+  invoiceSection: {
+    marginTop: 6,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(0,0,0,0.05)",
+    gap: 12,
+  },
+  invoiceHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 4,
+  },
+  invoiceLabel: {
+    fontSize: 11,
+    fontFamily: "Poppins_600SemiBold",
+    color: Colors.textMuted,
+  },
   fieldContainer: { gap: 6 },
   label: { fontSize: 11, fontFamily: "Poppins_700Bold", color: Colors.textSecondary, marginLeft: 4 },
   input: { 
@@ -271,4 +354,96 @@ const styles = StyleSheet.create({
   whatsIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#25D366', alignItems: 'center', justifyContent: 'center' },
   whatsText: { fontSize: 14, fontFamily: "Poppins_700Bold", color: Colors.slate },
   whatsSub: { fontSize: 11, fontFamily: "Poppins_400Regular", color: Colors.textMuted, marginTop: 2 },
+
+  modalOverlay: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: "rgba(15, 23, 42, 0.7)",
+    justifyContent: "flex-end",
+    zIndex: 1000,
+  },
+  modal: {
+    backgroundColor: Colors.slate,
+    borderTopLeftRadius: 36,
+    borderTopRightRadius: 36,
+    padding: 24,
+    borderTopWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+  },
+  modalIndicator: {
+    width: 40,
+    height: 4,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    borderRadius: 2,
+    alignSelf: "center",
+    marginBottom: 20,
+  },
+  modalTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 24,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontFamily: "Poppins_800ExtraBold",
+    color: Colors.white,
+  },
+  modalSub: {
+    fontSize: 12,
+    fontFamily: "Poppins_400Regular",
+    color: "rgba(255,255,255,0.6)",
+    marginTop: 2,
+  },
+  closeBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  whatsContent: { gap: 20 },
+  whatsNumberBox: {
+    backgroundColor: 'rgba(37, 211, 102, 0.1)',
+    padding: 20,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(37, 211, 102, 0.2)',
+    alignItems: 'center',
+  },
+  whatsNumberLabel: {
+    fontSize: 10,
+    fontFamily: 'Poppins_700Bold',
+    color: '#25D366',
+    letterSpacing: 1,
+    marginBottom: 4,
+  },
+  whatsNumber: {
+    fontSize: 22,
+    fontFamily: 'Poppins_800ExtraBold',
+    color: Colors.white,
+  },
+  whatsInstructions: {
+    fontSize: 13,
+    fontFamily: 'Poppins_400Regular',
+    color: 'rgba(255,255,255,0.7)',
+    lineHeight: 20,
+    textAlign: 'center',
+    paddingHorizontal: 10,
+  },
+  whatsPrimaryBtn: {
+    backgroundColor: '#25D366',
+    borderRadius: 18,
+    paddingVertical: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  whatsPrimaryBtnText: {
+    fontSize: 15,
+    fontFamily: 'Poppins_800ExtraBold',
+    color: Colors.white,
+  },
 });

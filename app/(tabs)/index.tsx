@@ -64,6 +64,7 @@ function ActionItem({
 export default function PanelScreen() {
   const insets = useSafeAreaInsets();
   const { user, logout, checkDailySpins, getDailyPulse } = useUser();
+  const [selectedBee, setSelectedBee] = React.useState<any>(null);
 
   useEffect(() => {
     if (user) checkDailySpins();
@@ -77,10 +78,10 @@ export default function PanelScreen() {
 
   const pulse = getDailyPulse();
   const checksCount = user.checks?.length || 0;
-  const activeReqs = (user.offerRequests || []).filter((r) => r.status === "collecting").length;
   const offersReady = (user.offerRequests || []).filter((r) => r.status === "ready").length;
 
   const totalAmount = (user.checks || []).reduce((sum, c) => sum + (c.amount || 0), 0);
+  const totalTrxVolume = (user.completedTransactions || []).reduce((sum, t) => sum + (t.offer.netPay || 0), 0);
 
   const formatTotalAmount = (num: number) => {
     if (num >= 1000000) {
@@ -173,8 +174,13 @@ export default function PanelScreen() {
         <Animated.View entering={FadeInDown.delay(300).springify()} style={styles.section}>
           <GlassCard style={styles.tipCard}>
              <View style={styles.tipHeader}>
-                <Ionicons name="bulb" size={18} color={Colors.gold} />
-                <Text style={styles.tipTitle}>Günün Tavsiyesi</Text>
+                <View style={styles.tipAvatar}>
+                  <Text style={styles.tipEmoji}>📊</Text>
+                </View>
+                <View>
+                  <Text style={styles.tipAuthor}>Nabız Arı</Text>
+                  <Text style={styles.tipTitle}>Günün Tavsiyesi</Text>
+                </View>
              </View>
              <Text style={styles.tipText}>
                {pulse.mood === 'sert'
@@ -190,12 +196,12 @@ export default function PanelScreen() {
           <Text style={styles.sectionTitle}>Canlı Durum</Text>
           <View style={styles.statGrid}>
             <View style={styles.statRow}>
-               <StatCard label="Toplam Çek" value={String(checksCount)} icon="document-attach" delay={100} />
-               <StatCard label="Toplam Tutar" value={formatTotalAmount(totalAmount)} icon="wallet" delay={150} />
+               <StatCard label="Aktif Çek" value={String(checksCount)} icon="document-attach" delay={100} />
+               <StatCard label="Aktif Tutar" value={formatTotalAmount(totalAmount)} icon="wallet" delay={150} />
             </View>
             <View style={styles.statRow}>
-               <StatCard label="Toplanıyor" value={String(activeReqs)} icon="time" delay={200} />
-               <StatCard label="Hazır" value={String(offersReady)} icon="flash" delay={250} />
+               <StatCard label="Hazır Teklif" value={String(offersReady)} icon="flash" delay={200} />
+               <StatCard label="İşlem Hacmi" value={formatTotalAmount(totalTrxVolume)} icon="stats-chart" delay={250} />
             </View>
           </View>
         </View>
@@ -247,22 +253,80 @@ export default function PanelScreen() {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.beesScroll}>
             {(user.bees || []).map((b, idx) => (
               <Animated.View key={b.id} entering={FadeInDown.delay(700 + idx * 100).springify()}>
-                <GlassCard style={styles.beeCard}>
-                  <Text style={styles.beeEmoji}>{b.emoji}</Text>
-                  <Text style={styles.beeName}>{b.name}</Text>
-                  <View style={styles.xpBarBackground}>
-                    <View style={[styles.xpBarFill, { width: `${b.xp}%` }]} />
-                  </View>
-                  <View style={styles.beeInfoRow}>
-                    <Text style={styles.beeLevel}>Sv {b.level}</Text>
-                    <Text style={styles.beeStatus}>• Aktif</Text>
-                  </View>
-                </GlassCard>
+                <Pressable onPress={() => setSelectedBee(b)}>
+                  <GlassCard style={styles.beeCard}>
+                    <Text style={styles.beeEmoji}>{b.emoji}</Text>
+                    <Text style={styles.beeName}>{b.name}</Text>
+                    <View style={styles.xpBarBackground}>
+                      <View style={[styles.xpBarFill, { width: `${b.xp}%` }]} />
+                    </View>
+                    <View style={styles.beeInfoRow}>
+                      <Text style={styles.beeLevel}>Sv {b.level}</Text>
+                      <Text style={styles.beeStatus}>• Aktif</Text>
+                    </View>
+                  </GlassCard>
+                </Pressable>
               </Animated.View>
             ))}
           </ScrollView>
         </View>
       </ScrollView>
+
+      {selectedBee && (
+        <View style={styles.modalOverlay}>
+           <Pressable style={StyleSheet.absoluteFill} onPress={() => setSelectedBee(null)} />
+           <Animated.View entering={FadeInUp.springify()} style={[styles.beeModal, { paddingBottom: insets.bottom + 20 }]}>
+              <View style={styles.modalIndicator} />
+              <View style={styles.beeModalTop}>
+                 <Text style={styles.beeModalEmoji}>{selectedBee.emoji}</Text>
+                 <View style={{ flex: 1 }}>
+                    <Text style={styles.beeModalName}>{selectedBee.name}</Text>
+                    <Text style={styles.beeModalRole}>{selectedBee.role} Birimi</Text>
+                 </View>
+                 <Pressable onPress={() => setSelectedBee(null)} style={styles.closeBtn}>
+                    <Ionicons name="close" size={20} color={Colors.white} />
+                 </Pressable>
+              </View>
+
+              <View style={styles.beeStats}>
+                 <View style={styles.beeStatItem}>
+                    <Text style={styles.beeStatLabel}>SEVİYE</Text>
+                    <Text style={styles.beeStatValue}>{selectedBee.level}</Text>
+                 </View>
+                 <View style={styles.beeStatDivider} />
+                 <View style={styles.beeStatItem}>
+                    <Text style={styles.beeStatLabel}>DENEYİM</Text>
+                    <Text style={styles.beeStatValue}>%{selectedBee.xp}</Text>
+                 </View>
+                 <View style={styles.beeStatDivider} />
+                 <View style={styles.beeStatItem}>
+                    <Text style={styles.beeStatLabel}>DURUM</Text>
+                    <Text style={[styles.beeStatValue, { color: Colors.primary }]}>HAZIR</Text>
+                 </View>
+              </View>
+
+              <GlassCard style={styles.beeDescCard} intensity={15}>
+                 <Text style={styles.beeDescTitle}>Görev Tanımı</Text>
+                 <Text style={styles.beeDescText}>
+                    {selectedBee.role === "İzci" && "Piyasadaki en güvenilir ve hızlı faktoring partnerlerini tarar, kovan için en uygun ağları belirler."}
+                    {selectedBee.role === "Aracı" && "Teklif toplama sürecinde partnerlerle otonom müzakere yürütür ve revize turlarında en iyi oranları zorlar."}
+                    {selectedBee.role === "Kâtip" && "Yüklediğiniz evrakların AI analizini yapar, verileri dijitalleştirir ve kovan kayıtlarını tutar."}
+                    {selectedBee.role === "Nabız" && "Ekonomik verileri ve piyasa likiditesini anlık takip ederek size en doğru işlem zamanlamasını önerir."}
+                 </Text>
+              </GlassCard>
+
+              <Pressable
+                style={styles.beeActionBtn}
+                onPress={() => {
+                  if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setSelectedBee(null);
+                }}
+              >
+                 <Text style={styles.beeActionText}>Kovana Geri Dön</Text>
+              </Pressable>
+           </Animated.View>
+        </View>
+      )}
     </View>
   );
 }
@@ -347,8 +411,11 @@ const styles = StyleSheet.create({
   actionSub: { fontSize: 11, fontFamily: "Poppins_400Regular", color: Colors.textMuted, marginTop: 2 },
 
   tipCard: { padding: 16, borderLeftWidth: 4, borderLeftColor: Colors.gold, backgroundColor: Colors.white },
-  tipHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
-  tipTitle: { fontSize: 14, fontFamily: 'Poppins_700Bold', color: Colors.slate },
+  tipHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
+  tipAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: Colors.slate, alignItems: 'center', justifyContent: 'center' },
+  tipEmoji: { fontSize: 16 },
+  tipAuthor: { fontSize: 10, fontFamily: 'Poppins_700Bold', color: Colors.gold, textTransform: 'uppercase', letterSpacing: 0.5 },
+  tipTitle: { fontSize: 14, fontFamily: 'Poppins_800ExtraBold', color: Colors.slate, marginTop: -2 },
   tipText: { fontSize: 12, fontFamily: 'Poppins_400Regular', color: Colors.textSecondary, lineHeight: 18 },
 
   beesScroll: { marginHorizontal: -20, paddingHorizontal: 20 },
@@ -360,4 +427,59 @@ const styles = StyleSheet.create({
   beeInfoRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   beeLevel: { fontSize: 10, fontFamily: 'Poppins_600SemiBold', color: Colors.textMuted },
   beeStatus: { fontSize: 10, fontFamily: 'Poppins_600SemiBold', color: Colors.primary },
+
+  modalOverlay: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: "rgba(15, 23, 42, 0.7)",
+    justifyContent: "flex-end",
+    zIndex: 1000,
+  },
+  modalIndicator: {
+    width: 40,
+    height: 4,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    borderRadius: 2,
+    alignSelf: "center",
+    marginBottom: 20,
+  },
+  closeBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  beeModal: {
+    backgroundColor: Colors.slate,
+    borderTopLeftRadius: 36,
+    borderTopRightRadius: 36,
+    padding: 24,
+    borderTopWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+  },
+  beeModalTop: { flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 24 },
+  beeModalEmoji: { fontSize: 48 },
+  beeModalName: { fontSize: 20, fontFamily: 'Poppins_800ExtraBold', color: Colors.white },
+  beeModalRole: { fontSize: 12, fontFamily: 'Poppins_600SemiBold', color: Colors.gold, textTransform: 'uppercase' },
+
+  beeStats: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 20, padding: 20, marginBottom: 24 },
+  beeStatItem: { flex: 1, alignItems: 'center', gap: 4 },
+  beeStatLabel: { fontSize: 8, fontFamily: 'Poppins_700Bold', color: 'rgba(255,255,255,0.4)', letterSpacing: 1 },
+  beeStatValue: { fontSize: 16, fontFamily: 'Poppins_800ExtraBold', color: Colors.white },
+  beeStatDivider: { width: 1, height: 24, backgroundColor: 'rgba(255,255,255,0.1)' },
+
+  beeDescCard: { padding: 20, borderRadius: 24, marginBottom: 24 },
+  beeDescTitle: { fontSize: 13, fontFamily: 'Poppins_700Bold', color: Colors.gold, marginBottom: 8 },
+  beeDescText: { fontSize: 13, fontFamily: 'Poppins_400Regular', color: 'rgba(255,255,255,0.7)', lineHeight: 20 },
+
+  beeActionBtn: {
+    backgroundColor: Colors.gold,
+    borderRadius: 20,
+    paddingVertical: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  beeActionText: { fontSize: 15, fontFamily: 'Poppins_800ExtraBold', color: Colors.slate },
 });
