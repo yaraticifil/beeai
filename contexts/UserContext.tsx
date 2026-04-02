@@ -121,6 +121,7 @@ export interface User {
   bees: BeeAgent[];
   checks: CheckItem[];
   offerRequests: OfferRequest[];
+  completedTransactions: { id: string; check: CheckItem; offer: Offer; completedAt: number }[];
   activities: { id: string; type: string; message: string; time: number }[];
   coupons: Coupon[];
   flowerSeeds: number;
@@ -152,6 +153,7 @@ const DEFAULT_USER: Partial<User> = {
   bees: [],
   checks: [],
   offerRequests: [],
+  completedTransactions: [],
   coupons: [],
   flowerSeeds: 0,
   doubleNextHoney: false,
@@ -357,6 +359,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
           bees: parsed.bees && parsed.bees.length ? parsed.bees : makeBeeAgents(),
           checks: parsed.checks || [],
           offerRequests: parsed.offerRequests || [],
+          completedTransactions: parsed.completedTransactions || [],
           activities: parsed.activities || [],
           coupons: parsed.coupons || [],
           flowerSeeds: parsed.flowerSeeds || 0,
@@ -806,13 +809,24 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const offer = req.offers.find((o) => o.id === offerId);
     if (!offer) return;
 
+    const check = (user.checks || []).find((c) => c.id === checkId);
+    if (!check) return;
+
     const updatedRequests = (user.offerRequests || []).filter((r) => r.checkId !== checkId);
     const updatedChecks = (user.checks || []).filter((c) => c.id !== checkId);
+
+    const newTransaction = {
+      id: `trx_${Date.now()}`,
+      check,
+      offer,
+      completedAt: Date.now(),
+    };
 
     await saveUser({
       ...user,
       checks: updatedChecks,
       offerRequests: updatedRequests,
+      completedTransactions: [newTransaction, ...(user.completedTransactions || [])],
       activities: [
         {
           id: `act_${Date.now()}`,
