@@ -37,6 +37,7 @@ export default function OffersScreen() {
     ensureOfferProgress,
     requestRevision,
     pickOffer,
+    linkInvoice,
   } = useUser();
 
   const [selected, setSelected] = useState<{
@@ -94,8 +95,9 @@ export default function OffersScreen() {
   const refreshSelected = useMemo(() => {
     if (!selected) return null;
     const req = getReq(selected.check.id);
-    return { check: selected.check, req };
-  }, [selected, getReq]);
+    const check = (user?.checks || []).find((c) => c.id === selected.check.id) || selected.check;
+    return { check, req };
+  }, [selected, getReq, user?.checks]);
 
   const topInset = Platform.OS === "web" ? 60 : insets.top;
 
@@ -351,6 +353,37 @@ export default function OffersScreen() {
                     {refreshSelected.check.checkNo} • Vade{" "}
                     {refreshSelected.check.dueDate}
                   </Text>
+
+                  {refreshSelected.check.invoice ? (
+                    <View style={styles.modalInvoiceBadge}>
+                      <Ionicons name="receipt" size={12} color={Colors.gold} />
+                      <Text style={styles.modalInvoiceText}>
+                        Fatura: {refreshSelected.check.invoice.invoiceNo} (₺{money(refreshSelected.check.invoice.invoiceAmount || 0)})
+                      </Text>
+                    </View>
+                  ) : (
+                    <Pressable
+                      style={styles.addInvoiceLink}
+                      onPress={() => {
+                        Alert.prompt(
+                          "Fatura Ekle",
+                          "Fatura numarasını giriniz:",
+                          [
+                            { text: "Vazgeç", style: "cancel" },
+                            {
+                              text: "Ekle",
+                              onPress: (val) => {
+                                if (val) linkInvoice(refreshSelected.check.id, val);
+                              }
+                            }
+                          ]
+                        );
+                      }}
+                    >
+                      <Ionicons name="add-circle-outline" size={14} color={Colors.gold} />
+                      <Text style={styles.addInvoiceText}>Fatura Eşleştir</Text>
+                    </Pressable>
+                  )}
                 </GlassCard>
 
                 {!refreshSelected.req ? (
@@ -773,6 +806,33 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: "Poppins_400Regular",
     color: "rgba(255,255,255,0.5)",
+    marginBottom: 10,
+  },
+  modalInvoiceBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "rgba(251, 191, 36, 0.1)",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    alignSelf: "flex-start",
+  },
+  modalInvoiceText: {
+    fontSize: 10,
+    fontFamily: "Poppins_600SemiBold",
+    color: Colors.gold,
+  },
+  addInvoiceLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 4,
+  },
+  addInvoiceText: {
+    fontSize: 11,
+    fontFamily: "Poppins_700Bold",
+    color: Colors.gold,
   },
 
   modalPrimary: {

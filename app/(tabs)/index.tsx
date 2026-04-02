@@ -64,6 +64,7 @@ function ActionItem({
 export default function PanelScreen() {
   const insets = useSafeAreaInsets();
   const { user, logout, checkDailySpins, getDailyPulse } = useUser();
+  const [selectedBee, setSelectedBee] = React.useState<any>(null);
 
   useEffect(() => {
     if (user) checkDailySpins();
@@ -252,22 +253,80 @@ export default function PanelScreen() {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.beesScroll}>
             {(user.bees || []).map((b, idx) => (
               <Animated.View key={b.id} entering={FadeInDown.delay(700 + idx * 100).springify()}>
-                <GlassCard style={styles.beeCard}>
-                  <Text style={styles.beeEmoji}>{b.emoji}</Text>
-                  <Text style={styles.beeName}>{b.name}</Text>
-                  <View style={styles.xpBarBackground}>
-                    <View style={[styles.xpBarFill, { width: `${b.xp}%` }]} />
-                  </View>
-                  <View style={styles.beeInfoRow}>
-                    <Text style={styles.beeLevel}>Sv {b.level}</Text>
-                    <Text style={styles.beeStatus}>• Aktif</Text>
-                  </View>
-                </GlassCard>
+                <Pressable onPress={() => setSelectedBee(b)}>
+                  <GlassCard style={styles.beeCard}>
+                    <Text style={styles.beeEmoji}>{b.emoji}</Text>
+                    <Text style={styles.beeName}>{b.name}</Text>
+                    <View style={styles.xpBarBackground}>
+                      <View style={[styles.xpBarFill, { width: `${b.xp}%` }]} />
+                    </View>
+                    <View style={styles.beeInfoRow}>
+                      <Text style={styles.beeLevel}>Sv {b.level}</Text>
+                      <Text style={styles.beeStatus}>• Aktif</Text>
+                    </View>
+                  </GlassCard>
+                </Pressable>
               </Animated.View>
             ))}
           </ScrollView>
         </View>
       </ScrollView>
+
+      {selectedBee && (
+        <View style={styles.modalOverlay}>
+           <Pressable style={StyleSheet.absoluteFill} onPress={() => setSelectedBee(null)} />
+           <Animated.View entering={FadeInUp.springify()} style={[styles.beeModal, { paddingBottom: insets.bottom + 20 }]}>
+              <View style={styles.modalIndicator} />
+              <View style={styles.beeModalTop}>
+                 <Text style={styles.beeModalEmoji}>{selectedBee.emoji}</Text>
+                 <View style={{ flex: 1 }}>
+                    <Text style={styles.beeModalName}>{selectedBee.name}</Text>
+                    <Text style={styles.beeModalRole}>{selectedBee.role} Birimi</Text>
+                 </View>
+                 <Pressable onPress={() => setSelectedBee(null)} style={styles.closeBtn}>
+                    <Ionicons name="close" size={20} color={Colors.white} />
+                 </Pressable>
+              </View>
+
+              <View style={styles.beeStats}>
+                 <View style={styles.beeStatItem}>
+                    <Text style={styles.beeStatLabel}>SEVİYE</Text>
+                    <Text style={styles.beeStatValue}>{selectedBee.level}</Text>
+                 </View>
+                 <View style={styles.beeStatDivider} />
+                 <View style={styles.beeStatItem}>
+                    <Text style={styles.beeStatLabel}>DENEYİM</Text>
+                    <Text style={styles.beeStatValue}>%{selectedBee.xp}</Text>
+                 </View>
+                 <View style={styles.beeStatDivider} />
+                 <View style={styles.beeStatItem}>
+                    <Text style={styles.beeStatLabel}>DURUM</Text>
+                    <Text style={[styles.beeStatValue, { color: Colors.primary }]}>HAZIR</Text>
+                 </View>
+              </View>
+
+              <GlassCard style={styles.beeDescCard} intensity={15}>
+                 <Text style={styles.beeDescTitle}>Görev Tanımı</Text>
+                 <Text style={styles.beeDescText}>
+                    {selectedBee.role === "İzci" && "Piyasadaki en güvenilir ve hızlı faktoring partnerlerini tarar, kovan için en uygun ağları belirler."}
+                    {selectedBee.role === "Aracı" && "Teklif toplama sürecinde partnerlerle otonom müzakere yürütür ve revize turlarında en iyi oranları zorlar."}
+                    {selectedBee.role === "Kâtip" && "Yüklediğiniz evrakların AI analizini yapar, verileri dijitalleştirir ve kovan kayıtlarını tutar."}
+                    {selectedBee.role === "Nabız" && "Ekonomik verileri ve piyasa likiditesini anlık takip ederek size en doğru işlem zamanlamasını önerir."}
+                 </Text>
+              </GlassCard>
+
+              <Pressable
+                style={styles.beeActionBtn}
+                onPress={() => {
+                  if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setSelectedBee(null);
+                }}
+              >
+                 <Text style={styles.beeActionText}>Kovana Geri Dön</Text>
+              </Pressable>
+           </Animated.View>
+        </View>
+      )}
     </View>
   );
 }
@@ -368,4 +427,59 @@ const styles = StyleSheet.create({
   beeInfoRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   beeLevel: { fontSize: 10, fontFamily: 'Poppins_600SemiBold', color: Colors.textMuted },
   beeStatus: { fontSize: 10, fontFamily: 'Poppins_600SemiBold', color: Colors.primary },
+
+  modalOverlay: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: "rgba(15, 23, 42, 0.7)",
+    justifyContent: "flex-end",
+    zIndex: 1000,
+  },
+  modalIndicator: {
+    width: 40,
+    height: 4,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    borderRadius: 2,
+    alignSelf: "center",
+    marginBottom: 20,
+  },
+  closeBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  beeModal: {
+    backgroundColor: Colors.slate,
+    borderTopLeftRadius: 36,
+    borderTopRightRadius: 36,
+    padding: 24,
+    borderTopWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+  },
+  beeModalTop: { flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 24 },
+  beeModalEmoji: { fontSize: 48 },
+  beeModalName: { fontSize: 20, fontFamily: 'Poppins_800ExtraBold', color: Colors.white },
+  beeModalRole: { fontSize: 12, fontFamily: 'Poppins_600SemiBold', color: Colors.gold, textTransform: 'uppercase' },
+
+  beeStats: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 20, padding: 20, marginBottom: 24 },
+  beeStatItem: { flex: 1, alignItems: 'center', gap: 4 },
+  beeStatLabel: { fontSize: 8, fontFamily: 'Poppins_700Bold', color: 'rgba(255,255,255,0.4)', letterSpacing: 1 },
+  beeStatValue: { fontSize: 16, fontFamily: 'Poppins_800ExtraBold', color: Colors.white },
+  beeStatDivider: { width: 1, height: 24, backgroundColor: 'rgba(255,255,255,0.1)' },
+
+  beeDescCard: { padding: 20, borderRadius: 24, marginBottom: 24 },
+  beeDescTitle: { fontSize: 13, fontFamily: 'Poppins_700Bold', color: Colors.gold, marginBottom: 8 },
+  beeDescText: { fontSize: 13, fontFamily: 'Poppins_400Regular', color: 'rgba(255,255,255,0.7)', lineHeight: 20 },
+
+  beeActionBtn: {
+    backgroundColor: Colors.gold,
+    borderRadius: 20,
+    paddingVertical: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  beeActionText: { fontSize: 15, fontFamily: 'Poppins_800ExtraBold', color: Colors.slate },
 });
