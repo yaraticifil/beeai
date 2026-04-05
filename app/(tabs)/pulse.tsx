@@ -9,6 +9,20 @@ import { useUser } from "@/contexts/UserContext";
 import { GlassCard } from "@/components/GlassCard";
 import { TrendChart } from "@/components/TrendChart";
 
+function DynamicItem({ icon, title, desc }: { icon: keyof typeof Ionicons.glyphMap; title: string; desc: string }) {
+  return (
+    <View style={styles.dynamicItem}>
+      <View style={styles.dynamicIcon}>
+        <Ionicons name={icon} size={18} color={Colors.gold} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.dynamicTitle}>{title}</Text>
+        <Text style={styles.dynamicDesc}>{desc}</Text>
+      </View>
+    </View>
+  );
+}
+
 export default function PulseScreen() {
   const insets = useSafeAreaInsets();
   const { user, getDailyPulse, setPulseMode } = useUser();
@@ -111,6 +125,27 @@ export default function PulseScreen() {
           </GlassCard>
         </Animated.View>
 
+        <Animated.View entering={FadeInDown.delay(200).springify()}>
+          <Text style={styles.sectionTitle}>Piyasa Dinamikleri</Text>
+          <GlassCard style={styles.dynamicsCard}>
+             <DynamicItem
+                icon="trending-up-outline"
+                title="Likidite Durumu"
+                desc={pulse.mood === 'yumuşak' ? "Yüksek: Fonlama iştahı artıda." : "Kısıtlı: Seçici fonlama hakim."}
+             />
+             <DynamicItem
+                icon="calendar-outline"
+                title="Vade Tercihi"
+                desc="60-120 gün arası evraklar revaçta."
+             />
+             <DynamicItem
+                icon="business-outline"
+                title="Sektörel Etki"
+                desc="İmalat ve ihracat odaklı çekler öncelikli."
+             />
+          </GlassCard>
+        </Animated.View>
+
         <Animated.View entering={FadeInDown.delay(300).springify()}>
           <View style={styles.infoRow}>
             <Ionicons name="shield-checkmark-outline" size={16} color={Colors.textMuted} />
@@ -132,6 +167,7 @@ const styles = StyleSheet.create({
   h2: { fontSize: 13, fontFamily: "Poppins_400Regular", color: "rgba(255,255,255,0.7)", lineHeight: 20 },
 
   scroll: { flex: 1, paddingHorizontal: 20, marginTop: -20 },
+  sectionTitle: { fontSize: 14, fontFamily: "Poppins_800ExtraBold", color: Colors.slate, marginTop: 24, marginBottom: 12, marginLeft: 4 },
   card: { padding: 20, borderRadius: 28 },
 
   topRow: { flexDirection: "row", alignItems: "center", gap: 14, marginBottom: 20 },
@@ -167,6 +203,12 @@ const styles = StyleSheet.create({
   noteHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
   noteTitle: { fontSize: 13, fontFamily: "Poppins_700Bold", color: Colors.gold },
   noteText: { fontSize: 12, fontFamily: "Poppins_400Regular", color: "rgba(255,255,255,0.7)", lineHeight: 20 },
+
+  dynamicsCard: { padding: 0, overflow: 'hidden' },
+  dynamicItem: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.05)' },
+  dynamicIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(251,191,36,0.1)', alignItems: 'center', justifyContent: 'center' },
+  dynamicTitle: { fontSize: 13, fontFamily: "Poppins_700Bold", color: Colors.slate },
+  dynamicDesc: { fontSize: 11, fontFamily: "Poppins_400Regular", color: Colors.textMuted, marginTop: 2 },
 
   infoRow: { marginTop: 20, flexDirection: "row", gap: 10, alignItems: "center", paddingHorizontal: 10 },
   footerText: { fontSize: 11, fontFamily: "Poppins_400Regular", color: Colors.textMuted, lineHeight: 18, flex: 1 },

@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { View, Text, StyleSheet, TextInput, Pressable, ScrollView, Alert, Platform } from "react-native";
+import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -121,6 +122,15 @@ export default function UploadScreen() {
               </View>
             </Pressable>
 
+            {imageUri && (
+              <View style={styles.previewContainer}>
+                <Image source={{ uri: imageUri }} style={styles.previewImage} />
+                <Pressable style={styles.removePhoto} onPress={() => setImageUri(undefined)}>
+                  <Ionicons name="close-circle" size={24} color={Colors.danger} />
+                </Pressable>
+              </View>
+            )}
+
             <View style={styles.form}>
               <Field label="Çek No" value={checkNo} onChangeText={setCheckNo} placeholder="Örn: 00012345" />
               <Field label="Keşideci (Firma)" value={issuerName} onChangeText={setIssuerName} placeholder="Örn: Kovan Tekstil A.Ş." />
@@ -224,6 +234,10 @@ const styles = StyleSheet.create({
   photoText: { fontSize: 13, fontFamily: "Poppins_700Bold", color: Colors.slate },
   photoSub: { fontSize: 11, fontFamily: "Poppins_400Regular", color: Colors.textMuted, marginTop: 2 },
   
+  previewContainer: { position: 'relative', marginBottom: 20, borderRadius: 18, overflow: 'hidden', borderWidth: 1, borderColor: Colors.cardBorder },
+  previewImage: { width: '100%', height: 160 },
+  removePhoto: { position: 'absolute', top: 8, right: 8, backgroundColor: Colors.white, borderRadius: 12 },
+
   form: { gap: 14, marginBottom: 20 },
   row: { flexDirection: 'row', gap: 12 },
   fieldContainer: { gap: 6 },
