@@ -11,12 +11,17 @@ import { useUser } from "@/contexts/UserContext";
 import { GlassCard } from "@/components/GlassCard";
 import { TrendChart } from "@/components/TrendChart";
 
-function StatCard({ label, value, icon, delay = 0 }: { label: string; value: string; icon: keyof typeof Ionicons.glyphMap; delay?: number }) {
+function StatCard({ label, value, icon, trend, delay = 0 }: { label: string; value: string; icon: keyof typeof Ionicons.glyphMap; trend?: string; delay?: number }) {
   return (
     <Animated.View entering={FadeInDown.delay(delay).springify()} style={{ flex: 1 }}>
       <GlassCard style={styles.statCard}>
         <View style={styles.statIconContainer}>
           <Ionicons name={icon} size={18} color={Colors.gold} />
+          {trend && (
+            <View style={styles.trendBadge}>
+              <Text style={styles.trendText}>{trend}</Text>
+            </View>
+          )}
         </View>
         <Text style={styles.statValue}>{value}</Text>
         <Text style={styles.statLabel}>{label}</Text>
@@ -190,8 +195,8 @@ export default function PanelScreen() {
           <Text style={styles.sectionTitle}>Canlı Durum</Text>
           <View style={styles.statGrid}>
             <View style={styles.statRow}>
-               <StatCard label="Toplam Çek" value={String(checksCount)} icon="document-attach" delay={100} />
-               <StatCard label="Toplam Tutar" value={formatTotalAmount(totalAmount)} icon="wallet" delay={150} />
+               <StatCard label="Toplam Çek" value={String(checksCount)} icon="document-attach" trend="+1.2%" delay={100} />
+               <StatCard label="Toplam Tutar" value={formatTotalAmount(totalAmount)} icon="wallet" trend="+3.4%" delay={150} />
             </View>
             <View style={styles.statRow}>
                <StatCard label="Toplanıyor" value={String(activeReqs)} icon="time" delay={200} />
@@ -200,9 +205,9 @@ export default function PanelScreen() {
           </View>
         </View>
 
-        {user.activities && user.activities.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Son Hareketler</Text>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Son Hareketler</Text>
+          {user.activities && user.activities.length > 0 ? (
             <GlassCard style={styles.activityCard}>
               {user.activities.slice(0, 3).map((act, idx) => (
                 <View key={act.id} style={[styles.activityItem, idx === 0 && { borderTopWidth: 0 }]}>
@@ -214,8 +219,13 @@ export default function PanelScreen() {
                 </View>
               ))}
             </GlassCard>
-          </View>
-        )}
+          ) : (
+            <GlassCard style={styles.emptyActivityCard}>
+              <Ionicons name="notifications-off-outline" size={24} color={Colors.textMuted} />
+              <Text style={styles.emptyActivityText}>Henüz bir hareket yok</Text>
+            </GlassCard>
+          )}
+        </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Hızlı İşlemler</Text>
@@ -310,11 +320,15 @@ const styles = StyleSheet.create({
   statGrid: { gap: 12 },
   statRow: { flexDirection: 'row', gap: 12 },
   statCard: { alignItems: "center", paddingVertical: 14, paddingHorizontal: 8, minHeight: 100, justifyContent: 'center' },
-  statIconContainer: { width: 32, height: 32, borderRadius: 10, backgroundColor: Colors.goldLight, alignItems: "center", justifyContent: "center", marginBottom: 8 },
+  statIconContainer: { width: 32, height: 32, borderRadius: 10, backgroundColor: Colors.goldLight, alignItems: "center", justifyContent: "center", marginBottom: 8, position: 'relative' },
+  trendBadge: { position: 'absolute', top: -10, right: -28, backgroundColor: Colors.primaryLight, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(34,197,94,0.2)' },
+  trendText: { fontSize: 8, fontFamily: "Poppins_700Bold", color: Colors.primary },
   statValue: { fontSize: 18, fontFamily: "Poppins_800ExtraBold", color: Colors.slate },
   statLabel: { fontSize: 10, fontFamily: "Poppins_600SemiBold", color: Colors.textMuted },
 
   activityCard: { padding: 0, overflow: 'hidden' },
+  emptyActivityCard: { padding: 30, alignItems: 'center', gap: 10, backgroundColor: 'rgba(0,0,0,0.02)' },
+  emptyActivityText: { fontSize: 12, fontFamily: 'Poppins_500Medium', color: Colors.textMuted },
   activityItem: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 16, borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.05)' },
   activityDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.gold },
   activityMsg: { fontSize: 12, fontFamily: "Poppins_600SemiBold", color: Colors.slate },
