@@ -85,6 +85,13 @@ export interface Offer {
   notes?: string;
 }
 
+export interface CompletedTransaction {
+  id: string;
+  check: CheckItem;
+  selectedOffer: Offer;
+  completedAt: number;
+}
+
 export interface OfferRequest {
   id: string;
   checkId: string;
@@ -121,6 +128,7 @@ export interface User {
   bees: BeeAgent[];
   checks: CheckItem[];
   offerRequests: OfferRequest[];
+  completedTransactions: CompletedTransaction[];
   activities: { id: string; type: string; message: string; time: number }[];
   coupons: Coupon[];
   flowerSeeds: number;
@@ -152,6 +160,7 @@ const DEFAULT_USER: Partial<User> = {
   bees: [],
   checks: [],
   offerRequests: [],
+  completedTransactions: [],
   coupons: [],
   flowerSeeds: 0,
   doubleNextHoney: false,
@@ -357,6 +366,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
           bees: parsed.bees && parsed.bees.length ? parsed.bees : makeBeeAgents(),
           checks: parsed.checks || [],
           offerRequests: parsed.offerRequests || [],
+          completedTransactions: parsed.completedTransactions || [],
           activities: parsed.activities || [],
           coupons: parsed.coupons || [],
           flowerSeeds: parsed.flowerSeeds || 0,
@@ -385,6 +395,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       bees: makeBeeAgents(),
       checks: [],
       offerRequests: [],
+      completedTransactions: [],
       activities: [],
       coupons: [],
       flowerSeeds: 1,
@@ -806,6 +817,16 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const offer = req.offers.find((o) => o.id === offerId);
     if (!offer) return;
 
+    const check = (user.checks || []).find((c) => c.id === checkId);
+    if (!check) return;
+
+    const completed: CompletedTransaction = {
+      id: `tx_${Date.now()}`,
+      check,
+      selectedOffer: offer,
+      completedAt: Date.now(),
+    };
+
     const updatedRequests = (user.offerRequests || []).filter((r) => r.checkId !== checkId);
     const updatedChecks = (user.checks || []).filter((c) => c.id !== checkId);
 
@@ -813,6 +834,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       ...user,
       checks: updatedChecks,
       offerRequests: updatedRequests,
+      completedTransactions: [completed, ...(user.completedTransactions || [])],
       activities: [
         {
           id: `act_${Date.now()}`,

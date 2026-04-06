@@ -200,9 +200,9 @@ export default function PanelScreen() {
           </View>
         </View>
 
-        {user.activities && user.activities.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Son Hareketler</Text>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Son Hareketler</Text>
+          {user.activities && user.activities.length > 0 ? (
             <GlassCard style={styles.activityCard}>
               {user.activities.slice(0, 3).map((act, idx) => (
                 <View key={act.id} style={[styles.activityItem, idx === 0 && { borderTopWidth: 0 }]}>
@@ -214,8 +214,13 @@ export default function PanelScreen() {
                 </View>
               ))}
             </GlassCard>
-          </View>
-        )}
+          ) : (
+            <GlassCard style={styles.emptyActivityCard}>
+               <Ionicons name="notifications-off-outline" size={24} color={Colors.textMuted} />
+               <Text style={styles.emptyActivityText}>Henüz bir hareket yok</Text>
+            </GlassCard>
+          )}
+        </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Hızlı İşlemler</Text>
@@ -319,6 +324,9 @@ const styles = StyleSheet.create({
   activityDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.gold },
   activityMsg: { fontSize: 12, fontFamily: "Poppins_600SemiBold", color: Colors.slate },
   activityTime: { fontSize: 10, fontFamily: "Poppins_400Regular", color: Colors.textMuted, marginTop: 2 },
+
+  emptyActivityCard: { padding: 24, alignItems: 'center', justifyContent: 'center', gap: 8, borderStyle: 'dashed', borderWidth: 1, borderColor: Colors.cardBorder },
+  emptyActivityText: { fontSize: 12, fontFamily: 'Poppins_600SemiBold', color: Colors.textMuted },
 
   actionItem: {
     backgroundColor: Colors.white,
