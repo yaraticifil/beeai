@@ -4,6 +4,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import Animated, { FadeInDown } from "react-native-reanimated";
@@ -111,15 +112,34 @@ export default function UploadScreen() {
       >
         <Animated.View entering={FadeInDown.delay(200).springify()}>
           <GlassCard style={styles.card}>
-            <Pressable style={({ pressed }) => [styles.photoBtn, pressed && { opacity: 0.8 }]} onPress={pickImage}>
-              <View style={[styles.photoIconContainer, imageUri && { backgroundColor: Colors.primaryLight }]}>
-                 <Ionicons name={imageUri ? "checkmark-circle" : "camera"} size={22} color={imageUri ? Colors.primary : Colors.gold} />
+            {imageUri ? (
+              <View style={styles.previewContainer}>
+                <Image source={{ uri: imageUri }} style={styles.previewImage} contentFit="cover" />
+                <Pressable
+                  style={styles.removeImageBtn}
+                  onPress={() => {
+                    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setImageUri(undefined);
+                  }}
+                >
+                  <Ionicons name="close-circle" size={28} color={Colors.danger} />
+                </Pressable>
+                <View style={styles.previewOverlay}>
+                   <Ionicons name="checkmark-circle" size={20} color={Colors.primary} />
+                   <Text style={styles.previewText}>Görsel Analiz İçin Hazır</Text>
+                </View>
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.photoText}>{imageUri ? "Görsel Başarıyla Eklendi" : "Çek Fotoğrafını Çek/Yükle"}</Text>
-                <Text style={styles.photoSub}>{imageUri ? "AI analizi için hazır" : "Yapay zeka verileri otomatik ayrıştırır"}</Text>
-              </View>
-            </Pressable>
+            ) : (
+              <Pressable style={({ pressed }) => [styles.photoBtn, pressed && { opacity: 0.8 }]} onPress={pickImage}>
+                <View style={[styles.photoIconContainer, imageUri && { backgroundColor: Colors.primaryLight }]}>
+                   <Ionicons name={imageUri ? "checkmark-circle" : "camera"} size={22} color={imageUri ? Colors.primary : Colors.gold} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.photoText}>{imageUri ? "Görsel Başarıyla Eklendi" : "Çek Fotoğrafını Çek/Yükle"}</Text>
+                  <Text style={styles.photoSub}>{imageUri ? "AI analizi için hazır" : "Yapay zeka verileri otomatik ayrıştırır"}</Text>
+                </View>
+              </Pressable>
+            )}
 
             <View style={styles.form}>
               <Field label="Çek No" value={checkNo} onChangeText={setCheckNo} placeholder="Örn: 00012345" />
@@ -204,6 +224,44 @@ const styles = StyleSheet.create({
   
   scroll: { flex: 1, paddingHorizontal: 20, marginTop: -20 },
   card: { padding: 20, borderRadius: 24 },
+
+  previewContainer: {
+    height: 160,
+    borderRadius: 20,
+    overflow: 'hidden',
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+  },
+  previewImage: {
+    width: '100%',
+    height: '100%',
+  },
+  removeImageBtn: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: Colors.white,
+    borderRadius: 14,
+  },
+  previewOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    paddingVertical: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  previewText: {
+    fontSize: 12,
+    fontFamily: 'Poppins_700Bold',
+    color: Colors.slate,
+  },
   
   photoBtn: { 
     flexDirection: "row", 
