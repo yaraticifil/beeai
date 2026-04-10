@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -89,7 +89,7 @@ function FlowerItem({
 
 export default function GardenScreen() {
   const insets = useSafeAreaInsets();
-  const { user, plantFlower, harvestFlower } = useUser();
+  const { user, plantFlower, harvestFlower, harvestAllFlowers } = useUser();
   const [harvestResult, setHarvestResult] = useState<number | null>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -121,6 +121,14 @@ export default function GardenScreen() {
     if (earned > 0) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       showHarvestResult(earned);
+    }
+  };
+
+  const handleHarvestAll = async () => {
+    const { count, honey } = await harvestAllFlowers();
+    if (count > 0) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      showHarvestResult(honey);
     }
   };
 
@@ -209,6 +217,19 @@ export default function GardenScreen() {
             )}
           </LinearGradient>
         </View>
+
+        {readyCount > 1 && (
+          <Pressable
+            style={({ pressed }) => [
+              styles.harvestAllBtn,
+              pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] },
+            ]}
+            onPress={handleHarvestAll}
+          >
+            <Ionicons name="sparkles" size={18} color={Colors.white} />
+            <Text style={styles.harvestAllText}>Hepsini Topla ({readyCount})</Text>
+          </Pressable>
+        )}
 
         <Pressable
           style={({ pressed }) => [
@@ -502,5 +523,24 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: "Poppins_400Regular",
     color: Colors.textSecondary,
+  },
+  harvestAllBtn: {
+    backgroundColor: Colors.gold,
+    borderRadius: 16,
+    paddingVertical: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    shadowColor: Colors.gold,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  harvestAllText: {
+    fontSize: 15,
+    fontFamily: "Poppins_700Bold",
+    color: Colors.white,
   },
 });
