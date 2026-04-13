@@ -7,6 +7,7 @@ import React, {
   ReactNode,
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { FLOWER_GROWTH_TIME_MS, MIN_DISCOUNT_RATE, MAX_DISCOUNT_RATE } from "@/constants/game";
 
 /* =========================
    Types
@@ -132,6 +133,8 @@ export interface User {
   activities: { id: string; type: string; message: string; time: number }[];
   coupons: Coupon[];
   flowerSeeds: number;
+  flowerBoostCount: number;
+  extraSpinCount: number;
   doubleNextHoney: boolean;
   settings: UserSettings;
 }
@@ -163,6 +166,8 @@ const DEFAULT_USER: Partial<User> = {
   completedTransactions: [],
   coupons: [],
   flowerSeeds: 0,
+  flowerBoostCount: 0,
+  extraSpinCount: 0,
   doubleNextHoney: false,
   settings: { pulseMode: "weather" },
 };
@@ -318,6 +323,8 @@ interface UserContextValue {
 
   plantFlower: () => Promise<boolean>;
   harvestFlower: (flowerId: string) => Promise<number>;
+  harvestAllFlowers: () => Promise<number>;
+  boostFlower: (flowerId: string) => Promise<boolean>;
   checkDailySpins: () => Promise<void>;
 
   // Pilot: checks & offers
@@ -370,6 +377,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
           activities: parsed.activities || [],
           coupons: parsed.coupons || [],
           flowerSeeds: parsed.flowerSeeds || 0,
+          flowerBoostCount: parsed.flowerBoostCount || 0,
+          extraSpinCount: parsed.extraSpinCount || 0,
           doubleNextHoney: parsed.doubleNextHoney || false,
         };
         hydrated.level = computeLevel(hydrated.honeyPoints);
@@ -399,6 +408,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
       activities: [],
       coupons: [],
       flowerSeeds: 1,
+      flowerBoostCount: 0,
+      extraSpinCount: 0,
       doubleNextHoney: false,
       settings: { pulseMode: "weather" },
     };
@@ -444,7 +455,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     if (!user) return;
     const today = todayKey();
     if (user.lastSpinDate !== today) {
-      await saveUser({ ...user, spinCount: 3, lastSpinDate: today });
+      await saveUser({ ...user, spinCount: 3 + (user.extraSpinCount || 0), lastSpinDate: today });
     }
   };
 
@@ -535,21 +546,81 @@ export function UserProvider({ children }: { children: ReactNode }) {
     if (!flower) return 0;
 
     const elapsed = Date.now() - flower.plantedAt;
-    const isReady = elapsed >= 30000;
+    const isReady = elapsed >= FLOWER_GROWTH_TIME_MS;
     if (!isReady) return 0;
 
     const honeyEarned = Math.floor(Math.random() * 16) + 15;
     const newFlowers = (user.flowers || []).filter((f) => f.id !== flowerId);
-    const newPoints = user.honeyPoints + honeyEarned;
+
+    // Use addHoney to support doubleNextHoney bonus
+    const oldPoints = user.honeyPoints;
+    await addHoney(honeyEarned);
+
+    // Refresh user after addHoney call (as it saves and updates state)
+    const stored = await AsyncStorage.getItem(STORAGE_KEY);
+    const latestUser = stored ? JSON.parse(stored) : user;
+
+    const updated: User = {
+      ...latestUser,
+      flowers: newFlowers,
+      totalHarvested: (latestUser.totalHarvested || 0) + 1,
+    };
+    await saveUser(updated);
+
+    return updated.honeyPoints - oldPoints;
+  };
+
+  const harvestAllFlowers = async (): Promise<number> => {
+    if (!user) return 0;
+
+    const now = Date.now();
+    const readyOnes = user.flowers.filter((f) => now - f.plantedAt >= FLOWER_GROWTH_TIME_MS);
+    if (readyOnes.length === 0) return 0;
+
+    let totalEarned = 0;
+    const remainingFlowers = user.flowers.filter((f) => now - f.plantedAt < FLOWER_GROWTH_TIME_MS);
+
+    // Apply doubleNextHoney only once for the whole batch
+    let bonusApplied = false;
+    for (let i = 0; i < readyOnes.length; i++) {
+      const earned = Math.floor(Math.random() * 16) + 15;
+      if (user.doubleNextHoney && !bonusApplied) {
+        totalEarned += earned * 2;
+        bonusApplied = true;
+      } else {
+        totalEarned += earned;
+      }
+    }
+
+    const newPoints = user.honeyPoints + totalEarned;
+    const updated: User = {
+      ...user,
+      flowers: remainingFlowers,
+      honeyPoints: newPoints,
+      level: computeLevel(newPoints),
+      totalHarvested: (user.totalHarvested || 0) + readyOnes.length,
+      doubleNextHoney: false,
+    };
+
+    await saveUser(updated);
+    return totalEarned;
+  };
+
+  const boostFlower = async (flowerId: string): Promise<boolean> => {
+    if (!user || user.flowerBoostCount <= 0) return false;
+
+    const idx = user.flowers.findIndex((f) => f.id === flowerId);
+    if (idx < 0) return false;
+
+    const updatedFlowers = [...user.flowers];
+    updatedFlowers[idx] = { ...updatedFlowers[idx], plantedAt: Date.now() - FLOWER_GROWTH_TIME_MS };
 
     await saveUser({
       ...user,
-      flowers: newFlowers,
-      honeyPoints: newPoints,
-      level: computeLevel(newPoints),
-      totalHarvested: (user.totalHarvested || 0) + 1,
+      flowers: updatedFlowers,
+      flowerBoostCount: user.flowerBoostCount - 1,
     });
-    return honeyEarned;
+    return true;
   };
 
   const addCheck: UserContextValue["addCheck"] = async (input) => {
@@ -782,10 +853,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const check = (user.checks || []).find((c) => c.id === checkId);
     if (!check) return false;
 
-    // Revize: tüm teklifleri küçük iyileştir (oran -0.15, fee -150)
+    // Aracı Arı Etkisi: Seviye arttıkça revize performansı artar
+    const negotiatorBee = user.bees.find(b => b.role === "Aracı");
+    const skillMultiplier = 1 + (negotiatorBee ? (negotiatorBee.level - 1) * 0.1 : 0);
+
+    // Revize: tüm teklifleri küçük iyileştir (oran -0.15 * multiplier, fee -150 * multiplier)
     const revised = req.offers.map((o) => {
-      const discountRate = clamp(o.discountRate - 0.15, 0.9, 7.5);
-      const fees = Math.max(0, o.fees - 150);
+      const discountRate = clamp(o.discountRate - (0.15 * skillMultiplier), MIN_DISCOUNT_RATE, MAX_DISCOUNT_RATE);
+      const fees = Math.max(0, o.fees - Math.round(150 * skillMultiplier));
       const netPay = Math.round(check.amount * (1 - discountRate / 100) - fees);
       return { ...o, discountRate: Number(discountRate.toFixed(2)), fees, netPay, notes: "Revize turu" };
     });
@@ -830,10 +905,25 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const updatedRequests = (user.offerRequests || []).filter((r) => r.checkId !== checkId);
     const updatedChecks = (user.checks || []).filter((c) => c.id !== checkId);
 
+    // Ajanlara XP Ver: İşlem tamamlandığında Aracı ve Kâtip XP kazanır
+    const updatedBees = user.bees.map(bee => {
+      if (bee.role === "Aracı" || bee.role === "Kâtip") {
+        let newXp = bee.xp + 10;
+        let newLevel = bee.level;
+        if (newXp >= 100) {
+          newXp -= 100;
+          newLevel += 1;
+        }
+        return { ...bee, xp: newXp, level: newLevel };
+      }
+      return bee;
+    });
+
     await saveUser({
       ...user,
       checks: updatedChecks,
       offerRequests: updatedRequests,
+      bees: updatedBees,
       completedTransactions: [completed, ...(user.completedTransactions || [])],
       activities: [
         {
@@ -868,6 +958,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
       spin,
       plantFlower,
       harvestFlower,
+      harvestAllFlowers,
+      boostFlower,
       checkDailySpins,
       addCheck,
       linkInvoice,

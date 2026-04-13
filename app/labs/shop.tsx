@@ -15,6 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import { useUser } from "@/contexts/UserContext";
+import { CONSUMABLE_ITEMS } from "@/constants/game";
 
 interface ShopItem {
   id: string;
@@ -100,11 +101,13 @@ function ShopCard({
   item,
   canAfford,
   isPurchased,
+  ownedCount,
   onBuy,
 }: {
   item: ShopItem;
   canAfford: boolean;
   isPurchased: boolean;
+  ownedCount: number;
   onBuy: () => void;
 }) {
   return (
@@ -131,25 +134,32 @@ function ShopCard({
           <View style={styles.costChip}>
             <Text style={styles.costText}>{item.cost} 🍯</Text>
           </View>
-          {isPurchased ? (
+          {isPurchased && item.category === "ozel" ? (
             <View style={styles.purchasedBadge}>
               <Ionicons name="checkmark" size={12} color={Colors.white} />
               <Text style={styles.purchasedText}>Alındı</Text>
             </View>
           ) : (
-            <Pressable
-              style={({ pressed }) => [
-                styles.buyButton,
-                { backgroundColor: canAfford ? item.color : "#d1d5db" },
-                pressed && { opacity: 0.8 },
-              ]}
-              onPress={onBuy}
-              disabled={!canAfford}
-            >
-              <Text style={styles.buyButtonText}>
-                {canAfford ? "Satın Al" : "Yetersiz"}
-              </Text>
-            </Pressable>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              {ownedCount > 0 && (
+                <View style={styles.ownedBadge}>
+                  <Text style={styles.ownedText}>{ownedCount} Adet</Text>
+                </View>
+              )}
+              <Pressable
+                style={({ pressed }) => [
+                  styles.buyButton,
+                  { backgroundColor: canAfford ? item.color : "#d1d5db" },
+                  pressed && { opacity: 0.8 },
+                ]}
+                onPress={onBuy}
+                disabled={!canAfford}
+              >
+                <Text style={styles.buyButtonText}>
+                  {canAfford ? "Satın Al" : "Yetersiz"}
+                </Text>
+              </Pressable>
+            </View>
           )}
         </View>
       </View>
@@ -170,12 +180,20 @@ export default function ShopScreen() {
     (item) => activeCategory === "all" || item.category === activeCategory
   );
 
+  const getOwnedCount = (id: string) => {
+     if (id === CONSUMABLE_ITEMS.FLOWER_BOOST) return user.flowerBoostCount || 0;
+     if (id === CONSUMABLE_ITEMS.EXTRA_SPIN) return user.extraSpinCount || 0;
+     return 0;
+  };
+
   const handleBuy = (item: ShopItem) => {
     if (!user || user.honeyPoints < item.cost) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       return;
     }
-    if (user.purchasedItems.includes(item.id)) return;
+
+    // Only block if it's a non-consumable special item
+    if (item.category === "ozel" && user.purchasedItems.includes(item.id)) return;
 
     Alert.alert(
       "Satın Al",
@@ -187,9 +205,22 @@ export default function ShopScreen() {
           onPress: async () => {
             const success = await spendHoney(item.cost);
             if (success) {
-              await updateUser({
+              const updates: any = {
                 purchasedItems: [...user.purchasedItems, item.id],
-              });
+              };
+
+              // Apply consumable effect
+              if (item.id === CONSUMABLE_ITEMS.FLOWER_BOOST) {
+                updates.flowerBoostCount = (user.flowerBoostCount || 0) + 1;
+              } else if (item.id === CONSUMABLE_ITEMS.EXTRA_SPIN) {
+                updates.extraSpinCount = (user.extraSpinCount || 0) + 1;
+              } else if (item.id === CONSUMABLE_ITEMS.TRIPLE_SPIN) {
+                updates.extraSpinCount = (user.extraSpinCount || 0) + 3;
+              } else if (item.id === "double_honey") {
+                updates.doubleNextHoney = true;
+              }
+
+              await updateUser(updates);
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
               Alert.alert("Tebrikler!", `${item.name} başarıyla satın alındı!`);
             }
@@ -252,6 +283,7 @@ export default function ShopScreen() {
             item={item}
             canAfford={user.honeyPoints >= item.cost}
             isPurchased={user.purchasedItems.includes(item.id)}
+            ownedCount={getOwnedCount(item.id)}
             onBuy={() => handleBuy(item)}
           />
         ))}
@@ -426,6 +458,17 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: "Poppins_600SemiBold",
     color: Colors.white,
+  },
+  ownedBadge: {
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  ownedText: {
+    fontSize: 10,
+    fontFamily: 'Poppins_700Bold',
+    color: Colors.textMuted,
   },
   emptyState: {
     alignItems: "center",
