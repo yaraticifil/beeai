@@ -13,13 +13,12 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import * as Haptics from "expo-haptics";
+import { impactLight, notificationSuccess, notificationError } from "@/shared/utils/haptics";
 import Colors from "@/constants/colors";
 import { useUser, Flower } from "@/contexts/UserContext";
+import { FLOWER_GROWTH_TIME_MS } from "@/constants/game";
 
 const { width } = Dimensions.get("window");
-
-const GROW_TIME = 30000;
 
 function FlowerItem({
   flower,
@@ -44,9 +43,9 @@ function FlowerItem({
     return () => clearInterval(interval);
   }, []);
 
-  const isReady = elapsed >= GROW_TIME;
-  const progress = Math.min(elapsed / GROW_TIME, 1);
-  const timeLeft = Math.max(0, Math.ceil((GROW_TIME - elapsed) / 1000));
+  const isReady = elapsed >= FLOWER_GROWTH_TIME_MS;
+  const progress = Math.min(elapsed / FLOWER_GROWTH_TIME_MS, 1);
+  const timeLeft = Math.max(0, Math.ceil((FLOWER_GROWTH_TIME_MS - elapsed) / 1000));
   const mins = Math.floor(timeLeft / 60);
   const secs = timeLeft % 60;
 
@@ -89,7 +88,7 @@ function FlowerItem({
 
 export default function GardenScreen() {
   const insets = useSafeAreaInsets();
-  const { user, plantFlower, harvestFlower } = useUser();
+  const { user, plantFlower, harvestFlower, harvestAllFlowers } = useUser();
   const [harvestResult, setHarvestResult] = useState<number | null>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -106,20 +105,28 @@ export default function GardenScreen() {
 
   const handlePlant = async () => {
     if (!user || user.honeyPoints < 10) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      notificationError();
       Alert.alert("Yetersiz Bal", "Çiçek dikmek için 10 bal puanı gerekiyor.");
       return;
     }
     const success = await plantFlower();
     if (success) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      impactLight();
     }
   };
 
   const handleHarvest = async (id: string) => {
     const earned = await harvestFlower(id);
     if (earned > 0) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      notificationSuccess();
+      showHarvestResult(earned);
+    }
+  };
+
+  const handleHarvestAll = async () => {
+    const earned = await harvestAllFlowers();
+    if (earned > 0) {
+      notificationSuccess();
       showHarvestResult(earned);
     }
   };
@@ -127,7 +134,7 @@ export default function GardenScreen() {
   if (!user) return null;
 
   const readyCount = user.flowers.filter(
-    (f) => Date.now() - f.plantedAt >= GROW_TIME
+    (f) => Date.now() - f.plantedAt >= FLOWER_GROWTH_TIME_MS
   ).length;
 
   return (
@@ -144,6 +151,12 @@ export default function GardenScreen() {
         </View>
 
         <View style={styles.gardenStats}>
+          <Pressable onPress={handleHarvestAll} disabled={readyCount === 0} style={({pressed}) => [styles.gardenStatItem, pressed && readyCount > 0 && {opacity: 0.7}]}>
+            <View style={styles.harvestAllBadge}>
+               <Text style={styles.harvestAllText}>Hepsini Topla</Text>
+            </View>
+          </Pressable>
+          <View style={styles.gardenStatDivider} />
           <View style={styles.gardenStatItem}>
             <Text style={styles.gardenStatValue}>{user.flowers.length}</Text>
             <Text style={styles.gardenStatLabel}>Çiçek</Text>
@@ -302,6 +315,7 @@ const styles = StyleSheet.create({
   gardenStatItem: {
     flex: 1,
     alignItems: "center",
+    justifyContent: "center",
     gap: 2,
   },
   gardenStatValue: {
@@ -318,6 +332,22 @@ const styles = StyleSheet.create({
     width: 1,
     height: 32,
     backgroundColor: Colors.cardBorder,
+  },
+  harvestAllBadge: {
+    backgroundColor: Colors.goldLight,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.gold,
+    width: '100%',
+    alignItems: 'center',
+  },
+  harvestAllText: {
+    fontSize: 10,
+    fontFamily: "Poppins_700Bold",
+    color: Colors.goldDark,
+    textAlign: 'center',
   },
   scroll: {
     flex: 1,

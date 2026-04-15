@@ -7,6 +7,12 @@ import React, {
   ReactNode,
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import {
+  FLOWER_GROWTH_TIME_MS,
+  MIN_DISCOUNT_RATE,
+  MAX_DISCOUNT_RATE,
+  XP_REWARDS
+} from "@/constants/game";
 
 /* =========================
    Types
@@ -318,6 +324,7 @@ interface UserContextValue {
 
   plantFlower: () => Promise<boolean>;
   harvestFlower: (flowerId: string) => Promise<number>;
+  harvestAllFlowers: () => Promise<number>;
   checkDailySpins: () => Promise<void>;
 
   // Pilot: checks & offers
@@ -535,10 +542,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
     if (!flower) return 0;
 
     const elapsed = Date.now() - flower.plantedAt;
-    const isReady = elapsed >= 30000;
+    const isReady = elapsed >= FLOWER_GROWTH_TIME_MS;
     if (!isReady) return 0;
 
-    const honeyEarned = Math.floor(Math.random() * 16) + 15;
+    const baseHoney = Math.floor(Math.random() * 16) + 15;
+    const honeyEarned = user.doubleNextHoney ? baseHoney * 2 : baseHoney;
+
     const newFlowers = (user.flowers || []).filter((f) => f.id !== flowerId);
     const newPoints = user.honeyPoints + honeyEarned;
 
@@ -548,8 +557,40 @@ export function UserProvider({ children }: { children: ReactNode }) {
       honeyPoints: newPoints,
       level: computeLevel(newPoints),
       totalHarvested: (user.totalHarvested || 0) + 1,
+      doubleNextHoney: false,
     });
     return honeyEarned;
+  };
+
+  const harvestAllFlowers = async (): Promise<number> => {
+    if (!user) return 0;
+
+    const now = Date.now();
+    const ready = (user.flowers || []).filter(f => (now - f.plantedAt) >= FLOWER_GROWTH_TIME_MS);
+    if (ready.length === 0) return 0;
+
+    let totalEarned = 0;
+    ready.forEach((f, idx) => {
+      const baseHoney = Math.floor(Math.random() * 16) + 15;
+      // Bonus only applies to the first flower in the batch for balance
+      const gain = (idx === 0 && user.doubleNextHoney) ? baseHoney * 2 : baseHoney;
+      totalEarned += gain;
+    });
+
+    const readyIds = new Set(ready.map(f => f.id));
+    const remainingFlowers = (user.flowers || []).filter(f => !readyIds.has(f.id));
+    const newPoints = user.honeyPoints + totalEarned;
+
+    await saveUser({
+      ...user,
+      flowers: remainingFlowers,
+      honeyPoints: newPoints,
+      level: computeLevel(newPoints),
+      totalHarvested: (user.totalHarvested || 0) + ready.length,
+      doubleNextHoney: false,
+    });
+
+    return totalEarned;
   };
 
   const addCheck: UserContextValue["addCheck"] = async (input) => {
@@ -585,8 +626,23 @@ export function UserProvider({ children }: { children: ReactNode }) {
       lane,
     };
 
+    // XP for Katip (Scribe)
+    const updatedBees = (user.bees || []).map(b => {
+      if (b.role === "Kâtip") {
+        let newXp = b.xp + XP_REWARDS.CHECK_ADD;
+        let newLevel = b.level;
+        if (newXp >= 100) {
+          newXp -= 100;
+          newLevel += 1;
+        }
+        return { ...b, xp: newXp, level: newLevel };
+      }
+      return b;
+    });
+
     const updated: User = {
       ...user,
+      bees: updatedBees,
       checks: [check, ...(user.checks || [])],
       activities: [
         {
@@ -782,10 +838,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const check = (user.checks || []).find((c) => c.id === checkId);
     if (!check) return false;
 
-    // Revize: tüm teklifleri küçük iyileştir (oran -0.15, fee -150)
+    const negotiator = (user.bees || []).find(b => b.role === "Aracı");
+    const negLevel = negotiator?.level || 1;
+    const boost = 0.15 + (negLevel - 1) * 0.05;
+
+    // Revize: tüm teklifleri iyileştir (oran -boost, fee -150)
     const revised = req.offers.map((o) => {
-      const discountRate = clamp(o.discountRate - 0.15, 0.9, 7.5);
-      const fees = Math.max(0, o.fees - 150);
+      const discountRate = clamp(o.discountRate - boost, MIN_DISCOUNT_RATE, MAX_DISCOUNT_RATE);
+      const fees = Math.max(0, o.fees - (150 + (negLevel - 1) * 50));
       const netPay = Math.round(check.amount * (1 - discountRate / 100) - fees);
       return { ...o, discountRate: Number(discountRate.toFixed(2)), fees, netPay, notes: "Revize turu" };
     });
@@ -793,8 +853,24 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const updatedReq: OfferRequest = { ...req, revisionUsed: true, offers: revised, status: "ready" };
     const updatedRequests = [...user.offerRequests];
     updatedRequests[idx] = updatedReq;
+
+    // XP for Araci (Negotiator) - Revision bonus
+    const updatedBees = (user.bees || []).map(b => {
+      if (b.role === "Aracı") {
+        let newXp = b.xp + XP_REWARDS.REVISION;
+        let newLevel = b.level;
+        if (newXp >= 100) {
+          newXp -= 100;
+          newLevel += 1;
+        }
+        return { ...b, xp: newXp, level: newLevel };
+      }
+      return b;
+    });
+
     await saveUser({
       ...user,
+      bees: updatedBees,
       offerRequests: updatedRequests,
       activities: [
         {
@@ -830,8 +906,23 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const updatedRequests = (user.offerRequests || []).filter((r) => r.checkId !== checkId);
     const updatedChecks = (user.checks || []).filter((c) => c.id !== checkId);
 
+    // XP for Araci (Negotiator)
+    const updatedBees = (user.bees || []).map(b => {
+      if (b.role === "Aracı") {
+        let newXp = b.xp + XP_REWARDS.OFFER_PICK;
+        let newLevel = b.level;
+        if (newXp >= 100) {
+          newXp -= 100;
+          newLevel += 1;
+        }
+        return { ...b, xp: newXp, level: newLevel };
+      }
+      return b;
+    });
+
     await saveUser({
       ...user,
+      bees: updatedBees,
       checks: updatedChecks,
       offerRequests: updatedRequests,
       completedTransactions: [completed, ...(user.completedTransactions || [])],
@@ -868,6 +959,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       spin,
       plantFlower,
       harvestFlower,
+      harvestAllFlowers,
       checkDailySpins,
       addCheck,
       linkInvoice,
