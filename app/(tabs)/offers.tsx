@@ -13,7 +13,7 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import * as Haptics from "expo-haptics";
+import { notificationSuccess } from "@/shared/utils/haptics";
 import Animated, { FadeInDown, Layout } from "react-native-reanimated";
 import Colors from "@/constants/colors";
 import { useUser, CheckItem, OfferRequest } from "@/contexts/UserContext";
@@ -445,11 +445,7 @@ export default function OffersScreen() {
                               style={styles.acceptBtn}
                               onPress={async () => {
                                 if (refreshSelected) {
-                                  if (Platform.OS !== "web") {
-                                    Haptics.notificationAsync(
-                                      Haptics.NotificationFeedbackType.Success,
-                                    );
-                                  }
+                                  notificationSuccess();
                                   await pickOffer(
                                     refreshSelected.check.id,
                                     o.id,
