@@ -3,13 +3,14 @@ import { View, Text, StyleSheet, ScrollView, Pressable, Platform, Alert } from "
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import * as Haptics from "expo-haptics";
+import { haptics } from "@/shared/utils/haptics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 import Colors from "@/constants/colors";
 import { useUser } from "@/contexts/UserContext";
 import { GlassCard } from "@/components/GlassCard";
 import { TrendChart } from "@/components/TrendChart";
+import { formatCompactNumber } from "@/shared/utils/format";
 
 function StatCard({ label, value, icon, delay = 0 }: { label: string; value: string; icon: keyof typeof Ionicons.glyphMap; delay?: number }) {
   return (
@@ -39,9 +40,7 @@ function ActionItem({
   delay?: number;
 }) {
   const handlePress = () => {
-    if (Platform.OS !== "web") {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
+    haptics.light();
     onPress();
   };
 
@@ -82,33 +81,17 @@ export default function PanelScreen() {
 
   const totalAmount = (user.checks || []).reduce((sum, c) => sum + (c.amount || 0), 0);
 
-  const formatTotalAmount = (num: number) => {
-    if (num >= 1000000) {
-      const val = num / 1000000;
-      return val % 1 === 0 ? val.toFixed(0) + "M" : val.toFixed(1) + "M";
-    }
-    if (num >= 1000) {
-      const val = num / 1000;
-      return val % 1 === 0 ? val.toFixed(0) + "K" : val.toFixed(1) + "K";
-    }
-    return String(num);
-  };
-
   const topInset = Platform.OS === "web" ? 60 : insets.top;
 
   const handleLogout = () => {
-    if (Platform.OS !== "web") {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    }
+    haptics.medium();
     Alert.alert("Çıkış Yap", "Kovan hesabınızdan çıkmak istiyor musunuz?", [
       { text: "Vazgeç", style: "cancel" },
       {
         text: "Çıkış Yap",
         style: "destructive",
         onPress: async () => {
-          if (Platform.OS !== "web") {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          }
+          haptics.success();
           await logout();
           router.replace("/");
         },
@@ -191,7 +174,7 @@ export default function PanelScreen() {
           <View style={styles.statGrid}>
             <View style={styles.statRow}>
                <StatCard label="Toplam Çek" value={String(checksCount)} icon="document-attach" delay={100} />
-               <StatCard label="Toplam Tutar" value={formatTotalAmount(totalAmount)} icon="wallet" delay={150} />
+               <StatCard label="Toplam Tutar" value={formatCompactNumber(totalAmount)} icon="wallet" delay={150} />
             </View>
             <View style={styles.statRow}>
                <StatCard label="Toplanıyor" value={String(activeReqs)} icon="time" delay={200} />
@@ -252,17 +235,25 @@ export default function PanelScreen() {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.beesScroll}>
             {(user.bees || []).map((b, idx) => (
               <Animated.View key={b.id} entering={FadeInDown.delay(700 + idx * 100).springify()}>
-                <GlassCard style={styles.beeCard}>
-                  <Text style={styles.beeEmoji}>{b.emoji}</Text>
-                  <Text style={styles.beeName}>{b.name}</Text>
-                  <View style={styles.xpBarBackground}>
-                    <View style={[styles.xpBarFill, { width: `${b.xp}%` }]} />
-                  </View>
-                  <View style={styles.beeInfoRow}>
-                    <Text style={styles.beeLevel}>Sv {b.level}</Text>
-                    <Text style={styles.beeStatus}>• Aktif</Text>
-                  </View>
-                </GlassCard>
+                <Pressable onPress={() => {
+                  haptics.light();
+                  Alert.alert(
+                    b.name,
+                    `${b.role} Arı\nSeviye: ${b.level}\nXP: %${b.xp}\n\nArılarınız işlem yaptıkça tecrübe kazanır.`
+                  );
+                }}>
+                  <GlassCard style={styles.beeCard}>
+                    <Text style={styles.beeEmoji}>{b.emoji}</Text>
+                    <Text style={styles.beeName}>{b.name}</Text>
+                    <View style={styles.xpBarBackground}>
+                      <View style={[styles.xpBarFill, { width: `${b.xp}%` }]} />
+                    </View>
+                    <View style={styles.beeInfoRow}>
+                      <Text style={styles.beeLevel}>Sv {b.level}</Text>
+                      <Text style={styles.beeStatus}>• Aktif</Text>
+                    </View>
+                  </GlassCard>
+                </Pressable>
               </Animated.View>
             ))}
           </ScrollView>
