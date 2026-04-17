@@ -52,3 +52,18 @@ export function money(n: number) {
     return String(n);
   }
 }
+
+/**
+ * Formats a number into a compact format (K/M) for Turkish Lira.
+ */
+export function formatCompactNumber(num: number) {
+  if (num >= 1000000) {
+    const val = num / 1000000;
+    return (val % 1 === 0 ? val.toFixed(0) : val.toFixed(1)).replace(".", ",") + "M";
+  }
+  if (num >= 1000) {
+    const val = num / 1000;
+    return (val % 1 === 0 ? val.toFixed(0) : val.toFixed(1)).replace(".", ",") + "K";
+  }
+  return String(num);
+}

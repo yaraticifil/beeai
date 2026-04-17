@@ -17,7 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
-import * as Haptics from "expo-haptics";
+import { haptics } from "@/shared/utils/haptics";
 import Colors from "@/constants/colors";
 import { useUser } from "@/contexts/UserContext";
 import { GlassCard } from "@/components/GlassCard";
@@ -49,22 +49,22 @@ export default function LoginScreen() {
     if (!companyName.trim() || !phoneNumber.trim()) {
       setError("Tüm alanları doldurunuz.");
       shake();
-      if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      haptics.error();
       return;
     }
     if (phoneNumber.replace(/\D/g, "").length < 10) {
       setError("Geçerli bir telefon numarası giriniz.");
       shake();
-      if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      haptics.error();
       return;
     }
     try {
       setError("");
       setLoading(true);
       await login(companyName.trim(), phoneNumber.trim());
-      if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      haptics.success();
       router.replace("/(tabs)");
-    } catch (e) {
+    } catch (err) {
       setError("Bir hata oluştu. Tekrar deneyiniz.");
       setLoading(false);
     }

@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { Image } from "expo-image";
-import * as Haptics from "expo-haptics";
+import { haptics } from "@/shared/utils/haptics";
 import { router } from "expo-router";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import Colors from "@/constants/colors";
@@ -54,9 +54,7 @@ export default function UploadScreen() {
 
   const handleSubmit = async () => {
     if (loading) return;
-    if (Platform.OS !== "web") {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    }
+    haptics.success();
     setLoading(true);
 
     const a = parseCurrency(amount);
@@ -118,7 +116,7 @@ export default function UploadScreen() {
                 <Pressable
                   style={styles.removeImageBtn}
                   onPress={() => {
-                    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    haptics.light();
                     setImageUri(undefined);
                   }}
                 >
