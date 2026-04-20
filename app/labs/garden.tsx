@@ -13,20 +13,25 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import * as Haptics from "expo-haptics";
+import { haptics } from "@/shared/utils/haptics";
 import Colors from "@/constants/colors";
 import { useUser, Flower } from "@/contexts/UserContext";
+import { FLOWER_GROWTH_TIME_MS } from "@/constants/game";
 
 const { width } = Dimensions.get("window");
 
-const GROW_TIME = 30000;
+const GROW_TIME = FLOWER_GROWTH_TIME_MS;
 
 function FlowerItem({
   flower,
   onHarvest,
+  onBoost,
+  hasBoosts,
 }: {
   flower: Flower;
   onHarvest: (id: string) => void;
+  onBoost: (id: string) => void;
+  hasBoosts: boolean;
 }) {
   const [elapsed, setElapsed] = useState(Date.now() - flower.plantedAt);
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
@@ -78,9 +83,19 @@ function FlowerItem({
         {isReady ? (
           <Text style={styles.harvestText}>Topla</Text>
         ) : (
-          <Text style={styles.growText}>
-            {mins > 0 ? `${mins}d ${secs}s` : `${secs}s`}
-          </Text>
+          <View style={{ alignItems: 'center' }}>
+            <Text style={styles.growText}>
+              {mins > 0 ? `${mins}d ${secs}s` : `${secs}s`}
+            </Text>
+            {hasBoosts && (
+              <Pressable
+                onPress={() => onBoost(flower.id)}
+                style={({ pressed }) => [styles.miniBoostBtn, pressed && { opacity: 0.7 }]}
+              >
+                <Text style={styles.miniBoostText}>🚀 Hızlandır</Text>
+              </Pressable>
+            )}
+          </View>
         )}
       </Pressable>
     </Animated.View>
@@ -89,7 +104,7 @@ function FlowerItem({
 
 export default function GardenScreen() {
   const insets = useSafeAreaInsets();
-  const { user, plantFlower, harvestFlower } = useUser();
+  const { user, plantFlower, harvestFlower, harvestAllFlowers, boostFlower } = useUser();
   const [harvestResult, setHarvestResult] = useState<number | null>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -105,22 +120,39 @@ export default function GardenScreen() {
   };
 
   const handlePlant = async () => {
-    if (!user || user.honeyPoints < 10) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert("Yetersiz Bal", "Çiçek dikmek için 10 bal puanı gerekiyor.");
+    if (!user) return;
+    const hasSeed = (user.flowerSeeds || 0) > 0;
+    if (!hasSeed && user.honeyPoints < 10) {
+      haptics.error();
+      Alert.alert("Yetersiz Bal", "Çiçek dikmek için 10 bal puanı veya tohum gerekiyor.");
       return;
     }
     const success = await plantFlower();
     if (success) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      haptics.light();
     }
   };
 
   const handleHarvest = async (id: string) => {
     const earned = await harvestFlower(id);
     if (earned > 0) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      haptics.success();
       showHarvestResult(earned);
+    }
+  };
+
+  const handleHarvestAll = async () => {
+    const earned = await harvestAllFlowers();
+    if (earned > 0) {
+      haptics.success();
+      showHarvestResult(earned);
+    }
+  };
+
+  const handleBoost = async (id: string) => {
+    const success = await boostFlower(id);
+    if (success) {
+      haptics.medium();
     }
   };
 
@@ -203,25 +235,33 @@ export default function GardenScreen() {
             ) : (
               <View style={styles.flowersGrid}>
                 {user.flowers.map((f) => (
-                  <FlowerItem key={f.id} flower={f} onHarvest={handleHarvest} />
+                  <FlowerItem
+                    key={f.id}
+                    flower={f}
+                    onHarvest={handleHarvest}
+                    onBoost={handleBoost}
+                    hasBoosts={(user.flowerBoosts || 0) > 0}
+                  />
                 ))}
               </View>
             )}
           </LinearGradient>
         </View>
 
+        <View style={styles.actionRow}>
         <Pressable
           style={({ pressed }) => [
             styles.plantBtn,
+            { flex: 1 },
             pressed && styles.plantBtnPressed,
-            user.honeyPoints < 10 && styles.plantBtnDisabled,
+            ((user.flowerSeeds || 0) === 0 && user.honeyPoints < 10) && styles.plantBtnDisabled,
           ]}
           onPress={handlePlant}
-          disabled={user.honeyPoints < 10}
+          disabled={(user.flowerSeeds || 0) === 0 && user.honeyPoints < 10}
         >
           <LinearGradient
             colors={
-              user.honeyPoints >= 10
+              ((user.flowerSeeds || 0) > 0 || user.honeyPoints >= 10)
                 ? [Colors.primary, Colors.primaryDark]
                 : ["#d1d5db", "#9ca3af"]
             }
@@ -230,9 +270,33 @@ export default function GardenScreen() {
             end={{ x: 1, y: 0 }}
           >
             <Text style={styles.plantBtnEmoji}>🌱</Text>
-            <Text style={styles.plantBtnText}>Çiçek Ek (10 bal)</Text>
+            <Text style={styles.plantBtnText}>
+              {(user.flowerSeeds || 0) > 0 ? `Tohumla Ek (${user.flowerSeeds})` : "Çiçek Ek (10 bal)"}
+            </Text>
           </LinearGradient>
         </Pressable>
+
+        {readyCount > 1 && (
+           <Pressable
+           style={({ pressed }) => [
+             styles.plantBtn,
+             { flex: 1 },
+             pressed && styles.plantBtnPressed,
+           ]}
+           onPress={handleHarvestAll}
+         >
+           <LinearGradient
+             colors={[Colors.gold, Colors.goldDark]}
+             style={styles.plantBtnGradient}
+             start={{ x: 0, y: 0 }}
+             end={{ x: 1, y: 0 }}
+           >
+             <Text style={styles.plantBtnEmoji}>🧺</Text>
+             <Text style={styles.plantBtnText}>Hepsini Topla</Text>
+           </LinearGradient>
+         </Pressable>
+        )}
+        </View>
 
         <View style={styles.infoCard}>
           <Text style={styles.infoTitle}>Nasıl Çalışır?</Text>
@@ -416,6 +480,20 @@ const styles = StyleSheet.create({
   flowerEmojiGrowing: {
     opacity: 0.7,
   },
+  miniBoostBtn: {
+    backgroundColor: 'rgba(255,255,255,0.8)',
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginTop: 2,
+    borderWidth: 0.5,
+    borderColor: Colors.primary,
+  },
+  miniBoostText: {
+    fontSize: 10,
+    fontFamily: 'Poppins_700Bold',
+    color: Colors.primary,
+  },
   flowerProgressBg: {
     width: "100%",
     height: 3,
@@ -436,6 +514,10 @@ const styles = StyleSheet.create({
     fontSize: 8,
     fontFamily: "Poppins_600SemiBold",
     color: Colors.textMuted,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    gap: 12,
   },
   plantBtn: {
     borderRadius: 16,
