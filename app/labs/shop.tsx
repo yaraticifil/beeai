@@ -175,7 +175,9 @@ export default function ShopScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       return;
     }
-    if (user.purchasedItems.includes(item.id)) return;
+
+    const isConsumable = ["extra_spin", "triple_spin", "flower_boost", "coupon_5", "coupon_10"].includes(item.id);
+    if (!isConsumable && user.purchasedItems.includes(item.id)) return;
 
     Alert.alert(
       "Satın Al",
@@ -187,9 +189,30 @@ export default function ShopScreen() {
           onPress: async () => {
             const success = await spendHoney(item.cost);
             if (success) {
-              await updateUser({
+              const updates: Partial<User> = {
                 purchasedItems: [...user.purchasedItems, item.id],
-              });
+              };
+
+              if (item.id === "extra_spin") updates.spinCount = (user.spinCount || 0) + 1;
+              if (item.id === "triple_spin") updates.spinCount = (user.spinCount || 0) + 3;
+              if (item.id === "flower_boost") updates.flowerBoosts = (user.flowerBoosts || 0) + 1;
+
+              if (item.id.startsWith("coupon_")) {
+                const val = item.id === "coupon_5" ? 5 : 10;
+                updates.coupons = [
+                  {
+                    id: `coupon_${Date.now()}`,
+                    title: `Mağaza Kuponu %${val}`,
+                    kind: "discount",
+                    value: val,
+                    createdAt: Date.now(),
+                    used: false,
+                  },
+                  ...(user.coupons || []),
+                ];
+              }
+
+              await updateUser(updates);
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
               Alert.alert("Tebrikler!", `${item.name} başarıyla satın alındı!`);
             }
