@@ -7,6 +7,7 @@ import React, {
   ReactNode,
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { MIN_DISCOUNT_RATE, MAX_DISCOUNT_RATE, XP_REWARDS, FLOWER_GROWTH_TIME_MS } from "@/constants/game";
 
 /* =========================
    Types
@@ -264,7 +265,7 @@ function computeOffers(check: CheckItem, pulse: DailyPulse, existingCount: numbe
     if (i < existingCount) continue;
     const partnerCode = makePartnerCode(seed, i);
     const jitter = ((seed >>> (i + 2)) % 40) / 100; // 0-0.39
-    const discountRate = clamp(baseRate + laneAdjust + sizeAdjust + jitter * (i === 0 ? 0.6 : 0.4), 1.0, 7.5);
+    const discountRate = clamp(baseRate + laneAdjust + sizeAdjust + jitter * (i === 0 ? 0.6 : 0.4), MIN_DISCOUNT_RATE, MAX_DISCOUNT_RATE);
     const fees = Math.round(clamp(check.amount * (0.002 + jitter / 200), 900, 6500));
     const netPay = Math.round(check.amount * (1 - discountRate / 100) - fees);
 
@@ -342,6 +343,7 @@ interface UserContextValue {
   // Pilot: pulse
   getDailyPulse: () => DailyPulse;
   setPulseMode: (mode: PulseMode) => Promise<void>;
+  awardBeeXP: (role: BeeRole, xp: number) => Promise<void>;
 }
 
 const UserContext = createContext<UserContextValue | null>(null);
@@ -535,7 +537,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     if (!flower) return 0;
 
     const elapsed = Date.now() - flower.plantedAt;
-    const isReady = elapsed >= 30000;
+    const isReady = elapsed >= FLOWER_GROWTH_TIME_MS;
     if (!isReady) return 0;
 
     const honeyEarned = Math.floor(Math.random() * 16) + 15;
@@ -585,8 +587,19 @@ export function UserProvider({ children }: { children: ReactNode }) {
       lane,
     };
 
+    const bees = (user.bees || []).map(b => {
+      if (b.role === "Kâtip") {
+        let newXp = b.xp + XP_REWARDS.CHECK_ADDED;
+        let newLevel = b.level;
+        if (newXp >= 100) { newXp -= 100; newLevel += 1; }
+        return { ...b, xp: newXp, level: newLevel };
+      }
+      return b;
+    });
+
     const updated: User = {
       ...user,
+      bees,
       checks: [check, ...(user.checks || [])],
       activities: [
         {
@@ -782,12 +795,25 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const check = (user.checks || []).find((c) => c.id === checkId);
     if (!check) return false;
 
+    const negotiator = (user.bees || []).find(b => b.role === "Aracı");
+    const bonusMultiplier = negotiator ? 1 + (negotiator.level - 1) * 0.1 : 1;
+
     // Revize: tüm teklifleri küçük iyileştir (oran -0.15, fee -150)
     const revised = req.offers.map((o) => {
-      const discountRate = clamp(o.discountRate - 0.15, 0.9, 7.5);
-      const fees = Math.max(0, o.fees - 150);
+      const discountRate = clamp(o.discountRate - (0.15 * bonusMultiplier), MIN_DISCOUNT_RATE, MAX_DISCOUNT_RATE);
+      const fees = Math.max(0, o.fees - Math.round(150 * bonusMultiplier));
       const netPay = Math.round(check.amount * (1 - discountRate / 100) - fees);
       return { ...o, discountRate: Number(discountRate.toFixed(2)), fees, netPay, notes: "Revize turu" };
+    });
+
+    const updatedBees = (user.bees || []).map(b => {
+      if (b.role === "Aracı") {
+        let newXp = b.xp + XP_REWARDS.REVISION;
+        let newLevel = b.level;
+        if (newXp >= 100) { newXp -= 100; newLevel += 1; }
+        return { ...b, xp: newXp, level: newLevel };
+      }
+      return b;
     });
 
     const updatedReq: OfferRequest = { ...req, revisionUsed: true, offers: revised, status: "ready" };
@@ -795,6 +821,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     updatedRequests[idx] = updatedReq;
     await saveUser({
       ...user,
+      bees: updatedBees,
       offerRequests: updatedRequests,
       activities: [
         {
@@ -830,8 +857,19 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const updatedRequests = (user.offerRequests || []).filter((r) => r.checkId !== checkId);
     const updatedChecks = (user.checks || []).filter((c) => c.id !== checkId);
 
+    const updatedBees = (user.bees || []).map(b => {
+      if (b.role === "Aracı" || b.role === "İzci") {
+        let newXp = b.xp + XP_REWARDS.OFFER_PICKED;
+        let newLevel = b.level;
+        if (newXp >= 100) { newXp -= 100; newLevel += 1; }
+        return { ...b, xp: newXp, level: newLevel };
+      }
+      return b;
+    });
+
     await saveUser({
       ...user,
+      bees: updatedBees,
       checks: updatedChecks,
       offerRequests: updatedRequests,
       completedTransactions: [completed, ...(user.completedTransactions || [])],
@@ -854,6 +892,23 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const setPulseMode: UserContextValue["setPulseMode"] = async (mode) => {
     if (!user) return;
     await saveUser({ ...user, settings: { ...(user.settings || { pulseMode: "weather" }), pulseMode: mode } });
+  };
+
+  const awardBeeXP: UserContextValue["awardBeeXP"] = async (role, xp) => {
+    if (!user) return;
+    const bees = (user.bees || []).map((b) => {
+      if (b.role === role) {
+        let newXp = b.xp + xp;
+        let newLevel = b.level;
+        if (newXp >= 100) {
+          newXp -= 100;
+          newLevel += 1;
+        }
+        return { ...b, xp: newXp, level: newLevel };
+      }
+      return b;
+    });
+    await saveUser({ ...user, bees });
   };
 
   const value = useMemo<UserContextValue>(
@@ -879,6 +934,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       pickOffer,
       getDailyPulse,
       setPulseMode,
+      awardBeeXP,
     }),
     [user, isLoading]
   );
