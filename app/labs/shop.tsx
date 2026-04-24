@@ -7,7 +7,6 @@ import {
   Pressable,
   Alert,
   Platform,
-  Animated,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -26,6 +25,8 @@ interface ShopItem {
   color: string;
   tag?: string;
 }
+
+const CONSUMABLES = ["extra_spin", "triple_spin", "flower_boost", "double_honey", "coupon_5", "coupon_10", "free_spin"];
 
 const SHOP_ITEMS: ShopItem[] = [
   {
@@ -175,7 +176,8 @@ export default function ShopScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       return;
     }
-    if (user.purchasedItems.includes(item.id)) return;
+    const isConsumable = CONSUMABLES.includes(item.id);
+    if (!isConsumable && user.purchasedItems.includes(item.id)) return;
 
     Alert.alert(
       "Satın Al",
@@ -187,9 +189,29 @@ export default function ShopScreen() {
           onPress: async () => {
             const success = await spendHoney(item.cost);
             if (success) {
-              await updateUser({
+              const updates: any = {
                 purchasedItems: [...user.purchasedItems, item.id],
-              });
+              };
+
+              if (item.id === "extra_spin") updates.spinCount = (user.spinCount || 0) + 1;
+              if (item.id === "triple_spin") updates.spinCount = (user.spinCount || 0) + 3;
+              if (item.id === "flower_boost") updates.flowerBoosts = (user.flowerBoosts || 0) + 1;
+              if (item.id === "double_honey") updates.doubleNextHoney = true;
+
+              if (item.id === "coupon_5" || item.id === "coupon_10") {
+                const val = item.id === "coupon_5" ? 5 : 10;
+                const c = {
+                  id: `coupon_${Date.now()}`,
+                  title: item.name,
+                  kind: "discount",
+                  value: val,
+                  createdAt: Date.now(),
+                  used: false,
+                };
+                updates.coupons = [c, ...(user.coupons || [])];
+              }
+
+              await updateUser(updates);
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
               Alert.alert("Tebrikler!", `${item.name} başarıyla satın alındı!`);
             }
@@ -207,8 +229,10 @@ export default function ShopScreen() {
       >
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Bal Mağazası</Text>
-          <View style={styles.balanceChip}>
-            <Text style={styles.balanceText}>{user.honeyPoints} 🍯</Text>
+          <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+             <View style={styles.balanceChip}>
+                <Text style={styles.balanceText}>{user.honeyPoints} 🍯</Text>
+             </View>
           </View>
         </View>
 
@@ -251,7 +275,7 @@ export default function ShopScreen() {
             key={item.id}
             item={item}
             canAfford={user.honeyPoints >= item.cost}
-            isPurchased={user.purchasedItems.includes(item.id)}
+            isPurchased={!CONSUMABLES.includes(item.id) && user.purchasedItems.includes(item.id)}
             onBuy={() => handleBuy(item)}
           />
         ))}
