@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -13,7 +13,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import * as Haptics from "expo-haptics";
+import { haptics } from "@/shared/utils/haptics";
 import Colors from "@/constants/colors";
 import { useUser, Flower } from "@/contexts/UserContext";
 
@@ -24,9 +24,13 @@ const GROW_TIME = 30000;
 function FlowerItem({
   flower,
   onHarvest,
+  onBoost,
+  hasBoosts,
 }: {
   flower: Flower;
   onHarvest: (id: string) => void;
+  onBoost: (id: string) => void;
+  hasBoosts: boolean;
 }) {
   const [elapsed, setElapsed] = useState(Date.now() - flower.plantedAt);
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
@@ -42,7 +46,7 @@ function FlowerItem({
       setElapsed(Date.now() - flower.plantedAt);
     }, 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [flower.plantedAt, scaleAnim]);
 
   const isReady = elapsed >= GROW_TIME;
   const progress = Math.min(elapsed / GROW_TIME, 1);
@@ -78,9 +82,22 @@ function FlowerItem({
         {isReady ? (
           <Text style={styles.harvestText}>Topla</Text>
         ) : (
-          <Text style={styles.growText}>
-            {mins > 0 ? `${mins}d ${secs}s` : `${secs}s`}
-          </Text>
+          <>
+            <Text style={styles.growText}>
+              {mins > 0 ? `${mins}d ${secs}s` : `${secs}s`}
+            </Text>
+            {hasBoosts && (
+              <Pressable
+                style={({ pressed }) => [
+                  styles.boostSmallBtn,
+                  pressed && { opacity: 0.7 },
+                ]}
+                onPress={() => onBoost(flower.id)}
+              >
+                <Text style={styles.boostSmallEmoji}>💨</Text>
+              </Pressable>
+            )}
+          </>
         )}
       </Pressable>
     </Animated.View>
@@ -89,7 +106,7 @@ function FlowerItem({
 
 export default function GardenScreen() {
   const insets = useSafeAreaInsets();
-  const { user, plantFlower, harvestFlower } = useUser();
+  const { user, plantFlower, harvestFlower, harvestAllFlowers, boostFlower } = useUser();
   const [harvestResult, setHarvestResult] = useState<number | null>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -105,22 +122,37 @@ export default function GardenScreen() {
   };
 
   const handlePlant = async () => {
-    if (!user || user.honeyPoints < 10) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert("Yetersiz Bal", "Çiçek dikmek için 10 bal puanı gerekiyor.");
+    if (!user || (user.honeyPoints < 10 && user.flowerSeeds <= 0)) {
+      haptics.error();
+      Alert.alert("Yetersiz Bal", "Çiçek dikmek için 10 bal puanı veya tohum gerekiyor.");
       return;
     }
     const success = await plantFlower();
     if (success) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      haptics.light();
     }
   };
 
   const handleHarvest = async (id: string) => {
     const earned = await harvestFlower(id);
     if (earned > 0) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      haptics.success();
       showHarvestResult(earned);
+    }
+  };
+
+  const handleHarvestAll = async () => {
+    const earned = await harvestAllFlowers();
+    if (earned > 0) {
+      haptics.success();
+      showHarvestResult(earned);
+    }
+  };
+
+  const handleBoost = async (id: string) => {
+    const success = await boostFlower(id);
+    if (success) {
+      haptics.medium();
     }
   };
 
@@ -162,6 +194,18 @@ export default function GardenScreen() {
             </Text>
             <Text style={styles.gardenStatLabel}>Hasat</Text>
           </View>
+
+          {readyCount > 0 && (
+            <Pressable
+              style={({ pressed }) => [
+                styles.harvestAllBtn,
+                pressed && { opacity: 0.8 },
+              ]}
+              onPress={handleHarvestAll}
+            >
+              <Text style={styles.harvestAllBtnText}>Hepsini Topla</Text>
+            </Pressable>
+          )}
         </View>
       </LinearGradient>
 
@@ -203,7 +247,13 @@ export default function GardenScreen() {
             ) : (
               <View style={styles.flowersGrid}>
                 {user.flowers.map((f) => (
-                  <FlowerItem key={f.id} flower={f} onHarvest={handleHarvest} />
+                  <FlowerItem
+                    key={f.id}
+                    flower={f}
+                    onHarvest={handleHarvest}
+                    onBoost={handleBoost}
+                    hasBoosts={(user.flowerBoosts || 0) > 0}
+                  />
                 ))}
               </View>
             )}
@@ -502,5 +552,45 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: "Poppins_400Regular",
     color: Colors.textSecondary,
+  },
+  harvestAllBtn: {
+    position: "absolute",
+    right: 12,
+    bottom: -10,
+    backgroundColor: Colors.gold,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
+    shadowColor: Colors.gold,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  harvestAllBtnText: {
+    fontSize: 10,
+    fontFamily: "Poppins_700Bold",
+    color: Colors.white,
+  },
+  boostSmallBtn: {
+    position: "absolute",
+    top: -8,
+    right: -8,
+    backgroundColor: Colors.white,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  boostSmallEmoji: {
+    fontSize: 12,
   },
 });

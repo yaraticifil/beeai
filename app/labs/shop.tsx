@@ -7,14 +7,14 @@ import {
   Pressable,
   Alert,
   Platform,
-  Animated,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import * as Haptics from "expo-haptics";
+import { haptics } from "@/shared/utils/haptics";
 import Colors from "@/constants/colors";
 import { useUser } from "@/contexts/UserContext";
+import { CONSUMABLE_ITEMS } from "@/constants/game";
 
 interface ShopItem {
   id: string;
@@ -47,10 +47,10 @@ const SHOP_ITEMS: ShopItem[] = [
     color: "#7c3aed",
     tag: "Popüler",
   },
-  { id: "extra_spin", emoji: "🎰", name: "Ekstra Çevirme", description: "Çark için +1 ekstra hak", cost: 20, category: "bonus", color: Colors.gold },
-  { id: "triple_spin", emoji: "🎲", name: "3x Çevirme Paketi", description: "Çark için +3 ekstra hak", cost: 50, category: "bonus", color: Colors.goldDark, tag: "Tasarruflu" },
+  { id: CONSUMABLE_ITEMS.extra_spin, emoji: "🎰", name: "Ekstra Çevirme", description: "Çark için +1 ekstra hak", cost: 20, category: "bonus", color: Colors.gold },
+  { id: CONSUMABLE_ITEMS.triple_spin, emoji: "🎲", name: "3x Çevirme Paketi", description: "Çark için +3 ekstra hak", cost: 50, category: "bonus", color: Colors.goldDark, tag: "Tasarruflu" },
   {
-    id: "flower_boost",
+    id: CONSUMABLE_ITEMS.flower_boost,
     emoji: "💨",
     name: "Çiçek Hızlandırıcı",
     description: "Bir çiçeği anında olgunlaştır",
@@ -172,10 +172,14 @@ export default function ShopScreen() {
 
   const handleBuy = (item: ShopItem) => {
     if (!user || user.honeyPoints < item.cost) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      haptics.error();
       return;
     }
-    if (user.purchasedItems.includes(item.id)) return;
+
+    const isConsumable = Object.values(CONSUMABLE_ITEMS).includes(item.id);
+    const isAlreadyPurchased = !isConsumable && user.purchasedItems.includes(item.id);
+
+    if (isAlreadyPurchased) return;
 
     Alert.alert(
       "Satın Al",
@@ -187,10 +191,19 @@ export default function ShopScreen() {
           onPress: async () => {
             const success = await spendHoney(item.cost);
             if (success) {
-              await updateUser({
-                purchasedItems: [...user.purchasedItems, item.id],
-              });
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              const updates: any = {};
+              if (item.id === CONSUMABLE_ITEMS.flower_boost) {
+                updates.flowerBoosts = (user.flowerBoosts || 0) + 1;
+              } else if (item.id === CONSUMABLE_ITEMS.extra_spin) {
+                updates.spinCount = (user.spinCount || 0) + 1;
+              } else if (item.id === CONSUMABLE_ITEMS.triple_spin) {
+                updates.spinCount = (user.spinCount || 0) + 3;
+              } else {
+                updates.purchasedItems = [...user.purchasedItems, item.id];
+              }
+
+              await updateUser(updates);
+              haptics.success();
               Alert.alert("Tebrikler!", `${item.name} başarıyla satın alındı!`);
             }
           },
@@ -246,15 +259,18 @@ export default function ShopScreen() {
         showsVerticalScrollIndicator={false}
         contentInsetAdjustmentBehavior="automatic"
       >
-        {filteredItems.map((item) => (
-          <ShopCard
-            key={item.id}
-            item={item}
-            canAfford={user.honeyPoints >= item.cost}
-            isPurchased={user.purchasedItems.includes(item.id)}
-            onBuy={() => handleBuy(item)}
-          />
-        ))}
+        {filteredItems.map((item) => {
+          const isConsumable = Object.values(CONSUMABLE_ITEMS).includes(item.id);
+          return (
+            <ShopCard
+              key={item.id}
+              item={item}
+              canAfford={user.honeyPoints >= item.cost}
+              isPurchased={!isConsumable && user.purchasedItems.includes(item.id)}
+              onBuy={() => handleBuy(item)}
+            />
+          );
+        })}
 
         {filteredItems.length === 0 && (
           <View style={styles.emptyState}>
