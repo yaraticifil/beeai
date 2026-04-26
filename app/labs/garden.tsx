@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -16,17 +16,20 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import { useUser, Flower } from "@/contexts/UserContext";
+import { FLOWER_GROWTH_TIME_MS } from "@/constants/game";
 
 const { width } = Dimensions.get("window");
-
-const GROW_TIME = 30000;
 
 function FlowerItem({
   flower,
   onHarvest,
+  onBoost,
+  hasBoosts,
 }: {
   flower: Flower;
   onHarvest: (id: string) => void;
+  onBoost: (id: string) => void;
+  hasBoosts: boolean;
 }) {
   const [elapsed, setElapsed] = useState(Date.now() - flower.plantedAt);
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
@@ -42,11 +45,11 @@ function FlowerItem({
       setElapsed(Date.now() - flower.plantedAt);
     }, 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [flower.plantedAt, scaleAnim]);
 
-  const isReady = elapsed >= GROW_TIME;
-  const progress = Math.min(elapsed / GROW_TIME, 1);
-  const timeLeft = Math.max(0, Math.ceil((GROW_TIME - elapsed) / 1000));
+  const isReady = elapsed >= FLOWER_GROWTH_TIME_MS;
+  const progress = Math.min(elapsed / FLOWER_GROWTH_TIME_MS, 1);
+  const timeLeft = Math.max(0, Math.ceil((FLOWER_GROWTH_TIME_MS - elapsed) / 1000));
   const mins = Math.floor(timeLeft / 60);
   const secs = timeLeft % 60;
 
@@ -78,9 +81,19 @@ function FlowerItem({
         {isReady ? (
           <Text style={styles.harvestText}>Topla</Text>
         ) : (
-          <Text style={styles.growText}>
-            {mins > 0 ? `${mins}d ${secs}s` : `${secs}s`}
-          </Text>
+          <>
+            <Text style={styles.growText}>
+              {mins > 0 ? `${mins}d ${secs}s` : `${secs}s`}
+            </Text>
+            {hasBoosts && (
+              <Pressable
+                style={styles.boostSmallBtn}
+                onPress={() => onBoost(flower.id)}
+              >
+                <Text style={styles.boostSmallEmoji}>💨</Text>
+              </Pressable>
+            )}
+          </>
         )}
       </Pressable>
     </Animated.View>
@@ -89,7 +102,7 @@ function FlowerItem({
 
 export default function GardenScreen() {
   const insets = useSafeAreaInsets();
-  const { user, plantFlower, harvestFlower } = useUser();
+  const { user, plantFlower, harvestFlower, harvestAllFlowers, boostFlower } = useUser();
   const [harvestResult, setHarvestResult] = useState<number | null>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -124,10 +137,25 @@ export default function GardenScreen() {
     }
   };
 
+  const handleHarvestAll = async () => {
+    const totalEarned = await harvestAllFlowers();
+    if (totalEarned > 0) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      showHarvestResult(totalEarned);
+    }
+  };
+
+  const handleBoost = async (id: string) => {
+    const success = await boostFlower(id);
+    if (success) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
+  };
+
   if (!user) return null;
 
   const readyCount = user.flowers.filter(
-    (f) => Date.now() - f.plantedAt >= GROW_TIME
+    (f) => Date.now() - f.plantedAt >= FLOWER_GROWTH_TIME_MS
   ).length;
 
   return (
@@ -138,8 +166,18 @@ export default function GardenScreen() {
       >
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Arı Bahçesi</Text>
-          <View style={styles.balanceChip}>
-            <Text style={styles.balanceText}>{user.honeyPoints} 🍯</Text>
+          <View style={styles.headerRight}>
+            {readyCount > 1 && (
+              <Pressable
+                style={styles.harvestAllBtn}
+                onPress={handleHarvestAll}
+              >
+                <Text style={styles.harvestAllBtnText}>Hepsini Topla</Text>
+              </Pressable>
+            )}
+            <View style={styles.balanceChip}>
+              <Text style={styles.balanceText}>{user.honeyPoints} 🍯</Text>
+            </View>
           </View>
         </View>
 
@@ -203,7 +241,13 @@ export default function GardenScreen() {
             ) : (
               <View style={styles.flowersGrid}>
                 {user.flowers.map((f) => (
-                  <FlowerItem key={f.id} flower={f} onHarvest={handleHarvest} />
+                  <FlowerItem
+                    key={f.id}
+                    flower={f}
+                    onHarvest={handleHarvest}
+                    onBoost={handleBoost}
+                    hasBoosts={(user.flowerBoosts || 0) > 0}
+                  />
                 ))}
               </View>
             )}
@@ -270,6 +314,22 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingTop: 8,
     marginBottom: 16,
+  },
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  harvestAllBtn: {
+    backgroundColor: Colors.gold,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  harvestAllBtnText: {
+    fontSize: 11,
+    fontFamily: "Poppins_700Bold",
+    color: Colors.white,
   },
   headerTitle: {
     fontSize: 22,
@@ -436,6 +496,23 @@ const styles = StyleSheet.create({
     fontSize: 8,
     fontFamily: "Poppins_600SemiBold",
     color: Colors.textMuted,
+  },
+  boostSmallBtn: {
+    position: "absolute",
+    top: -8,
+    right: -8,
+    backgroundColor: Colors.white,
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    zIndex: 10,
+  },
+  boostSmallEmoji: {
+    fontSize: 10,
   },
   plantBtn: {
     borderRadius: 16,

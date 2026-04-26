@@ -133,6 +133,7 @@ export interface User {
   activities: { id: string; type: string; message: string; time: number }[];
   coupons: Coupon[];
   flowerSeeds: number;
+  flowerBoosts: number;
   doubleNextHoney: boolean;
   settings: UserSettings;
 }
@@ -164,6 +165,7 @@ const DEFAULT_USER: Partial<User> = {
   completedTransactions: [],
   coupons: [],
   flowerSeeds: 0,
+  flowerBoosts: 0,
   doubleNextHoney: false,
   settings: { pulseMode: "weather" },
 };
@@ -319,6 +321,8 @@ interface UserContextValue {
 
   plantFlower: () => Promise<boolean>;
   harvestFlower: (flowerId: string) => Promise<number>;
+  harvestAllFlowers: () => Promise<number>;
+  boostFlower: (flowerId: string) => Promise<boolean>;
   checkDailySpins: () => Promise<void>;
 
   // Pilot: checks & offers
@@ -372,6 +376,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
           activities: parsed.activities || [],
           coupons: parsed.coupons || [],
           flowerSeeds: parsed.flowerSeeds || 0,
+          flowerBoosts: parsed.flowerBoosts || 0,
           doubleNextHoney: parsed.doubleNextHoney || false,
         };
         hydrated.level = computeLevel(hydrated.honeyPoints);
@@ -401,6 +406,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       activities: [],
       coupons: [],
       flowerSeeds: 1,
+      flowerBoosts: 0,
       doubleNextHoney: false,
       settings: { pulseMode: "weather" },
     };
@@ -540,7 +546,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const isReady = elapsed >= FLOWER_GROWTH_TIME_MS;
     if (!isReady) return 0;
 
-    const honeyEarned = Math.floor(Math.random() * 16) + 15;
+    let honeyEarned = Math.floor(Math.random() * 16) + 15;
+    let doubleUsed = false;
+    if (user.doubleNextHoney) {
+      honeyEarned *= 2;
+      doubleUsed = true;
+    }
+
     const newFlowers = (user.flowers || []).filter((f) => f.id !== flowerId);
     const newPoints = user.honeyPoints + honeyEarned;
 
@@ -550,8 +562,65 @@ export function UserProvider({ children }: { children: ReactNode }) {
       honeyPoints: newPoints,
       level: computeLevel(newPoints),
       totalHarvested: (user.totalHarvested || 0) + 1,
+      doubleNextHoney: doubleUsed ? false : user.doubleNextHoney,
     });
     return honeyEarned;
+  };
+
+  const harvestAllFlowers = async (): Promise<number> => {
+    if (!user) return 0;
+
+    const readyFlowers = (user.flowers || []).filter(
+      (f) => Date.now() - f.plantedAt >= FLOWER_GROWTH_TIME_MS
+    );
+    if (readyFlowers.length === 0) return 0;
+
+    let totalHoney = 0;
+    let doubleUsed = false;
+
+    readyFlowers.forEach((_, idx) => {
+      let earned = Math.floor(Math.random() * 16) + 15;
+      if (idx === 0 && user.doubleNextHoney) {
+        earned *= 2;
+        doubleUsed = true;
+      }
+      totalHoney += earned;
+    });
+
+    const remainingFlowers = (user.flowers || []).filter(
+      (f) => !readyFlowers.some((rf) => rf.id === f.id)
+    );
+    const newPoints = user.honeyPoints + totalHoney;
+
+    await saveUser({
+      ...user,
+      flowers: remainingFlowers,
+      honeyPoints: newPoints,
+      level: computeLevel(newPoints),
+      totalHarvested: (user.totalHarvested || 0) + readyFlowers.length,
+      doubleNextHoney: doubleUsed ? false : user.doubleNextHoney,
+    });
+
+    return totalHoney;
+  };
+
+  const boostFlower = async (flowerId: string): Promise<boolean> => {
+    if (!user || (user.flowerBoosts || 0) <= 0) return false;
+
+    const flowers = (user.flowers || []).map((f) => {
+      if (f.id === flowerId) {
+        // Set plantedAt to far in the past to make it ready immediately
+        return { ...f, plantedAt: Date.now() - FLOWER_GROWTH_TIME_MS - 1000 };
+      }
+      return f;
+    });
+
+    await saveUser({
+      ...user,
+      flowers,
+      flowerBoosts: user.flowerBoosts - 1,
+    });
+    return true;
   };
 
   const addCheck: UserContextValue["addCheck"] = async (input) => {
@@ -923,6 +992,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
       spin,
       plantFlower,
       harvestFlower,
+      harvestAllFlowers,
+      boostFlower,
       checkDailySpins,
       addCheck,
       linkInvoice,

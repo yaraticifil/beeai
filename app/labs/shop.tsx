@@ -7,7 +7,6 @@ import {
   Pressable,
   Alert,
   Platform,
-  Animated,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -15,6 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import { useUser } from "@/contexts/UserContext";
+import { CONSUMABLE_ITEMS } from "@/constants/game";
 
 interface ShopItem {
   id: string;
@@ -175,7 +175,9 @@ export default function ShopScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       return;
     }
-    if (user.purchasedItems.includes(item.id)) return;
+
+    const isConsumable = Object.values(CONSUMABLE_ITEMS).includes(item.id);
+    if (!isConsumable && user.purchasedItems.includes(item.id)) return;
 
     Alert.alert(
       "Satın Al",
@@ -187,9 +189,20 @@ export default function ShopScreen() {
           onPress: async () => {
             const success = await spendHoney(item.cost);
             if (success) {
-              await updateUser({
-                purchasedItems: [...user.purchasedItems, item.id],
-              });
+              const updates: any = {};
+              if (item.id === "extra_spin") {
+                updates.spinCount = (user.spinCount || 0) + 1;
+              } else if (item.id === "triple_spin") {
+                updates.spinCount = (user.spinCount || 0) + 3;
+              } else if (item.id === "flower_boost") {
+                updates.flowerBoosts = (user.flowerBoosts || 0) + 1;
+              }
+
+              if (!isConsumable) {
+                updates.purchasedItems = [...user.purchasedItems, item.id];
+              }
+
+              await updateUser(updates);
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
               Alert.alert("Tebrikler!", `${item.name} başarıyla satın alındı!`);
             }
@@ -246,15 +259,20 @@ export default function ShopScreen() {
         showsVerticalScrollIndicator={false}
         contentInsetAdjustmentBehavior="automatic"
       >
-        {filteredItems.map((item) => (
-          <ShopCard
-            key={item.id}
-            item={item}
-            canAfford={user.honeyPoints >= item.cost}
-            isPurchased={user.purchasedItems.includes(item.id)}
-            onBuy={() => handleBuy(item)}
-          />
-        ))}
+        {filteredItems.map((item) => {
+          const isConsumable = Object.values(CONSUMABLE_ITEMS).includes(item.id);
+          const isPurchased = !isConsumable && user.purchasedItems.includes(item.id);
+
+          return (
+            <ShopCard
+              key={item.id}
+              item={item}
+              canAfford={user.honeyPoints >= item.cost}
+              isPurchased={isPurchased}
+              onBuy={() => handleBuy(item)}
+            />
+          );
+        })}
 
         {filteredItems.length === 0 && (
           <View style={styles.emptyState}>
