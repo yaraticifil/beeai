@@ -12,4 +12,5 @@ export const XP_REWARDS = {
 export const CONSUMABLE_ITEMS = {
   flower_boost: "flower_boost",
   extra_spin: "extra_spin",
+  triple_spin: "triple_spin",
 };
