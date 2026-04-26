@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   Pressable,
+  TextInput,
   ScrollView,
   Modal,
   Platform,
@@ -45,6 +46,8 @@ export default function OffersScreen() {
   } | null>(null);
   const [now, setNow] = useState(Date.now());
   const [tab, setTab] = useState<"active" | "history">("active");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "ready" | "collecting">("all");
 
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
@@ -66,8 +69,6 @@ export default function OffersScreen() {
     return () => clearInterval(interval);
   }, [user]);
 
-  const checks = user?.checks || [];
-
   // ⚡ Bolt: Cache offer requests by checkId to optimize O(N*M) lookup into O(N+M)
   const reqMap = useMemo(() => {
     const reqs = user?.offerRequests || [];
@@ -79,6 +80,25 @@ export default function OffersScreen() {
   }, [user?.offerRequests]);
 
   const getReq = React.useCallback((checkId: string) => reqMap.get(checkId), [reqMap]);
+
+  const filteredChecks = useMemo(() => {
+    const rawChecks = user?.checks || [];
+    return rawChecks.filter((c) => {
+      const r = getReq(c.id);
+      const status = r?.status || "yok";
+
+      const matchesSearch =
+        c.issuerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        c.checkNo.toLowerCase().includes(searchQuery.toLowerCase());
+
+      const matchesStatus =
+        statusFilter === "all" ||
+        (statusFilter === "ready" && status === "ready") ||
+        (statusFilter === "collecting" && status === "collecting");
+
+      return matchesSearch && matchesStatus;
+    });
+  }, [user?.checks, searchQuery, statusFilter, getReq]);
 
   const open = (check: CheckItem) => {
     const req = getReq(check.id);
@@ -135,16 +155,62 @@ export default function OffersScreen() {
         </Pressable>
       </View>
 
+      {tab === "active" && (
+        <Animated.View entering={FadeInDown.delay(50).springify()} style={styles.filterContainer}>
+          <View style={styles.searchBar}>
+            <Ionicons name="search" size={18} color={Colors.textMuted} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Keşideci veya çek no ara..."
+              placeholderTextColor={Colors.textMuted}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+            {searchQuery.length > 0 && (
+              <Pressable onPress={() => setSearchQuery("")}>
+                <Ionicons name="close-circle" size={18} color={Colors.textMuted} />
+              </Pressable>
+            )}
+          </View>
+
+          <View style={styles.filterChips}>
+            {[
+              { id: "all", label: "Tümü" },
+              { id: "ready", label: "Hazır" },
+              { id: "collecting", label: "Toplanıyor" },
+            ].map((f) => (
+              <Pressable
+                key={f.id}
+                onPress={() => setStatusFilter(f.id as any)}
+                style={[
+                  styles.filterChip,
+                  statusFilter === f.id && styles.filterChipActive,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.filterChipText,
+                    statusFilter === f.id && styles.filterChipTextActive,
+                  ]}
+                >
+                  {f.label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </Animated.View>
+      )}
+
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={{
           paddingBottom: insets.bottom + 120,
-          paddingTop: 10,
+          paddingTop: 0,
         }}
         showsVerticalScrollIndicator={false}
       >
         {tab === "active" ? (
-          checks.length === 0 ? (
+          filteredChecks.length === 0 ? (
             <Animated.View entering={FadeInDown.delay(100).springify()}>
               <GlassCard style={styles.emptyCard}>
                 <Text style={styles.emptyEmoji}>🧺</Text>
@@ -155,7 +221,7 @@ export default function OffersScreen() {
               </GlassCard>
             </Animated.View>
           ) : (
-            checks.map((c, idx) => {
+            filteredChecks.map((c, idx) => {
               const r = getReq(c.id);
               const status = r?.status || "yok";
               const offersCount = r?.offers?.length || 0;
@@ -930,5 +996,53 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.3)",
     textAlign: "center",
     lineHeight: 14,
+  },
+
+  filterContainer: {
+    paddingHorizontal: 20,
+    marginTop: 16,
+    gap: 12,
+  },
+  searchBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 44,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  searchInput: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 13,
+    fontFamily: "Poppins_400Regular",
+    color: Colors.slate,
+    paddingVertical: 8,
+  },
+  filterChips: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  filterChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 10,
+    backgroundColor: "rgba(0,0,0,0.03)",
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.05)",
+  },
+  filterChipActive: {
+    backgroundColor: Colors.slate,
+    borderColor: Colors.slate,
+  },
+  filterChipText: {
+    fontSize: 11,
+    fontFamily: "Poppins_600SemiBold",
+    color: Colors.textMuted,
+  },
+  filterChipTextActive: {
+    color: Colors.white,
   },
 });

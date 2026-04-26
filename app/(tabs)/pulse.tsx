@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { View, Text, StyleSheet, Pressable, ScrollView, Platform } from "react-native";
+import { View, Text, StyleSheet, Pressable, ScrollView, Platform, Dimensions } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -8,6 +8,8 @@ import Colors from "@/constants/colors";
 import { useUser } from "@/contexts/UserContext";
 import { GlassCard } from "@/components/GlassCard";
 import { TrendChart } from "@/components/TrendChart";
+
+const { width } = Dimensions.get("window");
 
 export default function PulseScreen() {
   const insets = useSafeAreaInsets();
@@ -111,7 +113,28 @@ export default function PulseScreen() {
           </GlassCard>
         </Animated.View>
 
-        <Animated.View entering={FadeInDown.delay(300).springify()}>
+        <Animated.View entering={FadeInDown.delay(300).springify()} style={styles.insightSection}>
+          <Text style={styles.sectionTitle}>Sektörel Analizler</Text>
+          <View style={styles.insightGrid}>
+            {[
+              { sector: "Gıda", trend: "stabil", icon: "restaurant-outline", note: "Tedarik zinciri finansmanı aktif." },
+              { sector: "İnşaat", trend: "down", icon: "construct-outline", note: "Uzun vadeli çeklerde iskonto artışı." },
+              { sector: "Teknoloji", trend: "up", icon: "laptop-outline", note: "Kısa vade likidite talebi yüksek." },
+              { sector: "Lojistik", trend: "stabil", icon: "bus-outline", note: "Akaryakıt endeksli fiyatlama hakim." },
+            ].map((item, idx) => (
+              <GlassCard key={idx} style={styles.insightCard} intensity={10}>
+                <View style={styles.insightTop}>
+                  <Ionicons name={item.icon as any} size={18} color={Colors.gold} />
+                  <View style={[styles.trendDot, { backgroundColor: item.trend === "up" ? Colors.primary : item.trend === "down" ? Colors.danger : Colors.gold }]} />
+                </View>
+                <Text style={styles.insightSector}>{item.sector}</Text>
+                <Text style={styles.insightNote}>{item.note}</Text>
+              </GlassCard>
+            ))}
+          </View>
+        </Animated.View>
+
+        <Animated.View entering={FadeInDown.delay(500).springify()}>
           <View style={styles.infoRow}>
             <Ionicons name="shield-checkmark-outline" size={16} color={Colors.textMuted} />
             <Text style={styles.footerText}>
@@ -170,4 +193,13 @@ const styles = StyleSheet.create({
 
   infoRow: { marginTop: 20, flexDirection: "row", gap: 10, alignItems: "center", paddingHorizontal: 10 },
   footerText: { fontSize: 11, fontFamily: "Poppins_400Regular", color: Colors.textMuted, lineHeight: 18, flex: 1 },
+
+  insightSection: { marginTop: 24 },
+  sectionTitle: { fontSize: 16, fontFamily: "Poppins_800ExtraBold", color: Colors.slate, marginBottom: 14 },
+  insightGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  insightCard: { width: (width - 40 - 12) / 2, padding: 14, borderRadius: 20 },
+  insightTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  trendDot: { width: 6, height: 6, borderRadius: 3 },
+  insightSector: { fontSize: 14, fontFamily: "Poppins_700Bold", color: Colors.slate, marginBottom: 4 },
+  insightNote: { fontSize: 10, fontFamily: "Poppins_400Regular", color: Colors.textSecondary, lineHeight: 14 },
 });
