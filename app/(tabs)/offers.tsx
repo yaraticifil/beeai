@@ -16,7 +16,13 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import Animated, { FadeInDown, Layout } from "react-native-reanimated";
 import Colors from "@/constants/colors";
-import { useUser, CheckItem, OfferRequest } from "@/contexts/UserContext";
+import {
+  useUser,
+  CheckItem,
+  OfferRequest,
+  MIN_DISCOUNT_RATE,
+  MAX_DISCOUNT_RATE,
+} from "@/contexts/UserContext";
 import { GlassCard } from "@/components/GlassCard";
 import { money } from "@/shared/utils/format";
 
@@ -45,6 +51,7 @@ export default function OffersScreen() {
   } | null>(null);
   const [now, setNow] = useState(Date.now());
   const [tab, setTab] = useState<"active" | "history">("active");
+  const [selectedCouponId, setSelectedCouponId] = useState<string | undefined>();
 
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
@@ -83,6 +90,7 @@ export default function OffersScreen() {
   const open = (check: CheckItem) => {
     const req = getReq(check.id);
     setSelected({ check, req });
+    setSelectedCouponId(undefined);
   };
 
   const start = async (check: CheckItem) => {
@@ -415,57 +423,105 @@ export default function OffersScreen() {
                     </View>
 
                     <View style={styles.offerList}>
-                      {refreshSelected.req.offers.map((o) => (
-                        <GlassCard
-                          key={o.id}
-                          style={styles.offerCard}
-                          intensity={10}
-                        >
-                          <View style={styles.offerTop}>
-                            <View style={styles.partnerInfo}>
-                              <View style={styles.partnerDot} />
-                              <Text style={styles.offerPartner}>
-                                {o.partnerCode}
-                              </Text>
+                      {user.coupons && user.coupons.filter(c => !c.used).length > 0 && (
+                        <View style={styles.couponSection}>
+                          <Text style={styles.couponTitle}>Kupon Uygula</Text>
+                          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.couponScroll}>
+                            {user.coupons.filter(c => !c.used).map((c) => (
+                              <Pressable
+                                key={c.id}
+                                onPress={() => setSelectedCouponId(selectedCouponId === c.id ? undefined : c.id)}
+                                style={[
+                                  styles.couponCard,
+                                  selectedCouponId === c.id && styles.couponCardSelected
+                                ]}
+                              >
+                                <Text style={styles.couponEmoji}>🎫</Text>
+                                <Text style={styles.couponName}>{c.title}</Text>
+                                <Text style={styles.couponValue}>-%{c.value}</Text>
+                              </Pressable>
+                            ))}
+                          </ScrollView>
+                        </View>
+                      )}
+
+                      {refreshSelected.req.offers.map((o) => {
+                        const selectedCoupon = selectedCouponId ? user.coupons?.find(c => c.id === selectedCouponId) : null;
+                        let displayRate = o.discountRate;
+                        let displayNet = o.netPay;
+
+                        if (selectedCoupon && selectedCoupon.kind === "discount") {
+                          displayRate = Math.max(
+                            MIN_DISCOUNT_RATE,
+                            Math.min(
+                              MAX_DISCOUNT_RATE,
+                              o.discountRate - selectedCoupon.value
+                            )
+                          );
+                          displayNet = Math.round(
+                            refreshSelected.check.amount * (1 - displayRate / 100) -
+                              o.fees
+                          );
+                        }
+
+                        return (
+                          <GlassCard
+                            key={o.id}
+                            style={styles.offerCard}
+                            intensity={10}
+                          >
+                            <View style={styles.offerTop}>
+                              <View style={styles.partnerInfo}>
+                                <View style={styles.partnerDot} />
+                                <Text style={styles.offerPartner}>
+                                  {o.partnerCode}
+                                </Text>
+                              </View>
+                              <View style={{ alignItems: 'flex-end' }}>
+                                <Text style={styles.offerRate}>
+                                  %{displayRate.toFixed(2)}
+                                </Text>
+                                {selectedCoupon && (
+                                  <Text style={styles.discountHint}>-%{selectedCoupon.value} Uygulandı</Text>
+                                )}
+                              </View>
                             </View>
-                            <Text style={styles.offerRate}>
-                              %{o.discountRate}
-                            </Text>
-                          </View>
-                          <View style={styles.offerDetails}>
-                            <View>
-                              <Text style={styles.offerLine}>
-                                Masraf: ₺{money(o.fees)}
-                              </Text>
-                              <Text style={styles.offerNet}>
-                                Net Ödeme: ₺{money(o.netPay)}
-                              </Text>
-                            </View>
-                            <Pressable
-                              style={styles.acceptBtn}
-                              onPress={async () => {
-                                if (refreshSelected) {
-                                  if (Platform.OS !== "web") {
-                                    Haptics.notificationAsync(
-                                      Haptics.NotificationFeedbackType.Success,
+                            <View style={styles.offerDetails}>
+                              <View>
+                                <Text style={styles.offerLine}>
+                                  Masraf: ₺{money(o.fees)}
+                                </Text>
+                                <Text style={styles.offerNet}>
+                                  Net Ödeme: ₺{money(displayNet)}
+                                </Text>
+                              </View>
+                              <Pressable
+                                style={styles.acceptBtn}
+                                onPress={async () => {
+                                  if (refreshSelected) {
+                                    if (Platform.OS !== "web") {
+                                      Haptics.notificationAsync(
+                                        Haptics.NotificationFeedbackType.Success,
+                                      );
+                                    }
+                                    await pickOffer(
+                                      refreshSelected.check.id,
+                                      o.id,
+                                      selectedCouponId
                                     );
+                                    setSelected(null);
                                   }
-                                  await pickOffer(
-                                    refreshSelected.check.id,
-                                    o.id,
-                                  );
-                                  setSelected(null);
-                                }
-                              }}
-                            >
-                              <Text style={styles.acceptBtnText}>Onayla</Text>
-                            </Pressable>
-                          </View>
-                          {!!o.notes && (
-                            <Text style={styles.offerNote}>{o.notes}</Text>
-                          )}
-                        </GlassCard>
-                      ))}
+                                }}
+                              >
+                                <Text style={styles.acceptBtnText}>Onayla</Text>
+                              </Pressable>
+                            </View>
+                            {!!o.notes && (
+                              <Text style={styles.offerNote}>{o.notes}</Text>
+                            )}
+                          </GlassCard>
+                        );
+                      })}
 
                       {refreshSelected.req.offers.length === 0 && (
                         <View style={styles.waitBox}>
@@ -931,4 +987,25 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 14,
   },
+
+  couponSection: { marginBottom: 10 },
+  couponTitle: { fontSize: 12, fontFamily: 'Poppins_700Bold', color: Colors.gold, marginBottom: 8, marginLeft: 4 },
+  couponScroll: { gap: 10, paddingBottom: 4 },
+  couponCard: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 14,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center',
+    minWidth: 90,
+  },
+  couponCardSelected: {
+    backgroundColor: 'rgba(251,191,36,0.2)',
+    borderColor: Colors.gold,
+  },
+  couponEmoji: { fontSize: 18, marginBottom: 2 },
+  couponName: { fontSize: 9, fontFamily: 'Poppins_600SemiBold', color: 'rgba(255,255,255,0.8)' },
+  couponValue: { fontSize: 12, fontFamily: 'Poppins_800ExtraBold', color: Colors.gold },
+  discountHint: { fontSize: 9, fontFamily: 'Poppins_700Bold', color: Colors.primary, marginTop: -2 },
 });

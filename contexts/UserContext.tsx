@@ -170,6 +170,9 @@ const DEFAULT_USER: Partial<User> = {
 
 const STORAGE_KEY = "@beeai_user";
 
+export const MIN_DISCOUNT_RATE = 0.1;
+export const MAX_DISCOUNT_RATE = 7.5;
+
 /* =========================
    Helpers
 ========================= */
@@ -338,7 +341,7 @@ interface UserContextValue {
   startOfferCollection: (checkId: string) => Promise<void>;
   ensureOfferProgress: (checkId: string) => Promise<void>;
   requestRevision: (checkId: string) => Promise<boolean>;
-  pickOffer: (checkId: string, offerId: string) => Promise<void>;
+  pickOffer: (checkId: string, offerId: string, couponId?: string) => Promise<void>;
 
   // Pilot: pulse
   getDailyPulse: () => DailyPulse;
@@ -500,6 +503,18 @@ export function UserProvider({ children }: { children: ReactNode }) {
       updated = { ...updated, honeyPoints: newPoints, level: computeLevel(newPoints), doubleNextHoney: false };
     }
 
+    const activity = {
+      id: `act_${Date.now()}`,
+      type: "spin",
+      message: `Çarktan '${selected.prize}' kazandınız!`,
+      time: Date.now(),
+    };
+
+    updated = {
+      ...updated,
+      activities: [activity, ...(updated.activities || [])].slice(0, 10),
+    };
+
     await saveUser(updated);
     return { pointsWon: pointsWon, prize: selected.prize };
   };
@@ -550,6 +565,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
       honeyPoints: newPoints,
       level: computeLevel(newPoints),
       totalHarvested: (user.totalHarvested || 0) + 1,
+      activities: [
+        {
+          id: `act_${Date.now()}`,
+          type: "harvest",
+          message: `Bahçeden ${honeyEarned} 🍯 hasat edildi.`,
+          time: Date.now(),
+        },
+        ...(user.activities || []),
+      ].slice(0, 10),
     });
     return honeyEarned;
   };
@@ -836,16 +860,45 @@ export function UserProvider({ children }: { children: ReactNode }) {
     return true;
   };
 
-  const pickOffer: UserContextValue["pickOffer"] = async (checkId, offerId) => {
+  const pickOffer: UserContextValue["pickOffer"] = async (checkId, offerId, couponId) => {
     if (!user) return;
     const req = (user.offerRequests || []).find((r) => r.checkId === checkId);
     if (!req) return;
 
-    const offer = req.offers.find((o) => o.id === offerId);
+    let offer = req.offers.find((o) => o.id === offerId);
     if (!offer) return;
 
     const check = (user.checks || []).find((c) => c.id === checkId);
     if (!check) return;
+
+    let updatedCoupons = user.coupons || [];
+    let message = `${offer.partnerCode} teklifi seçildi, işlem tamamlanıyor.`;
+
+    if (couponId) {
+      const cIdx = updatedCoupons.findIndex((c) => c.id === couponId && !c.used);
+      if (cIdx >= 0) {
+        const coupon = updatedCoupons[cIdx];
+        updatedCoupons = [...updatedCoupons];
+        updatedCoupons[cIdx] = { ...coupon, used: true };
+
+        if (coupon.kind === "discount") {
+          const revisedRate = clamp(
+            offer.discountRate - coupon.value,
+            MIN_DISCOUNT_RATE,
+            MAX_DISCOUNT_RATE
+          );
+          const revisedNet = Math.round(
+            check.amount * (1 - revisedRate / 100) - offer.fees
+          );
+          offer = {
+            ...offer,
+            discountRate: Number(revisedRate.toFixed(2)),
+            netPay: revisedNet,
+          };
+        }
+        message = `${coupon.title} kullanılarak teklif onaylandı.`;
+      }
+    }
 
     const completed: CompletedTransaction = {
       id: `tx_${Date.now()}`,
@@ -873,11 +926,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
       checks: updatedChecks,
       offerRequests: updatedRequests,
       completedTransactions: [completed, ...(user.completedTransactions || [])],
+      coupons: updatedCoupons,
       activities: [
         {
           id: `act_${Date.now()}`,
           type: "pick_offer",
-          message: `${offer.partnerCode} teklifi seçildi, işlem tamamlanıyor.`,
+          message,
           time: Date.now(),
         },
         ...(user.activities || []),

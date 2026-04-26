@@ -62,7 +62,7 @@ const SHOP_ITEMS: ShopItem[] = [
     id: "double_honey",
     emoji: "💛",
     name: "2x Bal Pusulası",
-    description: "30 dk boyunca 2 kat bal kazan",
+    description: "Bir sonraki kazanımda 2 kat bal kazan",
     cost: 80,
     category: "ozel",
     color: "#f59e0b",
