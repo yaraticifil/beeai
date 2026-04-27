@@ -66,7 +66,7 @@ export default function PanelScreen() {
 
   useEffect(() => {
     if (user) checkDailySpins();
-  }, []);
+  }, [user, checkDailySpins]);
 
   useEffect(() => {
     if (!user) router.replace("/");

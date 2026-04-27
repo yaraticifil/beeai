@@ -133,6 +133,7 @@ export interface User {
   activities: { id: string; type: string; message: string; time: number }[];
   coupons: Coupon[];
   flowerSeeds: number;
+  flowerBoosts: number;
   doubleNextHoney: boolean;
   settings: UserSettings;
 }
@@ -164,6 +165,7 @@ const DEFAULT_USER: Partial<User> = {
   completedTransactions: [],
   coupons: [],
   flowerSeeds: 0,
+  flowerBoosts: 0,
   doubleNextHoney: false,
   settings: { pulseMode: "weather" },
 };
@@ -319,6 +321,8 @@ interface UserContextValue {
 
   plantFlower: () => Promise<boolean>;
   harvestFlower: (flowerId: string) => Promise<number>;
+  harvestAllFlowers: () => Promise<number>;
+  boostFlower: (flowerId: string) => Promise<boolean>;
   checkDailySpins: () => Promise<void>;
 
   // Pilot: checks & offers
@@ -372,6 +376,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
           activities: parsed.activities || [],
           coupons: parsed.coupons || [],
           flowerSeeds: parsed.flowerSeeds || 0,
+          flowerBoosts: parsed.flowerBoosts || 0,
           doubleNextHoney: parsed.doubleNextHoney || false,
         };
         hydrated.level = computeLevel(hydrated.honeyPoints);
@@ -401,6 +406,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       activities: [],
       coupons: [],
       flowerSeeds: 1,
+      flowerBoosts: 0,
       doubleNextHoney: false,
       settings: { pulseMode: "weather" },
     };
@@ -446,7 +452,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     if (!user) return;
     const today = todayKey();
     if (user.lastSpinDate !== today) {
-      await saveUser({ ...user, spinCount: 3, lastSpinDate: today });
+      await saveUser({ ...user, spinCount: user.spinCount + 3, lastSpinDate: today });
     }
   };
 
@@ -540,7 +546,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const isReady = elapsed >= FLOWER_GROWTH_TIME_MS;
     if (!isReady) return 0;
 
-    const honeyEarned = Math.floor(Math.random() * 16) + 15;
+    let honeyEarned = Math.floor(Math.random() * 16) + 15;
+    if (user.doubleNextHoney) {
+      honeyEarned *= 2;
+    }
+
     const newFlowers = (user.flowers || []).filter((f) => f.id !== flowerId);
     const newPoints = user.honeyPoints + honeyEarned;
 
@@ -550,8 +560,63 @@ export function UserProvider({ children }: { children: ReactNode }) {
       honeyPoints: newPoints,
       level: computeLevel(newPoints),
       totalHarvested: (user.totalHarvested || 0) + 1,
+      doubleNextHoney: false,
     });
     return honeyEarned;
+  };
+
+  const harvestAllFlowers = async (): Promise<number> => {
+    if (!user) return 0;
+
+    const readyFlowers = (user.flowers || []).filter(
+      (f) => Date.now() - f.plantedAt >= FLOWER_GROWTH_TIME_MS
+    );
+    if (readyFlowers.length === 0) return 0;
+
+    let totalEarned = 0;
+    readyFlowers.forEach((f, idx) => {
+      let earned = Math.floor(Math.random() * 16) + 15;
+      if (idx === 0 && user.doubleNextHoney) {
+        earned *= 2;
+      }
+      totalEarned += earned;
+    });
+
+    const readyIds = readyFlowers.map((f) => f.id);
+    const remainingFlowers = (user.flowers || []).filter((f) => !readyIds.includes(f.id));
+    const newPoints = user.honeyPoints + totalEarned;
+
+    await saveUser({
+      ...user,
+      flowers: remainingFlowers,
+      honeyPoints: newPoints,
+      level: computeLevel(newPoints),
+      totalHarvested: (user.totalHarvested || 0) + readyFlowers.length,
+      doubleNextHoney: false,
+    });
+
+    return totalEarned;
+  };
+
+  const boostFlower = async (flowerId: string): Promise<boolean> => {
+    if (!user || (user.flowerBoosts || 0) <= 0) return false;
+
+    const flowerIdx = (user.flowers || []).findIndex((f) => f.id === flowerId);
+    if (flowerIdx < 0) return false;
+
+    const flower = user.flowers[flowerIdx];
+    if (Date.now() - flower.plantedAt >= FLOWER_GROWTH_TIME_MS) return false;
+
+    const updatedFlower = { ...flower, plantedAt: Date.now() - FLOWER_GROWTH_TIME_MS - 1000 };
+    const newFlowers = [...user.flowers];
+    newFlowers[flowerIdx] = updatedFlower;
+
+    await saveUser({
+      ...user,
+      flowers: newFlowers,
+      flowerBoosts: user.flowerBoosts - 1,
+    });
+    return true;
   };
 
   const addCheck: UserContextValue["addCheck"] = async (input) => {
@@ -923,6 +988,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
       spin,
       plantFlower,
       harvestFlower,
+      harvestAllFlowers,
+      boostFlower,
       checkDailySpins,
       addCheck,
       linkInvoice,

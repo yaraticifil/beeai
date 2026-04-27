@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -24,9 +24,11 @@ const GROW_TIME = 30000;
 function FlowerItem({
   flower,
   onHarvest,
+  onBoost,
 }: {
   flower: Flower;
   onHarvest: (id: string) => void;
+  onBoost: (id: string) => void;
 }) {
   const [elapsed, setElapsed] = useState(Date.now() - flower.plantedAt);
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
@@ -42,7 +44,7 @@ function FlowerItem({
       setElapsed(Date.now() - flower.plantedAt);
     }, 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [flower.plantedAt, scaleAnim]);
 
   const isReady = elapsed >= GROW_TIME;
   const progress = Math.min(elapsed / GROW_TIME, 1);
@@ -78,9 +80,20 @@ function FlowerItem({
         {isReady ? (
           <Text style={styles.harvestText}>Topla</Text>
         ) : (
-          <Text style={styles.growText}>
-            {mins > 0 ? `${mins}d ${secs}s` : `${secs}s`}
-          </Text>
+          <View style={{ alignItems: 'center' }}>
+            <Text style={styles.growText}>
+              {mins > 0 ? `${mins}d ${secs}s` : `${secs}s`}
+            </Text>
+            <Pressable
+              onPress={(e) => {
+                e.stopPropagation();
+                onBoost(flower.id);
+              }}
+              style={styles.boostMiniBtn}
+            >
+              <Ionicons name="flash" size={10} color={Colors.white} />
+            </Pressable>
+          </View>
         )}
       </Pressable>
     </Animated.View>
@@ -89,7 +102,7 @@ function FlowerItem({
 
 export default function GardenScreen() {
   const insets = useSafeAreaInsets();
-  const { user, plantFlower, harvestFlower } = useUser();
+  const { user, plantFlower, harvestFlower, harvestAllFlowers, boostFlower } = useUser();
   const [harvestResult, setHarvestResult] = useState<number | null>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -119,8 +132,31 @@ export default function GardenScreen() {
   const handleHarvest = async (id: string) => {
     const earned = await harvestFlower(id);
     if (earned > 0) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      if (Platform.OS !== 'web') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
       showHarvestResult(earned);
+    }
+  };
+
+  const handleHarvestAll = async () => {
+    const earned = await harvestAllFlowers();
+    if (earned > 0) {
+      if (Platform.OS !== 'web') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+      showHarvestResult(earned);
+    }
+  };
+
+  const handleBoost = async (id: string) => {
+    if (!user || (user.flowerBoosts || 0) <= 0) {
+      Alert.alert("Hızlandırıcı Yok", "Mağazadan çiçek hızlandırıcı alabilirsiniz.");
+      return;
+    }
+    const success = await boostFlower(id);
+    if (success && Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
   };
 
@@ -162,6 +198,13 @@ export default function GardenScreen() {
             </Text>
             <Text style={styles.gardenStatLabel}>Hasat</Text>
           </View>
+          <View style={styles.gardenStatDivider} />
+          <View style={styles.gardenStatItem}>
+            <Text style={[styles.gardenStatValue, { color: Colors.primary }]}>
+              {user.flowerBoosts || 0}
+            </Text>
+            <Text style={styles.gardenStatLabel}>Hızlandır</Text>
+          </View>
         </View>
       </LinearGradient>
 
@@ -201,11 +244,22 @@ export default function GardenScreen() {
                 </Text>
               </View>
             ) : (
-              <View style={styles.flowersGrid}>
-                {user.flowers.map((f) => (
-                  <FlowerItem key={f.id} flower={f} onHarvest={handleHarvest} />
-                ))}
-              </View>
+              <>
+                <View style={styles.flowersGrid}>
+                  {user.flowers.map((f) => (
+                    <FlowerItem key={f.id} flower={f} onHarvest={handleHarvest} onBoost={handleBoost} />
+                  ))}
+                </View>
+                {readyCount > 1 && (
+                  <Pressable
+                    onPress={handleHarvestAll}
+                    style={styles.harvestAllBtn}
+                  >
+                    <Text style={styles.harvestAllText}>Hepsini Topla</Text>
+                    <Ionicons name="basket" size={16} color={Colors.white} />
+                  </Pressable>
+                )}
+              </>
             )}
           </LinearGradient>
         </View>
@@ -415,6 +469,33 @@ const styles = StyleSheet.create({
   },
   flowerEmojiGrowing: {
     opacity: 0.7,
+  },
+  boostMiniBtn: {
+    marginTop: 4,
+    backgroundColor: Colors.primary,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  harvestAllBtn: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: Colors.gold,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    zIndex: 10,
+  },
+  harvestAllText: {
+    fontSize: 10,
+    fontFamily: 'Poppins_700Bold',
+    color: Colors.white,
   },
   flowerProgressBg: {
     width: "100%",

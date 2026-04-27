@@ -9,6 +9,7 @@ import {
   Platform,
   Dimensions,
   ActivityIndicator,
+  TextInput,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -20,7 +21,7 @@ import { useUser, CheckItem, OfferRequest } from "@/contexts/UserContext";
 import { GlassCard } from "@/components/GlassCard";
 import { money } from "@/shared/utils/format";
 
-const { width, height } = Dimensions.get("window");
+const { height } = Dimensions.get("window");
 
 function fmtCountdown(ms: number) {
   const t = Math.max(0, Math.floor(ms / 1000));
@@ -46,6 +47,9 @@ export default function OffersScreen() {
   const [now, setNow] = useState(Date.now());
   const [tab, setTab] = useState<"active" | "history">("active");
 
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<"all" | "ready" | "collecting">("all");
+
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
@@ -64,11 +68,10 @@ export default function OffersScreen() {
     }, 2500);
 
     return () => clearInterval(interval);
-  }, [user]);
+  }, [user, ensureOfferProgress]);
 
-  const checks = user?.checks || [];
+  const rawChecks = useMemo(() => user?.checks || [], [user?.checks]);
 
-  // ⚡ Bolt: Cache offer requests by checkId to optimize O(N*M) lookup into O(N+M)
   const reqMap = useMemo(() => {
     const reqs = user?.offerRequests || [];
     const map = new Map<string, OfferRequest>();
@@ -77,6 +80,26 @@ export default function OffersScreen() {
     }
     return map;
   }, [user?.offerRequests]);
+
+  const checks = useMemo(() => {
+    return rawChecks.filter((c) => {
+      const r = reqMap.get(c.id);
+      const status = r?.status || "yok";
+
+      if (filter === "ready" && status !== "ready") return false;
+      if (filter === "collecting" && status !== "collecting") return false;
+
+      if (search) {
+        const s = search.toLowerCase();
+        return (
+          c.issuerName.toLowerCase().includes(s) ||
+          c.checkNo.toLowerCase().includes(s)
+        );
+      }
+      return true;
+    });
+  }, [rawChecks, reqMap, search, filter]);
+
 
   const getReq = React.useCallback((checkId: string) => reqMap.get(checkId), [reqMap]);
 
@@ -134,6 +157,40 @@ export default function OffersScreen() {
           </Text>
         </Pressable>
       </View>
+
+      {tab === "active" && (
+        <Animated.View entering={FadeInDown.delay(100)} style={styles.filterSection}>
+          <View style={styles.searchBar}>
+            <Ionicons name="search" size={18} color={Colors.textMuted} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Keşideci veya çek no ara..."
+              placeholderTextColor={Colors.textMuted}
+              value={search}
+              onChangeText={setSearch}
+            />
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsScroll}>
+            <View style={styles.chipsContainer}>
+              {[
+                { id: "all", label: "Tümü" },
+                { id: "ready", label: "Hazır" },
+                { id: "collecting", label: "Toplanıyor" },
+              ].map((c) => (
+                <Pressable
+                  key={c.id}
+                  onPress={() => setFilter(c.id as any)}
+                  style={[styles.chip, filter === c.id && styles.chipActive]}
+                >
+                  <Text style={[styles.chipText, filter === c.id && styles.chipTextActive]}>
+                    {c.label}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </ScrollView>
+        </Animated.View>
+      )}
 
       <ScrollView
         style={styles.scroll}
@@ -718,6 +775,59 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     textAlign: "center",
     lineHeight: 20,
+  },
+
+  filterSection: {
+    marginTop: 16,
+    paddingHorizontal: 20,
+    gap: 12,
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.white,
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    height: 48,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  searchInput: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 14,
+    fontFamily: 'Poppins_400Regular',
+    color: Colors.slate,
+    paddingVertical: 8,
+  },
+  chipsScroll: {
+    marginHorizontal: -20,
+    paddingHorizontal: 20,
+  },
+  chipsContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingBottom: 4,
+  },
+  chip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.5)',
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  chipActive: {
+    backgroundColor: Colors.slate,
+    borderColor: Colors.slate,
+  },
+  chipText: {
+    fontSize: 12,
+    fontFamily: 'Poppins_600SemiBold',
+    color: Colors.textMuted,
+  },
+  chipTextActive: {
+    color: Colors.white,
   },
 
   historyMeta: {
