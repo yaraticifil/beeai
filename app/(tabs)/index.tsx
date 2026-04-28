@@ -11,6 +11,7 @@ import { GlassCard } from "@/components/GlassCard";
 import { TrendChart } from "@/components/TrendChart";
 import { haptics } from "@/shared/utils/haptics";
 import { formatCompactNumber } from "@/shared/utils/format";
+import { getBeeInsight } from "@/shared/utils/insights";
 
 function StatCard({ label, value, icon, delay = 0 }: { label: string; value: string; icon: keyof typeof Ionicons.glyphMap; delay?: number }) {
   return (
@@ -64,6 +65,14 @@ export default function PanelScreen() {
   const insets = useSafeAreaInsets();
   const { user, logout, checkDailySpins, getDailyPulse } = useUser();
 
+  const pulse = React.useMemo(() => getDailyPulse(), [getDailyPulse]);
+
+  const headerColors = React.useMemo(() => {
+    if (pulse.mood === 'sert') return [Colors.slate, "rgba(239, 68, 68, 0.2)", Colors.slate];
+    if (pulse.mood === 'yumuşak') return [Colors.slate, "rgba(34, 197, 94, 0.2)", Colors.slate];
+    return [Colors.slate, Colors.slateLight, Colors.slate];
+  }, [pulse.mood]);
+
   useEffect(() => {
     if (user) checkDailySpins();
   }, [user, checkDailySpins]);
@@ -74,7 +83,6 @@ export default function PanelScreen() {
 
   if (!user) return null;
 
-  const pulse = getDailyPulse();
   const checksCount = user.checks?.length || 0;
   const activeReqs = (user.offerRequests || []).filter((r) => r.status === "collecting").length;
   const offersReady = (user.offerRequests || []).filter((r) => r.status === "ready").length;
@@ -102,7 +110,7 @@ export default function PanelScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={[Colors.slate, "#1e293b", "#0f172a"]}
+        colors={headerColors}
         style={[styles.header, { paddingTop: topInset + 10 }]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -235,17 +243,28 @@ export default function PanelScreen() {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.beesScroll}>
             {(user.bees || []).map((b, idx) => (
               <Animated.View key={b.id} entering={FadeInDown.delay(700 + idx * 100).springify()}>
-                <GlassCard style={styles.beeCard}>
-                  <Text style={styles.beeEmoji}>{b.emoji}</Text>
-                  <Text style={styles.beeName}>{b.name}</Text>
-                  <View style={styles.xpBarBackground}>
-                    <View style={[styles.xpBarFill, { width: `${b.xp}%` }]} />
-                  </View>
-                  <View style={styles.beeInfoRow}>
-                    <Text style={styles.beeLevel}>Sv {b.level}</Text>
-                    <Text style={styles.beeStatus}>• Aktif</Text>
-                  </View>
-                </GlassCard>
+                <Pressable
+                  onPress={() => {
+                    haptics.light();
+                    Alert.alert(
+                      `${b.emoji} ${b.name}`,
+                      getBeeInsight(b.role, pulse.mood),
+                      [{ text: "Tamam" }]
+                    );
+                  }}
+                >
+                  <GlassCard style={styles.beeCard}>
+                    <Text style={styles.beeEmoji}>{b.emoji}</Text>
+                    <Text style={styles.beeName}>{b.name}</Text>
+                    <View style={styles.xpBarBackground}>
+                      <View style={[styles.xpBarFill, { width: `${b.xp}%` }]} />
+                    </View>
+                    <View style={styles.beeInfoRow}>
+                      <Text style={styles.beeLevel}>Sv {b.level}</Text>
+                      <Text style={styles.beeStatus}>• Aktif</Text>
+                    </View>
+                  </GlassCard>
+                </Pressable>
               </Animated.View>
             ))}
           </ScrollView>

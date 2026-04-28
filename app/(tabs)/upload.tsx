@@ -7,11 +7,48 @@ import * as ImagePicker from "expo-image-picker";
 import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
-import Animated, { FadeInDown } from "react-native-reanimated";
+import Animated, {
+  FadeInDown,
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  withSequence,
+  Easing,
+} from "react-native-reanimated";
 import Colors from "@/constants/colors";
 import { useUser } from "@/contexts/UserContext";
 import { GlassCard } from "@/components/GlassCard";
 import { formatCurrency, formatDate, parseCurrency } from "@/shared/utils/format";
+
+function ScanningOverlay() {
+  const translateY = useSharedValue(0);
+
+  React.useEffect(() => {
+    translateY.value = withRepeat(
+      withSequence(
+        withTiming(160, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0, { duration: 1500, easing: Easing.inOut(Easing.ease) })
+      ),
+      -1,
+      false
+    );
+  }, [translateY]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+  }));
+
+  return (
+    <View style={[StyleSheet.absoluteFill, { overflow: 'hidden' }]}>
+      <Animated.View style={[styles.scanLine, animatedStyle]} />
+      <LinearGradient
+        colors={['rgba(34,197,94,0.2)', 'rgba(34,197,94,0)']}
+        style={StyleSheet.absoluteFill}
+      />
+    </View>
+  );
+}
 
 export default function UploadScreen() {
   const insets = useSafeAreaInsets();
@@ -115,6 +152,7 @@ export default function UploadScreen() {
             {imageUri ? (
               <View style={styles.previewContainer}>
                 <Image source={{ uri: imageUri }} style={styles.previewImage} contentFit="cover" />
+                {loading && <ScanningOverlay />}
                 <Pressable
                   style={styles.removeImageBtn}
                   onPress={() => {
@@ -126,7 +164,7 @@ export default function UploadScreen() {
                 </Pressable>
                 <View style={styles.previewOverlay}>
                    <Ionicons name="checkmark-circle" size={20} color={Colors.primary} />
-                   <Text style={styles.previewText}>Görsel Analiz İçin Hazır</Text>
+                   <Text style={styles.previewText}>{loading ? "AI Analiz Yapıyor..." : "Görsel Analiz İçin Hazır"}</Text>
                 </View>
               </View>
             ) : (
@@ -261,6 +299,18 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: 'Poppins_700Bold',
     color: Colors.slate,
+  },
+  scanLine: {
+    height: 3,
+    width: '100%',
+    backgroundColor: Colors.primary,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 10,
+    elevation: 5,
+    position: 'absolute',
+    zIndex: 20,
   },
   
   photoBtn: { 
