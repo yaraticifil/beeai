@@ -11,6 +11,7 @@ import { GlassCard } from "@/components/GlassCard";
 import { TrendChart } from "@/components/TrendChart";
 import { haptics } from "@/shared/utils/haptics";
 import { formatCompactNumber } from "@/shared/utils/format";
+import { getBeeInsight } from "@/shared/utils/insights";
 
 function StatCard({ label, value, icon, delay = 0 }: { label: string; value: string; icon: keyof typeof Ionicons.glyphMap; delay?: number }) {
   return (
@@ -81,6 +82,8 @@ export default function PanelScreen() {
 
   const totalAmount = (user.checks || []).reduce((sum, c) => sum + (c.amount || 0), 0);
 
+  const levelProgress = user.honeyPoints % 100;
+
   const topInset = Platform.OS === "web" ? 60 : insets.top;
 
   const handleLogout = () => {
@@ -119,6 +122,15 @@ export default function PanelScreen() {
               <Text style={styles.companyText} numberOfLines={1}>
                 {user.companyName}
               </Text>
+              <View style={styles.levelProgressContainer}>
+                <View style={styles.levelLabelRow}>
+                  <Text style={styles.levelText}>Seviye {user.level}</Text>
+                  <Text style={styles.xpText}>{levelProgress}/100 Bal</Text>
+                </View>
+                <View style={styles.levelProgressBarBg}>
+                  <View style={[styles.levelProgressBarFill, { width: `${levelProgress}%` }]} />
+                </View>
+              </View>
             </View>
           </Animated.View>
 
@@ -235,17 +247,28 @@ export default function PanelScreen() {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.beesScroll}>
             {(user.bees || []).map((b, idx) => (
               <Animated.View key={b.id} entering={FadeInDown.delay(700 + idx * 100).springify()}>
-                <GlassCard style={styles.beeCard}>
-                  <Text style={styles.beeEmoji}>{b.emoji}</Text>
-                  <Text style={styles.beeName}>{b.name}</Text>
-                  <View style={styles.xpBarBackground}>
-                    <View style={[styles.xpBarFill, { width: `${b.xp}%` }]} />
-                  </View>
-                  <View style={styles.beeInfoRow}>
-                    <Text style={styles.beeLevel}>Sv {b.level}</Text>
-                    <Text style={styles.beeStatus}>• Aktif</Text>
-                  </View>
-                </GlassCard>
+                <Pressable
+                  onPress={() => {
+                    haptics.light();
+                    Alert.alert(
+                      `${b.name} Tavsiyesi`,
+                      getBeeInsight(b.role, pulse.mood),
+                      [{ text: "Anladım", style: "default" }]
+                    );
+                  }}
+                >
+                  <GlassCard style={styles.beeCard}>
+                    <Text style={styles.beeEmoji}>{b.emoji}</Text>
+                    <Text style={styles.beeName}>{b.name}</Text>
+                    <View style={styles.xpBarBackground}>
+                      <View style={[styles.xpBarFill, { width: `${b.xp}%` }]} />
+                    </View>
+                    <View style={styles.beeInfoRow}>
+                      <Text style={styles.beeLevel}>Sv {b.level}</Text>
+                      <Text style={styles.beeStatus}>• Aktif</Text>
+                    </View>
+                  </GlassCard>
+                </Pressable>
               </Animated.View>
             ))}
           </ScrollView>
@@ -276,8 +299,14 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.2)",
   },
   avatarText: { fontSize: 24 },
-  welcomeText: { fontSize: 13, fontFamily: "Poppins_400Regular", color: "rgba(255,255,255,0.7)" },
-  companyText: { fontSize: 18, fontFamily: "Poppins_800ExtraBold", color: Colors.white },
+  welcomeText: { fontSize: 11, fontFamily: "Poppins_400Regular", color: "rgba(255,255,255,0.7)" },
+  companyText: { fontSize: 16, fontFamily: "Poppins_800ExtraBold", color: Colors.white },
+  levelProgressContainer: { marginTop: 4, width: '100%' },
+  levelLabelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 },
+  levelText: { fontSize: 10, fontFamily: "Poppins_700Bold", color: Colors.gold },
+  xpText: { fontSize: 8, fontFamily: "Poppins_400Regular", color: "rgba(255,255,255,0.6)" },
+  levelProgressBarBg: { height: 4, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 2, overflow: 'hidden' },
+  levelProgressBarFill: { height: '100%', backgroundColor: Colors.gold, borderRadius: 2 },
   logoutBtn: { width: 44, height: 44, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.12)" },
 
   pulseContainer: { marginTop: 4 },
