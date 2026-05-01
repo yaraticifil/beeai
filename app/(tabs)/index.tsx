@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 import Colors from "@/constants/colors";
 import { useUser } from "@/contexts/UserContext";
+import { getBeeInsight } from "@/shared/utils/insights";
 import { GlassCard } from "@/components/GlassCard";
 import { TrendChart } from "@/components/TrendChart";
 import { haptics } from "@/shared/utils/haptics";
@@ -235,17 +236,25 @@ export default function PanelScreen() {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.beesScroll}>
             {(user.bees || []).map((b, idx) => (
               <Animated.View key={b.id} entering={FadeInDown.delay(700 + idx * 100).springify()}>
-                <GlassCard style={styles.beeCard}>
-                  <Text style={styles.beeEmoji}>{b.emoji}</Text>
-                  <Text style={styles.beeName}>{b.name}</Text>
-                  <View style={styles.xpBarBackground}>
-                    <View style={[styles.xpBarFill, { width: `${b.xp}%` }]} />
-                  </View>
-                  <View style={styles.beeInfoRow}>
-                    <Text style={styles.beeLevel}>Sv {b.level}</Text>
-                    <Text style={styles.beeStatus}>• Aktif</Text>
-                  </View>
-                </GlassCard>
+                <Pressable
+                  onPress={() => {
+                    haptics.light();
+                    const insight = getBeeInsight(b.role, pulse.mood);
+                    Alert.alert(b.name, insight);
+                  }}
+                >
+                  <GlassCard style={styles.beeCard}>
+                    <Text style={styles.beeEmoji}>{b.emoji}</Text>
+                    <Text style={styles.beeName}>{b.name}</Text>
+                    <View style={styles.xpBarBackground}>
+                      <View style={[styles.xpBarFill, { width: `${b.xp}%` }]} />
+                    </View>
+                    <View style={styles.beeInfoRow}>
+                      <Text style={styles.beeLevel}>Sv {b.level}</Text>
+                      <Text style={styles.beeStatus}>• Aktif</Text>
+                    </View>
+                  </GlassCard>
+                </Pressable>
               </Animated.View>
             ))}
           </ScrollView>
