@@ -20,6 +20,7 @@ import Colors from "@/constants/colors";
 import { useUser, CheckItem, OfferRequest } from "@/contexts/UserContext";
 import { GlassCard } from "@/components/GlassCard";
 import { money } from "@/shared/utils/format";
+import { haptics } from "@/shared/utils/haptics";
 
 const { height } = Dimensions.get("window");
 
@@ -49,6 +50,7 @@ export default function OffersScreen() {
 
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "ready" | "collecting">("all");
+  const [selectedCoupon, setSelectedCoupon] = useState<string | null>(null);
 
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
@@ -106,6 +108,7 @@ export default function OffersScreen() {
   const open = (check: CheckItem) => {
     const req = getReq(check.id);
     setSelected({ check, req });
+    setSelectedCoupon(null);
   };
 
   const start = async (check: CheckItem) => {
@@ -472,57 +475,72 @@ export default function OffersScreen() {
                     </View>
 
                     <View style={styles.offerList}>
-                      {refreshSelected.req.offers.map((o) => (
-                        <GlassCard
-                          key={o.id}
-                          style={styles.offerCard}
-                          intensity={10}
-                        >
-                          <View style={styles.offerTop}>
-                            <View style={styles.partnerInfo}>
-                              <View style={styles.partnerDot} />
-                              <Text style={styles.offerPartner}>
-                                {o.partnerCode}
-                              </Text>
+                      {refreshSelected.req.offers.map((o) => {
+                        const coupon = user?.coupons?.find(c => c.id === selectedCoupon);
+                        let displayNetPay = o.netPay;
+                        let displayRate = o.discountRate;
+
+                        if (coupon && coupon.kind === 'discount') {
+                           const discount = coupon.value / 100;
+                           const newRate = Math.max(1.0, o.discountRate * (1 - discount));
+                           displayRate = Number(newRate.toFixed(2));
+                           displayNetPay = Math.round(refreshSelected.check.amount * (1 - newRate / 100) - o.fees);
+                        }
+
+                        return (
+                          <GlassCard
+                            key={o.id}
+                            style={styles.offerCard}
+                            intensity={10}
+                          >
+                            <View style={styles.offerTop}>
+                              <View style={styles.partnerInfo}>
+                                <View style={styles.partnerDot} />
+                                <Text style={styles.offerPartner}>
+                                  {o.partnerCode}
+                                </Text>
+                              </View>
+                              <View style={{ alignItems: 'flex-end' }}>
+                                <Text style={styles.offerRate}>
+                                  %{displayRate}
+                                </Text>
+                                {coupon && (
+                                  <Text style={styles.couponBadgeText}>-%{coupon.value} Kupon</Text>
+                                )}
+                              </View>
                             </View>
-                            <Text style={styles.offerRate}>
-                              %{o.discountRate}
-                            </Text>
-                          </View>
-                          <View style={styles.offerDetails}>
-                            <View>
-                              <Text style={styles.offerLine}>
-                                Masraf: ₺{money(o.fees)}
-                              </Text>
-                              <Text style={styles.offerNet}>
-                                Net Ödeme: ₺{money(o.netPay)}
-                              </Text>
-                            </View>
-                            <Pressable
-                              style={styles.acceptBtn}
-                              onPress={async () => {
-                                if (refreshSelected) {
-                                  if (Platform.OS !== "web") {
-                                    Haptics.notificationAsync(
-                                      Haptics.NotificationFeedbackType.Success,
+                            <View style={styles.offerDetails}>
+                              <View>
+                                <Text style={styles.offerLine}>
+                                  Masraf: ₺{money(o.fees)}
+                                </Text>
+                                <Text style={styles.offerNet}>
+                                  Net Ödeme: ₺{money(displayNetPay)}
+                                </Text>
+                              </View>
+                              <Pressable
+                                style={styles.acceptBtn}
+                                onPress={async () => {
+                                  if (refreshSelected) {
+                                  haptics.success();
+                                    await pickOffer(
+                                      refreshSelected.check.id,
+                                      o.id,
+                                      selectedCoupon || undefined
                                     );
+                                    setSelected(null);
                                   }
-                                  await pickOffer(
-                                    refreshSelected.check.id,
-                                    o.id,
-                                  );
-                                  setSelected(null);
-                                }
-                              }}
-                            >
-                              <Text style={styles.acceptBtnText}>Onayla</Text>
-                            </Pressable>
-                          </View>
-                          {!!o.notes && (
-                            <Text style={styles.offerNote}>{o.notes}</Text>
-                          )}
-                        </GlassCard>
-                      ))}
+                                }}
+                              >
+                                <Text style={styles.acceptBtnText}>Onayla</Text>
+                              </Pressable>
+                            </View>
+                            {!!o.notes && (
+                              <Text style={styles.offerNote}>{o.notes}</Text>
+                            )}
+                          </GlassCard>
+                        );
+                      })}
 
                       {refreshSelected.req.offers.length === 0 && (
                         <View style={styles.waitBox}>
@@ -533,6 +551,24 @@ export default function OffersScreen() {
                         </View>
                       )}
                     </View>
+
+                    {refreshSelected.req.offers.length > 0 && user?.coupons && user.coupons.filter(c => !c.used).length > 0 && (
+                      <View style={styles.couponSection}>
+                        <Text style={styles.couponTitle}>Mevcut Kuponlar</Text>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.couponScroll}>
+                          {user.coupons.filter(c => !c.used).map(c => (
+                            <Pressable
+                              key={c.id}
+                              onPress={() => setSelectedCoupon(selectedCoupon === c.id ? null : c.id)}
+                              style={[styles.couponItem, selectedCoupon === c.id && styles.couponItemActive]}
+                            >
+                              <Ionicons name="ticket" size={16} color={selectedCoupon === c.id ? Colors.slate : Colors.gold} />
+                              <Text style={[styles.couponText, selectedCoupon === c.id && styles.couponTextActive]}>{c.title}</Text>
+                            </Pressable>
+                          ))}
+                        </ScrollView>
+                      </View>
+                    )}
 
                     <View style={styles.actionsRow}>
                       <Pressable
