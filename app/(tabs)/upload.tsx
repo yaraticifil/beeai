@@ -12,6 +12,7 @@ import Colors from "@/constants/colors";
 import { useUser } from "@/contexts/UserContext";
 import { GlassCard } from "@/components/GlassCard";
 import { formatCurrency, formatDate, parseCurrency } from "@/shared/utils/format";
+import { haptics } from "@/shared/utils/haptics";
 
 export default function UploadScreen() {
   const insets = useSafeAreaInsets();
@@ -54,9 +55,7 @@ export default function UploadScreen() {
 
   const handleSubmit = async () => {
     if (loading) return;
-    if (Platform.OS !== "web") {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    }
+    haptics.success();
     setLoading(true);
 
     const a = parseCurrency(amount);
@@ -118,7 +117,7 @@ export default function UploadScreen() {
                 <Pressable
                   style={styles.removeImageBtn}
                   onPress={() => {
-                    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    haptics.light();
                     setImageUri(undefined);
                   }}
                 >
