@@ -134,7 +134,7 @@ export interface User {
   coupons: Coupon[];
   flowerSeeds: number;
   flowerBoosts: number;
-  doubleNextHoney: boolean;
+  honeyBoosterUntil: number; // timestamp
   settings: UserSettings;
 }
 
@@ -166,7 +166,7 @@ const DEFAULT_USER: Partial<User> = {
   coupons: [],
   flowerSeeds: 0,
   flowerBoosts: 0,
-  doubleNextHoney: false,
+  honeyBoosterUntil: 0,
   settings: { pulseMode: "weather" },
 };
 
@@ -377,7 +377,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
           coupons: parsed.coupons || [],
           flowerSeeds: parsed.flowerSeeds || 0,
           flowerBoosts: parsed.flowerBoosts || 0,
-          doubleNextHoney: parsed.doubleNextHoney || false,
+          honeyBoosterUntil: (parsed as any).honeyBoosterUntil || (parsed.doubleNextHoney ? Date.now() + 30 * 60 * 1000 : 0),
         };
         hydrated.level = computeLevel(hydrated.honeyPoints);
         setUser(hydrated);
@@ -407,7 +407,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       coupons: [],
       flowerSeeds: 1,
       flowerBoosts: 0,
-      doubleNextHoney: false,
+      honeyBoosterUntil: 0,
       settings: { pulseMode: "weather" },
     };
     newUser.level = computeLevel(newUser.honeyPoints);
@@ -429,14 +429,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const addHoney = async (amount: number) => {
     if (!user) return;
 
-    const gain = user.doubleNextHoney ? amount * 2 : amount;
+    const isBoosted = Date.now() < user.honeyBoosterUntil;
+    const gain = isBoosted ? amount * 2 : amount;
     const newPoints = user.honeyPoints + gain;
 
     const updated: User = {
       ...user,
       honeyPoints: newPoints,
       level: computeLevel(newPoints),
-      doubleNextHoney: false,
     };
     await saveUser(updated);
   };
@@ -486,9 +486,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
     let updated: User = { ...user, spinCount: newSpinCount, lastSpinDate: today };
 
-    if ((selected as any).bonus === "flower") {
+    const bonus = (selected as any).bonus;
+    if (bonus === "flower") {
       updated = { ...updated, flowerSeeds: (updated.flowerSeeds || 0) + 1 };
-    } else if ((selected as any).bonus === "coupon") {
+    } else if (bonus === "coupon") {
       const c: Coupon = {
         id: `coupon_${Date.now()}`,
         title: "Pilot Kupon %5",
@@ -499,11 +500,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
       };
       updated = { ...updated, coupons: [c, ...(updated.coupons || [])] };
     } else if ((selected as any).bonus === "double") {
-      updated = { ...updated, doubleNextHoney: true };
+      updated = { ...updated, honeyBoosterUntil: Date.now() + 30 * 60 * 1000 };
     } else if (pointsWon > 0) {
-      const gain = updated.doubleNextHoney ? pointsWon * 2 : pointsWon;
+      const isBoosted = Date.now() < updated.honeyBoosterUntil;
+      const gain = isBoosted ? pointsWon * 2 : pointsWon;
       const newPoints = updated.honeyPoints + gain;
-      updated = { ...updated, honeyPoints: newPoints, level: computeLevel(newPoints), doubleNextHoney: false };
+      updated = { ...updated, honeyPoints: newPoints, level: computeLevel(newPoints) };
     }
 
     await saveUser(updated);
@@ -547,7 +549,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
     if (!isReady) return 0;
 
     let honeyEarned = Math.floor(Math.random() * 16) + 15;
-    if (user.doubleNextHoney) {
+    const isBoosted = Date.now() < user.honeyBoosterUntil;
+    if (isBoosted) {
       honeyEarned *= 2;
     }
 
@@ -560,7 +563,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
       honeyPoints: newPoints,
       level: computeLevel(newPoints),
       totalHarvested: (user.totalHarvested || 0) + 1,
-      doubleNextHoney: false,
     });
     return honeyEarned;
   };
@@ -573,10 +575,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
     );
     if (readyFlowers.length === 0) return 0;
 
+    const isBoosted = Date.now() < user.honeyBoosterUntil;
     let totalEarned = 0;
-    readyFlowers.forEach((f, idx) => {
+    readyFlowers.forEach((f) => {
       let earned = Math.floor(Math.random() * 16) + 15;
-      if (idx === 0 && user.doubleNextHoney) {
+      if (isBoosted) {
         earned *= 2;
       }
       totalEarned += earned;
@@ -592,7 +595,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
       honeyPoints: newPoints,
       level: computeLevel(newPoints),
       totalHarvested: (user.totalHarvested || 0) + readyFlowers.length,
-      doubleNextHoney: false,
     });
 
     return totalEarned;
@@ -652,11 +654,33 @@ export function UserProvider({ children }: { children: ReactNode }) {
       lane,
     };
 
+    const scribe = (user.bees || []).find(b => b.role === "Kâtip");
+    const scribeLevel = scribe?.level || 1;
+    const scribeBonus = scribeLevel * 5;
+
+    const newActivities = [
+      {
+        id: `act_${Date.now()}`,
+        type: "check_add",
+        message: `${check.issuerName} firmasına ait çek eklendi. (+${scribeBonus} 🍯 Kâtip Bonusu)`,
+        time: Date.now(),
+      },
+    ];
+
     const bees = (user.bees || []).map(b => {
       if (b.role === "Kâtip") {
         let newXp = b.xp + XP_REWARDS.CHECK_ADDED;
         let newLevel = b.level;
-        if (newXp >= 100) { newXp -= 100; newLevel += 1; }
+        if (newXp >= 100) {
+          newXp -= 100;
+          newLevel += 1;
+          newActivities.push({
+            id: `lvl_${Date.now()}_${b.role}`,
+            type: "level_up",
+            message: `Tebrikler! ${b.name} ${newLevel}. seviyeye ulaştı!`,
+            time: Date.now(),
+          });
+        }
         return { ...b, xp: newXp, level: newLevel };
       }
       return b;
@@ -666,13 +690,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
       ...user,
       bees,
       checks: [check, ...(user.checks || [])],
+      honeyPoints: user.honeyPoints + scribeBonus,
+      level: computeLevel(user.honeyPoints + scribeBonus),
       activities: [
-        {
-          id: `act_${Date.now()}`,
-          type: "check_add",
-          message: `${check.issuerName} firmasına ait çek eklendi.`,
-          time: Date.now(),
-        },
+        ...newActivities,
         ...(user.activities || []),
       ].slice(0, 10),
     };
@@ -871,11 +892,29 @@ export function UserProvider({ children }: { children: ReactNode }) {
       return { ...o, discountRate: Number(discountRate.toFixed(2)), fees, netPay, notes: "Revize turu" };
     });
 
+    const newActivities = [
+      {
+        id: `act_${Date.now()}`,
+        type: "revision",
+        message: "Teklifler için revize talebi iletildi.",
+        time: Date.now(),
+      },
+    ];
+
     const updatedBees = (user.bees || []).map(b => {
       if (b.role === "Aracı") {
         let newXp = b.xp + XP_REWARDS.REVISION;
         let newLevel = b.level;
-        if (newXp >= 100) { newXp -= 100; newLevel += 1; }
+        if (newXp >= 100) {
+          newXp -= 100;
+          newLevel += 1;
+          newActivities.push({
+            id: `lvl_${Date.now()}_${b.role}`,
+            type: "level_up",
+            message: `Tebrikler! ${b.name} ${newLevel}. seviyeye ulaştı!`,
+            time: Date.now(),
+          });
+        }
         return { ...b, xp: newXp, level: newLevel };
       }
       return b;
@@ -889,12 +928,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       bees: updatedBees,
       offerRequests: updatedRequests,
       activities: [
-        {
-          id: `act_${Date.now()}`,
-          type: "revision",
-          message: "Teklifler için revize talebi iletildi.",
-          time: Date.now(),
-        },
+        ...newActivities,
         ...(user.activities || []),
       ].slice(0, 10),
     });
@@ -922,11 +956,29 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const updatedRequests = (user.offerRequests || []).filter((r) => r.checkId !== checkId);
     const updatedChecks = (user.checks || []).filter((c) => c.id !== checkId);
 
+    const newActivities = [
+      {
+        id: `act_${Date.now()}`,
+        type: "pick_offer",
+        message: `${offer.partnerCode} teklifi seçildi, işlem tamamlanıyor.`,
+        time: Date.now(),
+      },
+    ];
+
     const updatedBees = (user.bees || []).map(b => {
       if (b.role === "Aracı" || b.role === "İzci") {
         let newXp = b.xp + XP_REWARDS.OFFER_PICKED;
         let newLevel = b.level;
-        if (newXp >= 100) { newXp -= 100; newLevel += 1; }
+        if (newXp >= 100) {
+          newXp -= 100;
+          newLevel += 1;
+          newActivities.push({
+            id: `lvl_${Date.now()}_${b.role}`,
+            type: "level_up",
+            message: `Tebrikler! ${b.name} ${newLevel}. seviyeye ulaştı!`,
+            time: Date.now(),
+          });
+        }
         return { ...b, xp: newXp, level: newLevel };
       }
       return b;
@@ -939,12 +991,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       offerRequests: updatedRequests,
       completedTransactions: [completed, ...(user.completedTransactions || [])],
       activities: [
-        {
-          id: `act_${Date.now()}`,
-          type: "pick_offer",
-          message: `${offer.partnerCode} teklifi seçildi, işlem tamamlanıyor.`,
-          time: Date.now(),
-        },
+        ...newActivities,
         ...(user.activities || []),
       ].slice(0, 10),
     });
@@ -961,6 +1008,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   const awardBeeXP: UserContextValue["awardBeeXP"] = async (role, xp) => {
     if (!user) return;
+    const newActivities: { id: string; type: string; message: string; time: number }[] = [];
     const bees = (user.bees || []).map((b) => {
       if (b.role === role) {
         let newXp = b.xp + xp;
@@ -968,12 +1016,24 @@ export function UserProvider({ children }: { children: ReactNode }) {
         if (newXp >= 100) {
           newXp -= 100;
           newLevel += 1;
+          newActivities.push({
+            id: `lvl_${Date.now()}_${b.role}`,
+            type: "level_up",
+            message: `Tebrikler! ${b.name} ${newLevel}. seviyeye ulaştı!`,
+            time: Date.now(),
+          });
         }
         return { ...b, xp: newXp, level: newLevel };
       }
       return b;
     });
-    await saveUser({ ...user, bees });
+
+    const updated: User = {
+      ...user,
+      bees,
+      activities: [...newActivities, ...(user.activities || [])].slice(0, 10),
+    };
+    await saveUser(updated);
   };
 
   const value = useMemo<UserContextValue>(
