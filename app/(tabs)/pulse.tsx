@@ -9,6 +9,33 @@ import { useUser } from "@/contexts/UserContext";
 import { GlassCard } from "@/components/GlassCard";
 import { TrendChart } from "@/components/TrendChart";
 
+function DynamicItem({ label, value, trend }: { label: string; value: string; trend: 'up' | 'down' | 'stable' }) {
+  return (
+    <View style={styles.dynamicItem}>
+      <Text style={styles.dynamicLabel}>{label}</Text>
+      <View style={styles.dynamicValueRow}>
+        <Text style={styles.dynamicValue}>{value}</Text>
+        <Ionicons
+          name={trend === 'up' ? 'trending-up' : trend === 'down' ? 'trending-down' : 'remove'}
+          size={16}
+          color={trend === 'up' ? Colors.danger : trend === 'down' ? Colors.primary : Colors.textMuted}
+        />
+      </View>
+    </View>
+  );
+}
+
+function SectorCard({ name, change, mood }: { name: string; change: string; mood: 'positive' | 'negative' | 'neutral' }) {
+  return (
+    <GlassCard style={styles.sectorCard} intensity={10}>
+      <Text style={styles.sectorName}>{name}</Text>
+      <View style={[styles.sectorBadge, mood === 'positive' ? styles.badgePos : mood === 'negative' ? styles.badgeNeg : styles.badgeNeu]}>
+        <Text style={styles.sectorChange}>{change}</Text>
+      </View>
+    </GlassCard>
+  );
+}
+
 export default function PulseScreen() {
   const insets = useSafeAreaInsets();
   const { user, getDailyPulse, setPulseMode } = useUser();
@@ -43,6 +70,22 @@ export default function PulseScreen() {
       >
         <Animated.View entering={FadeInDown.delay(100).springify()}>
           <GlassCard style={styles.card}>
+            <View style={styles.sectionHeader}>
+               <Text style={styles.sectionTitle}>Piyasa Dinamikleri</Text>
+               <View style={styles.liveBadge}>
+                 <View style={styles.liveDot} />
+                 <Text style={styles.liveText}>CANLI</Text>
+               </View>
+            </View>
+
+            <View style={styles.dynamicsGrid}>
+               <DynamicItem label="Ort. İskonto" value={`%${pulse.band90.min.toFixed(1)}`} trend={pulse.mood === 'sert' ? 'up' : 'down'} />
+               <DynamicItem label="Partner İştahı" value={pulse.mood === 'yumuşak' ? 'Yüksek' : 'Orta'} trend={pulse.mood === 'yumuşak' ? 'down' : 'up'} />
+               <DynamicItem label="İşlem Hızı" value="12 dk" trend="down" />
+            </View>
+
+            <View style={styles.divider} />
+
             <View style={styles.topRow}>
               <View style={styles.iconWrap}>
                 <Ionicons name="pulse" size={24} color={Colors.gold} />
@@ -111,6 +154,16 @@ export default function PulseScreen() {
           </GlassCard>
         </Animated.View>
 
+        <Animated.View entering={FadeInDown.delay(200).springify()} style={{ marginTop: 20 }}>
+           <Text style={styles.sectionTitle}>Sektörel Analizler</Text>
+           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sectorScroll}>
+              <SectorCard name="İnşaat" change="+%1.2" mood="negative" />
+              <SectorCard name="Tekstil" change="-%0.5" mood="positive" />
+              <SectorCard name="Gıda" change="Stabil" mood="neutral" />
+              <SectorCard name="Lojistik" change="+%0.8" mood="negative" />
+           </ScrollView>
+        </Animated.View>
+
         <Animated.View entering={FadeInDown.delay(300).springify()}>
           <View style={styles.infoRow}>
             <Ionicons name="shield-checkmark-outline" size={16} color={Colors.textMuted} />
@@ -133,6 +186,29 @@ const styles = StyleSheet.create({
 
   scroll: { flex: 1, paddingHorizontal: 20, marginTop: -20 },
   card: { padding: 20, borderRadius: 28 },
+
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  sectionTitle: { fontSize: 15, fontFamily: 'Poppins_700Bold', color: Colors.slate },
+  liveBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(239,68,68,0.1)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
+  liveDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: Colors.danger },
+  liveText: { fontSize: 8, fontFamily: 'Poppins_800ExtraBold', color: Colors.danger },
+
+  dynamicsGrid: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 },
+  dynamicItem: { gap: 4 },
+  dynamicLabel: { fontSize: 10, fontFamily: 'Poppins_400Regular', color: Colors.textMuted },
+  dynamicValueRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  dynamicValue: { fontSize: 14, fontFamily: 'Poppins_700Bold', color: Colors.slate },
+
+  divider: { height: 1, backgroundColor: 'rgba(0,0,0,0.05)', marginBottom: 20 },
+
+  sectorScroll: { marginHorizontal: -20, paddingHorizontal: 20, marginTop: 10 },
+  sectorCard: { width: 110, marginRight: 12, padding: 12, alignItems: 'center', gap: 8 },
+  sectorName: { fontSize: 12, fontFamily: 'Poppins_700Bold', color: Colors.slate },
+  sectorBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  badgePos: { backgroundColor: 'rgba(34,197,94,0.1)' },
+  badgeNeg: { backgroundColor: 'rgba(239,68,68,0.1)' },
+  badgeNeu: { backgroundColor: 'rgba(0,0,0,0.05)' },
+  sectorChange: { fontSize: 10, fontFamily: 'Poppins_700Bold', color: Colors.slate },
 
   topRow: { flexDirection: "row", alignItems: "center", gap: 14, marginBottom: 20 },
   iconWrap: { width: 48, height: 48, borderRadius: 16, backgroundColor: Colors.slate, alignItems: "center", justifyContent: "center" },

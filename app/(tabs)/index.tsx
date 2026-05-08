@@ -6,11 +6,23 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 import Colors from "@/constants/colors";
-import { useUser } from "@/contexts/UserContext";
+import { useUser, BeeAgent } from "@/contexts/UserContext";
 import { GlassCard } from "@/components/GlassCard";
 import { TrendChart } from "@/components/TrendChart";
 import { haptics } from "@/shared/utils/haptics";
 import { formatCompactNumber } from "@/shared/utils/format";
+import { getBeeInsight } from "@/shared/utils/insights";
+
+function LevelProgressBar({ xp }: { xp: number }) {
+  return (
+    <View style={styles.levelProgressContainer}>
+      <View style={styles.levelProgressBarBg}>
+        <View style={[styles.levelProgressBarFill, { width: `${xp}%` }]} />
+      </View>
+      <Text style={styles.levelProgressText}>XP %{xp}</Text>
+    </View>
+  );
+}
 
 function StatCard({ label, value, icon, delay = 0 }: { label: string; value: string; icon: keyof typeof Ionicons.glyphMap; delay?: number }) {
   return (
@@ -63,6 +75,13 @@ function ActionItem({
 export default function PanelScreen() {
   const insets = useSafeAreaInsets();
   const { user, logout, checkDailySpins, getDailyPulse } = useUser();
+
+  const handleBeePress = (bee: BeeAgent) => {
+    haptics.light();
+    const pulse = getDailyPulse();
+    const insight = getBeeInsight(bee.role, pulse.mood);
+    Alert.alert(bee.name, insight);
+  };
 
   useEffect(() => {
     if (user) checkDailySpins();
@@ -119,6 +138,7 @@ export default function PanelScreen() {
               <Text style={styles.companyText} numberOfLines={1}>
                 {user.companyName}
               </Text>
+              <LevelProgressBar xp={user.honeyPoints % 100} />
             </View>
           </Animated.View>
 
@@ -235,17 +255,19 @@ export default function PanelScreen() {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.beesScroll}>
             {(user.bees || []).map((b, idx) => (
               <Animated.View key={b.id} entering={FadeInDown.delay(700 + idx * 100).springify()}>
-                <GlassCard style={styles.beeCard}>
-                  <Text style={styles.beeEmoji}>{b.emoji}</Text>
-                  <Text style={styles.beeName}>{b.name}</Text>
-                  <View style={styles.xpBarBackground}>
-                    <View style={[styles.xpBarFill, { width: `${b.xp}%` }]} />
-                  </View>
-                  <View style={styles.beeInfoRow}>
-                    <Text style={styles.beeLevel}>Sv {b.level}</Text>
-                    <Text style={styles.beeStatus}>• Aktif</Text>
-                  </View>
-                </GlassCard>
+                <Pressable onPress={() => handleBeePress(b)}>
+                  <GlassCard style={styles.beeCard}>
+                    <Text style={styles.beeEmoji}>{b.emoji}</Text>
+                    <Text style={styles.beeName}>{b.name}</Text>
+                    <View style={styles.xpBarBackground}>
+                      <View style={[styles.xpBarFill, { width: `${b.xp}%` }]} />
+                    </View>
+                    <View style={styles.beeInfoRow}>
+                      <Text style={styles.beeLevel}>Sv {b.level}</Text>
+                      <Text style={styles.beeStatus}>• Aktif</Text>
+                    </View>
+                  </GlassCard>
+                </Pressable>
               </Animated.View>
             ))}
           </ScrollView>
@@ -278,6 +300,10 @@ const styles = StyleSheet.create({
   avatarText: { fontSize: 24 },
   welcomeText: { fontSize: 13, fontFamily: "Poppins_400Regular", color: "rgba(255,255,255,0.7)" },
   companyText: { fontSize: 18, fontFamily: "Poppins_800ExtraBold", color: Colors.white },
+  levelProgressContainer: { marginTop: 4, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  levelProgressBarBg: { flex: 1, height: 4, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 2, maxWidth: 100 },
+  levelProgressBarFill: { height: '100%', backgroundColor: Colors.gold, borderRadius: 2 },
+  levelProgressText: { fontSize: 9, fontFamily: 'Poppins_700Bold', color: Colors.gold },
   logoutBtn: { width: 44, height: 44, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.12)" },
 
   pulseContainer: { marginTop: 4 },
