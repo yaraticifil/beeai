@@ -9,6 +9,20 @@ import { useUser } from "@/contexts/UserContext";
 import { GlassCard } from "@/components/GlassCard";
 import { TrendChart } from "@/components/TrendChart";
 
+function DynamicItem({ label, value, icon, color }: { label: string; value: string; icon: keyof typeof Ionicons.glyphMap; color: string }) {
+  return (
+    <View style={styles.dynamicItem}>
+      <View style={[styles.dynamicIcon, { backgroundColor: color + '15' }]}>
+        <Ionicons name={icon} size={18} color={color} />
+      </View>
+      <View>
+        <Text style={styles.dynamicValue}>{value}</Text>
+        <Text style={styles.dynamicLabel}>{label}</Text>
+      </View>
+    </View>
+  );
+}
+
 export default function PulseScreen() {
   const insets = useSafeAreaInsets();
   const { user, getDailyPulse, setPulseMode } = useUser();
@@ -111,7 +125,33 @@ export default function PulseScreen() {
           </GlassCard>
         </Animated.View>
 
-        <Animated.View entering={FadeInDown.delay(300).springify()}>
+        <Animated.View entering={FadeInDown.delay(250).springify()}>
+          <GlassCard style={styles.dynamicsCard}>
+            <Text style={styles.dynamicsTitle}>Piyasa Dinamikleri</Text>
+            <View style={styles.dynamicsGrid}>
+              <DynamicItem
+                label="Ort. İskonto"
+                value={`%${((pulse.band90.min + pulse.band90.max) / 2).toFixed(1)}`}
+                icon="trending-down"
+                color={Colors.primary}
+              />
+              <DynamicItem
+                label="Partner İştahı"
+                value={pulse.mood === 'yumuşak' ? 'Yüksek' : pulse.mood === 'sert' ? 'Düşük' : 'Orta'}
+                icon="flame"
+                color={Colors.danger}
+              />
+              <DynamicItem
+                label="İşlem Hızı"
+                value={pulse.mood === 'yumuşak' ? '8 dk' : pulse.mood === 'sert' ? '22 dk' : '15 dk'}
+                icon="speedometer"
+                color={Colors.gold}
+              />
+            </View>
+          </GlassCard>
+        </Animated.View>
+
+        <Animated.View entering={FadeInDown.delay(400).springify()}>
           <View style={styles.infoRow}>
             <Ionicons name="shield-checkmark-outline" size={16} color={Colors.textMuted} />
             <Text style={styles.footerText}>
@@ -170,4 +210,12 @@ const styles = StyleSheet.create({
 
   infoRow: { marginTop: 20, flexDirection: "row", gap: 10, alignItems: "center", paddingHorizontal: 10 },
   footerText: { fontSize: 11, fontFamily: "Poppins_400Regular", color: Colors.textMuted, lineHeight: 18, flex: 1 },
+
+  dynamicsCard: { padding: 20, borderRadius: 28, marginTop: 16 },
+  dynamicsTitle: { fontSize: 15, fontFamily: "Poppins_800ExtraBold", color: Colors.slate, marginBottom: 16 },
+  dynamicsGrid: { gap: 16 },
+  dynamicItem: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  dynamicIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  dynamicValue: { fontSize: 14, fontFamily: "Poppins_700Bold", color: Colors.slate },
+  dynamicLabel: { fontSize: 11, fontFamily: "Poppins_400Regular", color: Colors.textMuted },
 });

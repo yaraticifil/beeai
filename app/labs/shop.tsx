@@ -11,10 +11,10 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import { CONSUMABLE_ITEMS } from "@/constants/game";
 import { useUser } from "@/contexts/UserContext";
+import { haptics } from "@/shared/utils/haptics";
 
 interface ShopItem {
   id: string;
@@ -172,9 +172,7 @@ export default function ShopScreen() {
 
   const handleBuy = (item: ShopItem) => {
     if (!user || user.honeyPoints < item.cost) {
-      if (Platform.OS !== 'web') {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      }
+      haptics.error();
       return;
     }
 
@@ -202,12 +200,12 @@ export default function ShopScreen() {
                 updates.spinCount = (user.spinCount || 0) + 3;
               } else if (item.id === "flower_boost") {
                 updates.flowerBoosts = (user.flowerBoosts || 0) + 1;
+              } else if (item.id === "double_honey") {
+                updates.honeyBoosterUntil = Date.now() + 30 * 60 * 1000;
               }
 
               await updateUser(updates);
-              if (Platform.OS !== 'web') {
-                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              }
+              haptics.success();
               Alert.alert("Tebrikler!", `${item.name} başarıyla satın alındı!`);
             }
           },

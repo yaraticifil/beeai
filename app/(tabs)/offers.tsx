@@ -44,6 +44,7 @@ export default function OffersScreen() {
     check: CheckItem;
     req?: OfferRequest;
   } | null>(null);
+  const [selectedCoupon, setSelectedCoupon] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now());
   const [tab, setTab] = useState<"active" | "history">("active");
 
@@ -106,6 +107,7 @@ export default function OffersScreen() {
   const open = (check: CheckItem) => {
     const req = getReq(check.id);
     setSelected({ check, req });
+    setSelectedCoupon(null);
   };
 
   const start = async (check: CheckItem) => {
@@ -421,6 +423,28 @@ export default function OffersScreen() {
                   </Text>
                 </GlassCard>
 
+                {user.coupons && user.coupons.filter(c => !c.used).length > 0 && refreshSelected.req && (
+                  <View style={styles.couponSection}>
+                    <Text style={styles.couponTitle}>Kupon Uygula</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.couponScroll}>
+                      {user.coupons.filter(c => !c.used).map(c => (
+                        <Pressable
+                          key={c.id}
+                          onPress={() => setSelectedCoupon(selectedCoupon === c.id ? null : c.id)}
+                          style={[
+                            styles.couponPill,
+                            selectedCoupon === c.id && styles.couponPillActive
+                          ]}
+                        >
+                          <Text style={[styles.couponText, selectedCoupon === c.id && styles.couponTextActive]}>
+                            {c.title}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </ScrollView>
+                  </View>
+                )}
+
                 {!refreshSelected.req ? (
                   <Pressable
                     style={styles.modalPrimary}
@@ -510,6 +534,7 @@ export default function OffersScreen() {
                                   await pickOffer(
                                     refreshSelected.check.id,
                                     o.id,
+                                    selectedCoupon || undefined
                                   );
                                   setSelected(null);
                                 }
@@ -1040,5 +1065,41 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.3)",
     textAlign: "center",
     lineHeight: 14,
+  },
+
+  couponSection: {
+    marginBottom: 20,
+  },
+  couponTitle: {
+    fontSize: 12,
+    fontFamily: 'Poppins_700Bold',
+    color: 'rgba(255,255,255,0.6)',
+    marginBottom: 8,
+    marginLeft: 4,
+  },
+  couponScroll: {
+    marginHorizontal: -24,
+    paddingHorizontal: 24,
+  },
+  couponPill: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    marginRight: 8,
+  },
+  couponPillActive: {
+    backgroundColor: Colors.gold,
+    borderColor: Colors.gold,
+  },
+  couponText: {
+    fontSize: 12,
+    fontFamily: 'Poppins_600SemiBold',
+    color: Colors.white,
+  },
+  couponTextActive: {
+    color: Colors.slate,
   },
 });
