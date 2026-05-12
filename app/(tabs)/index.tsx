@@ -10,6 +10,7 @@ import { useUser } from "@/contexts/UserContext";
 import { GlassCard } from "@/components/GlassCard";
 import { TrendChart } from "@/components/TrendChart";
 import { haptics } from "@/shared/utils/haptics";
+import { getBeeInsight } from "@/shared/utils/insights";
 import { formatCompactNumber } from "@/shared/utils/format";
 
 function StatCard({ label, value, icon, delay = 0 }: { label: string; value: string; icon: keyof typeof Ionicons.glyphMap; delay?: number }) {
@@ -115,10 +116,29 @@ export default function PanelScreen() {
               </View>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.welcomeText}>Hoş Geldin,</Text>
-              <Text style={styles.companyText} numberOfLines={1}>
-                {user.companyName}
-              </Text>
+              <View style={styles.headerTitleRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.welcomeText}>Hoş Geldin,</Text>
+                  <Text style={styles.companyText} numberOfLines={1}>
+                    {user.companyName}
+                  </Text>
+                </View>
+                <View style={styles.levelBadge}>
+                  <Text style={styles.levelBadgeText}>Sv {user.level}</Text>
+                </View>
+              </View>
+
+              <View style={styles.levelProgressContainer}>
+                <View style={styles.levelProgressBar}>
+                  <View
+                    style={[
+                      styles.levelProgressFill,
+                      { width: `${user.honeyPoints % 100}%` }
+                    ]}
+                  />
+                </View>
+                <Text style={styles.levelProgressText}>{user.honeyPoints % 100}/100 XP</Text>
+              </View>
             </View>
           </Animated.View>
 
@@ -235,17 +255,27 @@ export default function PanelScreen() {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.beesScroll}>
             {(user.bees || []).map((b, idx) => (
               <Animated.View key={b.id} entering={FadeInDown.delay(700 + idx * 100).springify()}>
-                <GlassCard style={styles.beeCard}>
-                  <Text style={styles.beeEmoji}>{b.emoji}</Text>
-                  <Text style={styles.beeName}>{b.name}</Text>
-                  <View style={styles.xpBarBackground}>
-                    <View style={[styles.xpBarFill, { width: `${b.xp}%` }]} />
-                  </View>
-                  <View style={styles.beeInfoRow}>
-                    <Text style={styles.beeLevel}>Sv {b.level}</Text>
-                    <Text style={styles.beeStatus}>• Aktif</Text>
-                  </View>
-                </GlassCard>
+                <Pressable
+                  onPress={() => {
+                    haptics.light();
+                    Alert.alert(
+                      `${b.emoji} ${b.name} Diyor ki:`,
+                      getBeeInsight(b.role, pulse.mood)
+                    );
+                  }}
+                >
+                  <GlassCard style={styles.beeCard}>
+                    <Text style={styles.beeEmoji}>{b.emoji}</Text>
+                    <Text style={styles.beeName}>{b.name}</Text>
+                    <View style={styles.xpBarBackground}>
+                      <View style={[styles.xpBarFill, { width: `${b.xp}%` }]} />
+                    </View>
+                    <View style={styles.beeInfoRow}>
+                      <Text style={styles.beeLevel}>Sv {b.level}</Text>
+                      <Text style={styles.beeStatus}>• Aktif</Text>
+                    </View>
+                  </GlassCard>
+                </Pressable>
               </Animated.View>
             ))}
           </ScrollView>
@@ -276,8 +306,15 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.2)",
   },
   avatarText: { fontSize: 24 },
-  welcomeText: { fontSize: 13, fontFamily: "Poppins_400Regular", color: "rgba(255,255,255,0.7)" },
-  companyText: { fontSize: 18, fontFamily: "Poppins_800ExtraBold", color: Colors.white },
+  welcomeText: { fontSize: 12, fontFamily: "Poppins_400Regular", color: "rgba(255,255,255,0.7)" },
+  companyText: { fontSize: 16, fontFamily: "Poppins_800ExtraBold", color: Colors.white },
+  headerTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  levelBadge: { backgroundColor: Colors.gold, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 },
+  levelBadgeText: { fontSize: 10, fontFamily: 'Poppins_700Bold', color: Colors.slate },
+  levelProgressContainer: { marginTop: 6, gap: 4 },
+  levelProgressBar: { height: 4, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 2, overflow: 'hidden' },
+  levelProgressFill: { height: '100%', backgroundColor: Colors.gold },
+  levelProgressText: { fontSize: 8, fontFamily: 'Poppins_600SemiBold', color: 'rgba(255,255,255,0.5)' },
   logoutBtn: { width: 44, height: 44, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.12)" },
 
   pulseContainer: { marginTop: 4 },
