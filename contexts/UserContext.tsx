@@ -652,29 +652,44 @@ export function UserProvider({ children }: { children: ReactNode }) {
       lane,
     };
 
+    let leveledUp = false;
+    let leveledBeeName = "";
+    let nl = 0;
+
     const bees = (user.bees || []).map(b => {
       if (b.role === "Kâtip") {
-        let newXp = b.xp + XP_REWARDS.CHECK_ADDED;
-        let newLevel = b.level;
-        if (newXp >= 100) { newXp -= 100; newLevel += 1; }
-        return { ...b, xp: newXp, level: newLevel };
+        let nx = b.xp + XP_REWARDS.CHECK_ADDED;
+        let nlv = b.level;
+        if (nx >= 100) { nx -= 100; nlv += 1; leveledUp = true; leveledBeeName = b.name; nl = nlv; }
+        return { ...b, xp: nx, level: nlv };
       }
       return b;
     });
+
+    const activities = [
+      {
+        id: `act_${Date.now()}`,
+        type: "check_add",
+        message: `${check.issuerName} firmasına ait çek eklendi.`,
+        time: Date.now(),
+      },
+      ...(user.activities || []),
+    ];
+
+    if (leveledUp) {
+      activities.unshift({
+        id: `act_lvl_${Date.now()}`,
+        type: "bee_level_up",
+        message: `${leveledBeeName} seviye atladı! Yeni seviye: ${nl}`,
+        time: Date.now(),
+      });
+    }
 
     const updated: User = {
       ...user,
       bees,
       checks: [check, ...(user.checks || [])],
-      activities: [
-        {
-          id: `act_${Date.now()}`,
-          type: "check_add",
-          message: `${check.issuerName} firmasına ait çek eklendi.`,
-          time: Date.now(),
-        },
-        ...(user.activities || []),
-      ].slice(0, 10),
+      activities: activities.slice(0, 10),
     };
     await saveUser(updated);
     return id;
@@ -871,15 +886,38 @@ export function UserProvider({ children }: { children: ReactNode }) {
       return { ...o, discountRate: Number(discountRate.toFixed(2)), fees, netPay, notes: "Revize turu" };
     });
 
+    let leveledUp = false;
+    let leveledBeeName = "";
+    let nl = 0;
+
     const updatedBees = (user.bees || []).map(b => {
       if (b.role === "Aracı") {
-        let newXp = b.xp + XP_REWARDS.REVISION;
-        let newLevel = b.level;
-        if (newXp >= 100) { newXp -= 100; newLevel += 1; }
-        return { ...b, xp: newXp, level: newLevel };
+        let nx = b.xp + XP_REWARDS.REVISION;
+        let nlv = b.level;
+        if (nx >= 100) { nx -= 100; nlv += 1; leveledUp = true; leveledBeeName = b.name; nl = nlv; }
+        return { ...b, xp: nx, level: nlv };
       }
       return b;
     });
+
+    const activities = [
+      {
+        id: `act_${Date.now()}`,
+        type: "revision",
+        message: "Teklifler için revize talebi iletildi.",
+        time: Date.now(),
+      },
+      ...(user.activities || []),
+    ];
+
+    if (leveledUp) {
+      activities.unshift({
+        id: `act_lvl_${Date.now()}`,
+        type: "bee_level_up",
+        message: `${leveledBeeName} seviye atladı! Yeni seviye: ${nl}`,
+        time: Date.now(),
+      });
+    }
 
     const updatedReq: OfferRequest = { ...req, revisionUsed: true, offers: revised, status: "ready" };
     const updatedRequests = [...user.offerRequests];
@@ -888,15 +926,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       ...user,
       bees: updatedBees,
       offerRequests: updatedRequests,
-      activities: [
-        {
-          id: `act_${Date.now()}`,
-          type: "revision",
-          message: "Teklifler için revize talebi iletildi.",
-          time: Date.now(),
-        },
-        ...(user.activities || []),
-      ].slice(0, 10),
+      activities: activities.slice(0, 10),
     });
     return true;
   };
@@ -922,14 +952,35 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const updatedRequests = (user.offerRequests || []).filter((r) => r.checkId !== checkId);
     const updatedChecks = (user.checks || []).filter((c) => c.id !== checkId);
 
+    const levelUps: { name: string; level: number }[] = [];
+
     const updatedBees = (user.bees || []).map(b => {
       if (b.role === "Aracı" || b.role === "İzci") {
-        let newXp = b.xp + XP_REWARDS.OFFER_PICKED;
-        let newLevel = b.level;
-        if (newXp >= 100) { newXp -= 100; newLevel += 1; }
-        return { ...b, xp: newXp, level: newLevel };
+        let nx = b.xp + XP_REWARDS.OFFER_PICKED;
+        let nlv = b.level;
+        if (nx >= 100) { nx -= 100; nlv += 1; levelUps.push({ name: b.name, level: nlv }); }
+        return { ...b, xp: nx, level: nlv };
       }
       return b;
+    });
+
+    const activities = [
+      {
+        id: `act_${Date.now()}`,
+        type: "pick_offer",
+        message: `${offer.partnerCode} teklifi seçildi, işlem tamamlanıyor.`,
+        time: Date.now(),
+      },
+      ...(user.activities || []),
+    ];
+
+    levelUps.forEach(lu => {
+      activities.unshift({
+        id: `act_lvl_${Date.now()}_${lu.name}`,
+        type: "bee_level_up",
+        message: `${lu.name} seviye atladı! Yeni seviye: ${lu.level}`,
+        time: Date.now(),
+      });
     });
 
     await saveUser({
@@ -938,15 +989,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       checks: updatedChecks,
       offerRequests: updatedRequests,
       completedTransactions: [completed, ...(user.completedTransactions || [])],
-      activities: [
-        {
-          id: `act_${Date.now()}`,
-          type: "pick_offer",
-          message: `${offer.partnerCode} teklifi seçildi, işlem tamamlanıyor.`,
-          time: Date.now(),
-        },
-        ...(user.activities || []),
-      ].slice(0, 10),
+      activities: activities.slice(0, 10),
     });
   };
 
@@ -961,19 +1004,37 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   const awardBeeXP: UserContextValue["awardBeeXP"] = async (role, xp) => {
     if (!user) return;
+    let leveledUp = false;
+    let leveledBeeName = "";
+    let newLevel = 0;
+
     const bees = (user.bees || []).map((b) => {
       if (b.role === role) {
-        let newXp = b.xp + xp;
-        let newLevel = b.level;
-        if (newXp >= 100) {
-          newXp -= 100;
-          newLevel += 1;
+        let nXp = b.xp + xp;
+        let nLevel = b.level;
+        if (nXp >= 100) {
+          nXp -= 100;
+          nLevel += 1;
+          leveledUp = true;
+          leveledBeeName = b.name;
+          newLevel = nLevel;
         }
-        return { ...b, xp: newXp, level: newLevel };
+        return { ...b, xp: nXp, level: nLevel };
       }
       return b;
     });
-    await saveUser({ ...user, bees });
+
+    const activities = [...(user.activities || [])];
+    if (leveledUp) {
+      activities.unshift({
+        id: `act_lvl_${Date.now()}`,
+        type: "bee_level_up",
+        message: `${leveledBeeName} seviye atladı! Yeni seviye: ${newLevel}`,
+        time: Date.now(),
+      });
+    }
+
+    await saveUser({ ...user, bees, activities: activities.slice(0, 10) });
   };
 
   const value = useMemo<UserContextValue>(
