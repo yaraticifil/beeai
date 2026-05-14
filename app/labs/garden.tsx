@@ -13,7 +13,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import * as Haptics from "expo-haptics";
+import { haptics } from "@/shared/utils/haptics";
 import Colors from "@/constants/colors";
 import { useUser, Flower } from "@/contexts/UserContext";
 
@@ -119,22 +119,20 @@ export default function GardenScreen() {
 
   const handlePlant = async () => {
     if (!user || user.honeyPoints < 10) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      haptics.error();
       Alert.alert("Yetersiz Bal", "Çiçek dikmek için 10 bal puanı gerekiyor.");
       return;
     }
     const success = await plantFlower();
     if (success) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      haptics.light();
     }
   };
 
   const handleHarvest = async (id: string) => {
     const earned = await harvestFlower(id);
     if (earned > 0) {
-      if (Platform.OS !== 'web') {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      }
+      haptics.success();
       showHarvestResult(earned);
     }
   };
@@ -142,9 +140,7 @@ export default function GardenScreen() {
   const handleHarvestAll = async () => {
     const earned = await harvestAllFlowers();
     if (earned > 0) {
-      if (Platform.OS !== 'web') {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      }
+      haptics.success();
       showHarvestResult(earned);
     }
   };
@@ -155,8 +151,8 @@ export default function GardenScreen() {
       return;
     }
     const success = await boostFlower(id);
-    if (success && Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (success) {
+      haptics.medium();
     }
   };
 
