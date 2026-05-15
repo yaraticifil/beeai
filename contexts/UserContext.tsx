@@ -134,7 +134,7 @@ export interface User {
   coupons: Coupon[];
   flowerSeeds: number;
   flowerBoosts: number;
-  doubleNextHoney: boolean;
+  honeyBoosterUntil: number; // timestamp
   settings: UserSettings;
 }
 
@@ -166,7 +166,7 @@ const DEFAULT_USER: Partial<User> = {
   coupons: [],
   flowerSeeds: 0,
   flowerBoosts: 0,
-  doubleNextHoney: false,
+  honeyBoosterUntil: 0,
   settings: { pulseMode: "weather" },
 };
 
@@ -342,7 +342,7 @@ interface UserContextValue {
   startOfferCollection: (checkId: string) => Promise<void>;
   ensureOfferProgress: (checkId: string) => Promise<void>;
   requestRevision: (checkId: string) => Promise<boolean>;
-  pickOffer: (checkId: string, offerId: string) => Promise<void>;
+  pickOffer: (checkId: string, offerId: string, couponId?: string) => Promise<void>;
 
   // Pilot: pulse
   getDailyPulse: () => DailyPulse;
@@ -377,7 +377,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
           coupons: parsed.coupons || [],
           flowerSeeds: parsed.flowerSeeds || 0,
           flowerBoosts: parsed.flowerBoosts || 0,
-          doubleNextHoney: parsed.doubleNextHoney || false,
+          honeyBoosterUntil: parsed.honeyBoosterUntil || (parsed.doubleNextHoney ? Date.now() + 30 * 60 * 1000 : 0),
         };
         hydrated.level = computeLevel(hydrated.honeyPoints);
         setUser(hydrated);
@@ -407,7 +407,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       coupons: [],
       flowerSeeds: 1,
       flowerBoosts: 0,
-      doubleNextHoney: false,
+      honeyBoosterUntil: 0,
       settings: { pulseMode: "weather" },
     };
     newUser.level = computeLevel(newUser.honeyPoints);
@@ -429,14 +429,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const addHoney = async (amount: number) => {
     if (!user) return;
 
-    const gain = user.doubleNextHoney ? amount * 2 : amount;
+    const isBoosted = Date.now() < (user.honeyBoosterUntil || 0);
+    const gain = isBoosted ? amount * 2 : amount;
     const newPoints = user.honeyPoints + gain;
 
     const updated: User = {
       ...user,
       honeyPoints: newPoints,
       level: computeLevel(newPoints),
-      doubleNextHoney: false,
     };
     await saveUser(updated);
   };
@@ -499,11 +499,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
       };
       updated = { ...updated, coupons: [c, ...(updated.coupons || [])] };
     } else if ((selected as any).bonus === "double") {
-      updated = { ...updated, doubleNextHoney: true };
+      updated = { ...updated, honeyBoosterUntil: Date.now() + 30 * 60 * 1000 };
     } else if (pointsWon > 0) {
-      const gain = updated.doubleNextHoney ? pointsWon * 2 : pointsWon;
+      const isBoosted = Date.now() < (updated.honeyBoosterUntil || 0);
+      const gain = isBoosted ? pointsWon * 2 : pointsWon;
       const newPoints = updated.honeyPoints + gain;
-      updated = { ...updated, honeyPoints: newPoints, level: computeLevel(newPoints), doubleNextHoney: false };
+      updated = { ...updated, honeyPoints: newPoints, level: computeLevel(newPoints) };
     }
 
     await saveUser(updated);
@@ -546,8 +547,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const isReady = elapsed >= FLOWER_GROWTH_TIME_MS;
     if (!isReady) return 0;
 
+    const isBoosted = Date.now() < (user.honeyBoosterUntil || 0);
     let honeyEarned = Math.floor(Math.random() * 16) + 15;
-    if (user.doubleNextHoney) {
+    if (isBoosted) {
       honeyEarned *= 2;
     }
 
@@ -560,7 +562,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
       honeyPoints: newPoints,
       level: computeLevel(newPoints),
       totalHarvested: (user.totalHarvested || 0) + 1,
-      doubleNextHoney: false,
     });
     return honeyEarned;
   };
@@ -573,10 +574,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
     );
     if (readyFlowers.length === 0) return 0;
 
+    const isBoosted = Date.now() < (user.honeyBoosterUntil || 0);
     let totalEarned = 0;
-    readyFlowers.forEach((f, idx) => {
+    readyFlowers.forEach((f) => {
       let earned = Math.floor(Math.random() * 16) + 15;
-      if (idx === 0 && user.doubleNextHoney) {
+      if (isBoosted) {
         earned *= 2;
       }
       totalEarned += earned;
@@ -592,7 +594,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
       honeyPoints: newPoints,
       level: computeLevel(newPoints),
       totalHarvested: (user.totalHarvested || 0) + readyFlowers.length,
-      doubleNextHoney: false,
     });
 
     return totalEarned;
@@ -631,6 +632,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const lane: CheckItem["lane"] = amount <= 250000 ? "pilot-micro" : "standard";
     const id = `chk_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
+    const katip = (user.bees || []).find(b => b.role === "Kâtip");
+    const bonusHoney = katip ? 5 * katip.level : 0;
+
     const check: CheckItem = {
       id,
       source: input.source || "manual",
@@ -666,11 +670,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
       ...user,
       bees,
       checks: [check, ...(user.checks || [])],
+      honeyPoints: user.honeyPoints + bonusHoney,
+      level: computeLevel(user.honeyPoints + bonusHoney),
       activities: [
         {
           id: `act_${Date.now()}`,
           type: "check_add",
-          message: `${check.issuerName} firmasına ait çek eklendi.`,
+          message: `${check.issuerName} firmasına ait çek eklendi. ${bonusHoney > 0 ? `+${bonusHoney} bal kazanıldı!` : ""}`,
           time: Date.now(),
         },
         ...(user.activities || []),
@@ -901,21 +907,41 @@ export function UserProvider({ children }: { children: ReactNode }) {
     return true;
   };
 
-  const pickOffer: UserContextValue["pickOffer"] = async (checkId, offerId) => {
+  const pickOffer: UserContextValue["pickOffer"] = async (checkId, offerId, couponId) => {
     if (!user) return;
     const req = (user.offerRequests || []).find((r) => r.checkId === checkId);
     if (!req) return;
 
-    const offer = req.offers.find((o) => o.id === offerId);
+    let offer = req.offers.find((o) => o.id === offerId);
     if (!offer) return;
 
     const check = (user.checks || []).find((c) => c.id === checkId);
     if (!check) return;
 
+    let finalOffer = { ...offer };
+    let coupons = [...(user.coupons || [])];
+
+    if (couponId) {
+      const couponIdx = coupons.findIndex(c => c.id === couponId && !c.used);
+      if (couponIdx >= 0) {
+        const coupon = coupons[couponIdx];
+        if (coupon.kind === "discount") {
+          const gap = check.amount - finalOffer.netPay;
+          const reduction = Math.round(gap * (coupon.value / 100));
+          finalOffer.netPay += reduction;
+          finalOffer.notes = (finalOffer.notes || "") + ` [Coupon applied: %${coupon.value} reduction]`;
+        } else if (coupon.kind === "fee") {
+          finalOffer.netPay += coupon.value;
+          finalOffer.notes = (finalOffer.notes || "") + ` [Coupon applied: ₺${coupon.value} bonus]`;
+        }
+        coupons[couponIdx] = { ...coupon, used: true };
+      }
+    }
+
     const completed: CompletedTransaction = {
       id: `tx_${Date.now()}`,
       check,
-      selectedOffer: offer,
+      selectedOffer: finalOffer,
       completedAt: Date.now(),
     };
 
@@ -938,6 +964,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       checks: updatedChecks,
       offerRequests: updatedRequests,
       completedTransactions: [completed, ...(user.completedTransactions || [])],
+      coupons,
       activities: [
         {
           id: `act_${Date.now()}`,
