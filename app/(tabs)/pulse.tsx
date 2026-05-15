@@ -8,6 +8,7 @@ import Colors from "@/constants/colors";
 import { useUser } from "@/contexts/UserContext";
 import { GlassCard } from "@/components/GlassCard";
 import { TrendChart } from "@/components/TrendChart";
+import { DynamicItem } from "@/components/DynamicItem";
 
 export default function PulseScreen() {
   const insets = useSafeAreaInsets();
@@ -111,7 +112,66 @@ export default function PulseScreen() {
           </GlassCard>
         </Animated.View>
 
-        <Animated.View entering={FadeInDown.delay(300).springify()}>
+        <Animated.View entering={FadeInDown.delay(200).springify()} style={styles.section}>
+          <Text style={styles.sectionTitle}>Piyasa Dinamikleri</Text>
+          <GlassCard style={styles.dynamicsCard}>
+            <View style={styles.dynamicRow}>
+              <DynamicItem
+                label="Ortalama İskonto"
+                value={`%${((pulse.band90.min + pulse.band90.max) / 2).toFixed(2)}`}
+                icon="pricetag-outline"
+                color={Colors.primary}
+              />
+              <DynamicItem
+                label="Partner İştahı"
+                value={pulse.mood === 'yumuşak' ? 'Yüksek' : pulse.mood === 'sert' ? 'Düşük' : 'Orta'}
+                icon="flame-outline"
+                color={Colors.gold}
+              />
+            </View>
+            <View style={[styles.dynamicRow, { marginTop: 20 }]}>
+              <DynamicItem
+                label="İşlem Hızı"
+                value={pulse.mood === 'yumuşak' ? '12 dk' : pulse.mood === 'sert' ? '45 dk' : '20 dk'}
+                icon="speedometer-outline"
+                color="#8b5cf6"
+              />
+              <DynamicItem
+                label="Aktif Partner"
+                value="24"
+                icon="business-outline"
+                color="#06b6d4"
+              />
+            </View>
+          </GlassCard>
+        </Animated.View>
+
+        <Animated.View entering={FadeInDown.delay(300).springify()} style={styles.section}>
+          <Text style={styles.sectionTitle}>Sektörel Analizler</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sectorScroll}>
+            {[
+              { id: '1', name: 'İnşaat', trend: 'down', score: 68, color: '#f97316' },
+              { id: '2', name: 'Tekstil', trend: 'up', score: 82, color: '#ec4899' },
+              { id: '3', name: 'Gıda', trend: 'stable', score: 75, color: '#10b981' },
+              { id: '4', name: 'Lojistik', trend: 'up', score: 88, color: '#3b82f6' },
+            ].map((sector) => (
+              <GlassCard key={sector.id} style={styles.sectorCard}>
+                <View style={[styles.sectorIcon, { backgroundColor: sector.color + '15' }]}>
+                  <Ionicons
+                    name={sector.trend === 'up' ? 'trending-up' : sector.trend === 'down' ? 'trending-down' : 'remove'}
+                    size={16}
+                    color={sector.color}
+                  />
+                </View>
+                <Text style={styles.sectorName}>{sector.name}</Text>
+                <Text style={styles.sectorScore}>{sector.score}</Text>
+                <Text style={styles.sectorLabel}>NABIZ SKORU</Text>
+              </GlassCard>
+            ))}
+          </ScrollView>
+        </Animated.View>
+
+        <Animated.View entering={FadeInDown.delay(400).springify()}>
           <View style={styles.infoRow}>
             <Ionicons name="shield-checkmark-outline" size={16} color={Colors.textMuted} />
             <Text style={styles.footerText}>
@@ -132,7 +192,7 @@ const styles = StyleSheet.create({
   h2: { fontSize: 13, fontFamily: "Poppins_400Regular", color: "rgba(255,255,255,0.7)", lineHeight: 20 },
 
   scroll: { flex: 1, paddingHorizontal: 20, marginTop: -20 },
-  card: { padding: 20, borderRadius: 28 },
+  card: { padding: 20, borderRadius: 28, marginBottom: 24 },
 
   topRow: { flexDirection: "row", alignItems: "center", gap: 14, marginBottom: 20 },
   iconWrap: { width: 48, height: 48, borderRadius: 16, backgroundColor: Colors.slate, alignItems: "center", justifyContent: "center" },
@@ -168,6 +228,18 @@ const styles = StyleSheet.create({
   noteTitle: { fontSize: 13, fontFamily: "Poppins_700Bold", color: Colors.gold },
   noteText: { fontSize: 12, fontFamily: "Poppins_400Regular", color: "rgba(255,255,255,0.7)", lineHeight: 20 },
 
-  infoRow: { marginTop: 20, flexDirection: "row", gap: 10, alignItems: "center", paddingHorizontal: 10 },
+  infoRow: { marginTop: 0, flexDirection: "row", gap: 10, alignItems: "center", paddingHorizontal: 10 },
   footerText: { fontSize: 11, fontFamily: "Poppins_400Regular", color: Colors.textMuted, lineHeight: 18, flex: 1 },
+
+  section: { marginBottom: 24 },
+  sectionTitle: { fontSize: 16, fontFamily: "Poppins_800ExtraBold", color: Colors.slate, marginBottom: 14 },
+  dynamicsCard: { padding: 20, borderRadius: 24 },
+  dynamicRow: { flexDirection: 'row', justifyContent: 'space-between' },
+
+  sectorScroll: { marginHorizontal: -20, paddingHorizontal: 20 },
+  sectorCard: { width: 110, marginRight: 12, padding: 16, alignItems: 'center' },
+  sectorIcon: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
+  sectorName: { fontSize: 13, fontFamily: 'Poppins_700Bold', color: Colors.slate, marginBottom: 4 },
+  sectorScore: { fontSize: 18, fontFamily: 'Poppins_800ExtraBold', color: Colors.primary },
+  sectorLabel: { fontSize: 8, fontFamily: 'Poppins_700Bold', color: Colors.textMuted },
 });
