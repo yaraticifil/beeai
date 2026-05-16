@@ -11,6 +11,7 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 import Colors from "@/constants/colors";
 import { useUser } from "@/contexts/UserContext";
 import { GlassCard } from "@/components/GlassCard";
+import { ScanningOverlay } from "@/components/ScanningOverlay";
 import { formatCurrency, formatDate, parseCurrency } from "@/shared/utils/format";
 
 export default function UploadScreen() {
@@ -67,6 +68,9 @@ export default function UploadScreen() {
       const [d, m, y] = dueDate.split(".");
       isoDate = `${y}-${m}-${d}`;
     }
+
+    // Artificial delay for scanning animation visibility in pilot
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
     const id = await addCheck({
       checkNo,
@@ -188,6 +192,7 @@ export default function UploadScreen() {
           </Pressable>
         </Animated.View>
       </ScrollView>
+      {loading && <ScanningOverlay />}
     </View>
   );
 }
