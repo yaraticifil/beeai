@@ -8,6 +8,7 @@ import Colors from "@/constants/colors";
 import { useUser } from "@/contexts/UserContext";
 import { GlassCard } from "@/components/GlassCard";
 import { TrendChart } from "@/components/TrendChart";
+import { DynamicItem } from "@/components/DynamicItem";
 
 export default function PulseScreen() {
   const insets = useSafeAreaInsets();
@@ -42,6 +43,27 @@ export default function PulseScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Animated.View entering={FadeInDown.delay(100).springify()}>
+          <View style={styles.dynamicGrid}>
+            <DynamicItem
+              icon="trending-down"
+              value={`%${pulse.band90.min.toFixed(1)}`}
+              label="Ort. İskonto"
+              color={Colors.primary}
+            />
+            <DynamicItem
+              icon="flame"
+              value={pulse.mood === 'sert' ? 'Düşük' : pulse.mood === 'yumuşak' ? 'Yüksek' : 'Normal'}
+              label="Partner İştahı"
+              color={Colors.gold}
+            />
+            <DynamicItem
+              icon="speedometer"
+              value={pulse.mood === 'yumuşak' ? 'Yüksek' : 'Standart'}
+              label="İşlem Hızı"
+              color="#8b5cf6"
+            />
+          </View>
+
           <GlassCard style={styles.card}>
             <View style={styles.topRow}>
               <View style={styles.iconWrap}>
@@ -132,6 +154,7 @@ const styles = StyleSheet.create({
   h2: { fontSize: 13, fontFamily: "Poppins_400Regular", color: "rgba(255,255,255,0.7)", lineHeight: 20 },
 
   scroll: { flex: 1, paddingHorizontal: 20, marginTop: -20 },
+  dynamicGrid: { flexDirection: 'row', gap: 10, marginBottom: 12 },
   card: { padding: 20, borderRadius: 28 },
 
   topRow: { flexDirection: "row", alignItems: "center", gap: 14, marginBottom: 20 },
