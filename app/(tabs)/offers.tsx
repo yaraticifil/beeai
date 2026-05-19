@@ -44,6 +44,7 @@ export default function OffersScreen() {
     check: CheckItem;
     req?: OfferRequest;
   } | null>(null);
+  const [selectedCoupon, setSelectedCoupon] = useState<string | undefined>(undefined);
   const [now, setNow] = useState(Date.now());
   const [tab, setTab] = useState<"active" | "history">("active");
 
@@ -106,6 +107,7 @@ export default function OffersScreen() {
   const open = (check: CheckItem) => {
     const req = getReq(check.id);
     setSelected({ check, req });
+    setSelectedCoupon(undefined);
   };
 
   const start = async (check: CheckItem) => {
@@ -472,6 +474,25 @@ export default function OffersScreen() {
                     </View>
 
                     <View style={styles.offerList}>
+                      {user?.coupons && user.coupons.filter(c => !c.used).length > 0 && (
+                        <View style={styles.couponSection}>
+                           <Text style={styles.couponTitle}>Kupon Kullan</Text>
+                           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.couponScroll}>
+                              {user.coupons.filter(c => !c.used).map(c => (
+                                <Pressable
+                                  key={c.id}
+                                  onPress={() => setSelectedCoupon(selectedCoupon === c.id ? undefined : c.id)}
+                                  style={[styles.couponChip, selectedCoupon === c.id && styles.couponChipActive]}
+                                >
+                                   <Text style={[styles.couponChipText, selectedCoupon === c.id && styles.couponChipTextActive]}>
+                                     {c.kind === 'discount' ? `%${c.value} İndirim` : `${c.value} TL İade`}
+                                   </Text>
+                                </Pressable>
+                              ))}
+                           </ScrollView>
+                        </View>
+                      )}
+
                       {refreshSelected.req.offers.map((o) => (
                         <GlassCard
                           key={o.id}
@@ -510,6 +531,7 @@ export default function OffersScreen() {
                                   await pickOffer(
                                     refreshSelected.check.id,
                                     o.id,
+                                    selectedCoupon
                                   );
                                   setSelected(null);
                                 }
@@ -1033,6 +1055,14 @@ const styles = StyleSheet.create({
     fontFamily: "Poppins_700Bold",
     color: Colors.gold,
   },
+
+  couponSection: { marginBottom: 12 },
+  couponTitle: { fontSize: 11, fontFamily: 'Poppins_700Bold', color: 'rgba(255,255,255,0.4)', marginBottom: 8, marginLeft: 4 },
+  couponScroll: { marginHorizontal: -4 },
+  couponChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', marginRight: 8 },
+  couponChipActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  couponChipText: { fontSize: 11, fontFamily: 'Poppins_600SemiBold', color: Colors.white },
+  couponChipTextActive: { color: Colors.white },
 
   legal: {
     fontSize: 9,
