@@ -72,14 +72,22 @@ export default function PanelScreen() {
     if (!user) router.replace("/");
   }, [user]);
 
+  const pulse = getDailyPulse();
+
+  const headerColors = useMemo(() => {
+    if (pulse.mood === "sert") return [Colors.danger, "#7f1d1d", "#450a0a"];
+    if (pulse.mood === "yumuşak") return ["#15803d", "#14532d", "#064e3b"];
+    return [Colors.slate, "#1e293b", "#0f172a"];
+  }, [pulse.mood]);
+
   if (!user) return null;
 
-  const pulse = getDailyPulse();
   const checksCount = user.checks?.length || 0;
   const activeReqs = (user.offerRequests || []).filter((r) => r.status === "collecting").length;
   const offersReady = (user.offerRequests || []).filter((r) => r.status === "ready").length;
 
   const totalAmount = (user.checks || []).reduce((sum, c) => sum + (c.amount || 0), 0);
+  const xpProgress = user.honeyPoints % 100;
 
   const topInset = Platform.OS === "web" ? 60 : insets.top;
 
@@ -102,7 +110,7 @@ export default function PanelScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={[Colors.slate, "#1e293b", "#0f172a"]}
+        colors={headerColors}
         style={[styles.header, { paddingTop: topInset + 10 }]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -119,10 +127,22 @@ export default function PanelScreen() {
               <Text style={styles.companyText} numberOfLines={1}>
                 {user.companyName}
               </Text>
+              <View style={styles.levelRow}>
+                <View style={styles.levelProgressContainer}>
+                  <View style={[styles.levelProgressBar, { width: `${xpProgress}%` }]} />
+                </View>
+                <Text style={styles.levelLabel}>Sv {user.level}</Text>
+              </View>
             </View>
           </Animated.View>
 
-          <Pressable onPress={handleLogout} style={styles.logoutBtn}>
+          <Pressable
+            onPress={() => {
+              haptics.impact();
+              handleLogout();
+            }}
+            style={styles.logoutBtn}
+          >
             <Ionicons name="power-outline" size={20} color={Colors.white} />
           </Pressable>
         </View>
@@ -235,17 +255,30 @@ export default function PanelScreen() {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.beesScroll}>
             {(user.bees || []).map((b, idx) => (
               <Animated.View key={b.id} entering={FadeInDown.delay(700 + idx * 100).springify()}>
-                <GlassCard style={styles.beeCard}>
-                  <Text style={styles.beeEmoji}>{b.emoji}</Text>
-                  <Text style={styles.beeName}>{b.name}</Text>
-                  <View style={styles.xpBarBackground}>
-                    <View style={[styles.xpBarFill, { width: `${b.xp}%` }]} />
-                  </View>
-                  <View style={styles.beeInfoRow}>
-                    <Text style={styles.beeLevel}>Sv {b.level}</Text>
-                    <Text style={styles.beeStatus}>• Aktif</Text>
-                  </View>
-                </GlassCard>
+                <Pressable
+                  onPress={() => {
+                    haptics.light();
+                    const insights: Record<string, string> = {
+                      "İzci": "Piyasadaki yeni partnerleri ve fırsatları sürekli tarıyorum.",
+                      "Aracı": "En iyi teklifleri koparmak için müzakere turlarını yönetiyorum.",
+                      "Kâtip": "Çek verilerini hatasız işleyip DNA analizlerini yapıyorum.",
+                      "Nabız": "Anlık piyasa verilerini analiz edip strateji üretiyorum."
+                    };
+                    Alert.alert(b.name, `${insights[b.role] || "Kovanın başarısı için çalışıyorum."}\n\nSeviye: ${b.level}\nTecrübe: %${b.xp}`);
+                  }}
+                >
+                  <GlassCard style={styles.beeCard}>
+                    <Text style={styles.beeEmoji}>{b.emoji}</Text>
+                    <Text style={styles.beeName}>{b.name}</Text>
+                    <View style={styles.xpBarBackground}>
+                      <View style={[styles.xpBarFill, { width: `${b.xp}%` }]} />
+                    </View>
+                    <View style={styles.beeInfoRow}>
+                      <Text style={styles.beeLevel}>Sv {b.level}</Text>
+                      <Text style={styles.beeStatus}>• Aktif</Text>
+                    </View>
+                  </GlassCard>
+                </Pressable>
               </Animated.View>
             ))}
           </ScrollView>
@@ -278,6 +311,10 @@ const styles = StyleSheet.create({
   avatarText: { fontSize: 24 },
   welcomeText: { fontSize: 13, fontFamily: "Poppins_400Regular", color: "rgba(255,255,255,0.7)" },
   companyText: { fontSize: 18, fontFamily: "Poppins_800ExtraBold", color: Colors.white },
+  levelRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
+  levelProgressContainer: { flex: 1, height: 4, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 2, maxWidth: 100 },
+  levelProgressBar: { height: 4, backgroundColor: Colors.gold, borderRadius: 2 },
+  levelLabel: { fontSize: 10, fontFamily: 'Poppins_700Bold', color: Colors.gold },
   logoutBtn: { width: 44, height: 44, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.12)" },
 
   pulseContainer: { marginTop: 4 },

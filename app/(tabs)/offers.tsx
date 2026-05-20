@@ -49,6 +49,7 @@ export default function OffersScreen() {
 
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "ready" | "collecting">("all");
+  const [selectedCouponId, setSelectedCouponId] = useState<string | undefined>();
 
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
@@ -106,6 +107,7 @@ export default function OffersScreen() {
   const open = (check: CheckItem) => {
     const req = getReq(check.id);
     setSelected({ check, req });
+    setSelectedCouponId(undefined);
   };
 
   const start = async (check: CheckItem) => {
@@ -471,6 +473,31 @@ export default function OffersScreen() {
                       </View>
                     </View>
 
+                    <View style={styles.couponSection}>
+                      <Text style={styles.sectionLabel}>Mevcut Kuponlar</Text>
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.couponScroll}>
+                        <View style={styles.couponContainer}>
+                          <Pressable
+                            onPress={() => setSelectedCouponId(undefined)}
+                            style={[styles.couponChip, !selectedCouponId && styles.couponChipActive]}
+                          >
+                            <Text style={[styles.couponText, !selectedCouponId && styles.couponTextActive]}>Kupon Yok</Text>
+                          </Pressable>
+                          {(user?.coupons || []).filter(c => !c.used).map((c) => (
+                            <Pressable
+                              key={c.id}
+                              onPress={() => setSelectedCouponId(c.id)}
+                              style={[styles.couponChip, selectedCouponId === c.id && styles.couponChipActive]}
+                            >
+                              <Text style={[styles.couponText, selectedCouponId === c.id && styles.couponTextActive]}>
+                                {c.title} ({c.kind === 'discount' ? `%${c.value}` : `₺${c.value}`})
+                              </Text>
+                            </Pressable>
+                          ))}
+                        </View>
+                      </ScrollView>
+                    </View>
+
                     <View style={styles.offerList}>
                       {refreshSelected.req.offers.map((o) => (
                         <GlassCard
@@ -510,6 +537,7 @@ export default function OffersScreen() {
                                   await pickOffer(
                                     refreshSelected.check.id,
                                     o.id,
+                                    selectedCouponId
                                   );
                                   setSelected(null);
                                 }
@@ -1041,4 +1069,13 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 14,
   },
+
+  couponSection: { marginBottom: 20 },
+  sectionLabel: { fontSize: 10, fontFamily: 'Poppins_700Bold', color: 'rgba(255,255,255,0.4)', marginBottom: 8, marginLeft: 4, letterSpacing: 1 },
+  couponScroll: { marginHorizontal: -24, paddingHorizontal: 24 },
+  couponContainer: { flexDirection: 'row', gap: 8, paddingBottom: 4 },
+  couponChip: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+  couponChipActive: { backgroundColor: Colors.gold, borderColor: Colors.gold },
+  couponText: { fontSize: 11, fontFamily: 'Poppins_600SemiBold', color: 'rgba(255,255,255,0.6)' },
+  couponTextActive: { color: Colors.slate },
 });
