@@ -49,6 +49,7 @@ export default function OffersScreen() {
 
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "ready" | "collecting">("all");
+  const [selectedCouponId, setSelectedCouponId] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
@@ -106,6 +107,7 @@ export default function OffersScreen() {
   const open = (check: CheckItem) => {
     const req = getReq(check.id);
     setSelected({ check, req });
+    setSelectedCouponId(undefined);
   };
 
   const start = async (check: CheckItem) => {
@@ -421,6 +423,24 @@ export default function OffersScreen() {
                   </Text>
                 </GlassCard>
 
+                {user?.coupons && user.coupons.filter(c => !c.used).length > 0 && refreshSelected.req && (
+                  <View style={styles.couponSection}>
+                    <Text style={styles.couponSectionTitle}>Kullanılabilir Kuponlar</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.couponScroll}>
+                      {user.coupons.filter(c => !c.used).map(c => (
+                        <Pressable
+                          key={c.id}
+                          onPress={() => setSelectedCouponId(selectedCouponId === c.id ? undefined : c.id)}
+                          style={[styles.couponPill, selectedCouponId === c.id && styles.couponPillActive]}
+                        >
+                          <Ionicons name="ticket-outline" size={14} color={selectedCouponId === c.id ? Colors.slate : Colors.gold} />
+                          <Text style={[styles.couponText, selectedCouponId === c.id && styles.couponTextActive]}>{c.title}</Text>
+                        </Pressable>
+                      ))}
+                    </ScrollView>
+                  </View>
+                )}
+
                 {!refreshSelected.req ? (
                   <Pressable
                     style={styles.modalPrimary}
@@ -510,8 +530,10 @@ export default function OffersScreen() {
                                   await pickOffer(
                                     refreshSelected.check.id,
                                     o.id,
+                                    selectedCouponId
                                   );
                                   setSelected(null);
+                                  setSelectedCouponId(undefined);
                                 }
                               }}
                             >
@@ -906,6 +928,14 @@ const styles = StyleSheet.create({
     fontFamily: "Poppins_400Regular",
     color: "rgba(255,255,255,0.5)",
   },
+
+  couponSection: { marginBottom: 20 },
+  couponSectionTitle: { fontSize: 11, fontFamily: 'Poppins_700Bold', color: 'rgba(255,255,255,0.4)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 1 },
+  couponScroll: { marginHorizontal: -24, paddingHorizontal: 24 },
+  couponPill: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,0.05)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', marginRight: 8 },
+  couponPillActive: { backgroundColor: Colors.gold, borderColor: Colors.gold },
+  couponText: { fontSize: 12, fontFamily: 'Poppins_600SemiBold', color: Colors.white },
+  couponTextActive: { color: Colors.slate },
 
   modalPrimary: {
     backgroundColor: Colors.gold,

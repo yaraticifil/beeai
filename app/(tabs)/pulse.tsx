@@ -8,6 +8,7 @@ import Colors from "@/constants/colors";
 import { useUser } from "@/contexts/UserContext";
 import { GlassCard } from "@/components/GlassCard";
 import { TrendChart } from "@/components/TrendChart";
+import { DynamicItem } from "@/components/DynamicItem";
 
 export default function PulseScreen() {
   const insets = useSafeAreaInsets();
@@ -111,6 +112,26 @@ export default function PulseScreen() {
           </GlassCard>
         </Animated.View>
 
+        <Animated.View entering={FadeInDown.delay(200).springify()}>
+          <View style={styles.sectionTitleRow}>
+            <Text style={styles.sectionTitle}>Piyasa Dinamikleri</Text>
+            <View style={styles.liveIndicator}>
+              <View style={styles.liveDot} />
+              <Text style={styles.liveText}>CANLI</Text>
+            </View>
+          </View>
+          <GlassCard style={styles.dynamicsCard}>
+            <View style={styles.dynamicsRow}>
+               <DynamicItem icon="receipt-outline" label="Ort. İskonto" value={`%${pulse.band90.min}`} />
+               <DynamicItem icon="people-outline" label="Partner İştahı" value="Yüksek" color={Colors.gold} />
+            </View>
+            <View style={[styles.dynamicsRow, { marginTop: 16, borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.05)', paddingTop: 16 }]}>
+               <DynamicItem icon="flash-outline" label="İşlem Hızı" value="12 Dakika" color="#8b5cf6" />
+               <DynamicItem icon="shield-checkmark-outline" label="Güven Skoru" value="9.8/10" color={Colors.primary} />
+            </View>
+          </GlassCard>
+        </Animated.View>
+
         <Animated.View entering={FadeInDown.delay(300).springify()}>
           <View style={styles.infoRow}>
             <Ionicons name="shield-checkmark-outline" size={16} color={Colors.textMuted} />
@@ -167,6 +188,14 @@ const styles = StyleSheet.create({
   noteHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
   noteTitle: { fontSize: 13, fontFamily: "Poppins_700Bold", color: Colors.gold },
   noteText: { fontSize: 12, fontFamily: "Poppins_400Regular", color: "rgba(255,255,255,0.7)", lineHeight: 20 },
+
+  sectionTitleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 24, marginBottom: 14, paddingHorizontal: 4 },
+  sectionTitle: { fontSize: 16, fontFamily: "Poppins_800ExtraBold", color: Colors.slate },
+  liveIndicator: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(34,197,94,0.1)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  liveDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: Colors.primary },
+  liveText: { fontSize: 9, fontFamily: 'Poppins_700Bold', color: Colors.primary },
+  dynamicsCard: { padding: 16, borderRadius: 24 },
+  dynamicsRow: { flexDirection: 'row', gap: 12 },
 
   infoRow: { marginTop: 20, flexDirection: "row", gap: 10, alignItems: "center", paddingHorizontal: 10 },
   footerText: { fontSize: 11, fontFamily: "Poppins_400Regular", color: Colors.textMuted, lineHeight: 18, flex: 1 },
