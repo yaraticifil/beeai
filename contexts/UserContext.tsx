@@ -134,7 +134,7 @@ export interface User {
   coupons: Coupon[];
   flowerSeeds: number;
   flowerBoosts: number;
-  doubleNextHoney: boolean;
+  honeyBoosterUntil: number;
   settings: UserSettings;
 }
 
@@ -166,7 +166,7 @@ const DEFAULT_USER: Partial<User> = {
   coupons: [],
   flowerSeeds: 0,
   flowerBoosts: 0,
-  doubleNextHoney: false,
+  honeyBoosterUntil: 0,
   settings: { pulseMode: "weather" },
 };
 
@@ -342,7 +342,7 @@ interface UserContextValue {
   startOfferCollection: (checkId: string) => Promise<void>;
   ensureOfferProgress: (checkId: string) => Promise<void>;
   requestRevision: (checkId: string) => Promise<boolean>;
-  pickOffer: (checkId: string, offerId: string) => Promise<void>;
+  pickOffer: (checkId: string, offerId: string, couponId?: string) => Promise<void>;
 
   // Pilot: pulse
   getDailyPulse: () => DailyPulse;
@@ -377,7 +377,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
           coupons: parsed.coupons || [],
           flowerSeeds: parsed.flowerSeeds || 0,
           flowerBoosts: parsed.flowerBoosts || 0,
-          doubleNextHoney: parsed.doubleNextHoney || false,
+          honeyBoosterUntil: parsed.honeyBoosterUntil ?? (parsed.doubleNextHoney ? Date.now() + 30 * 60 * 1000 : 0),
         };
         hydrated.level = computeLevel(hydrated.honeyPoints);
         setUser(hydrated);
@@ -407,7 +407,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       coupons: [],
       flowerSeeds: 1,
       flowerBoosts: 0,
-      doubleNextHoney: false,
+      honeyBoosterUntil: 0,
       settings: { pulseMode: "weather" },
     };
     newUser.level = computeLevel(newUser.honeyPoints);
@@ -429,14 +429,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const addHoney = async (amount: number) => {
     if (!user) return;
 
-    const gain = user.doubleNextHoney ? amount * 2 : amount;
+    const isBoosted = user.honeyBoosterUntil > Date.now();
+    const gain = isBoosted ? amount * 2 : amount;
     const newPoints = user.honeyPoints + gain;
 
     const updated: User = {
       ...user,
       honeyPoints: newPoints,
       level: computeLevel(newPoints),
-      doubleNextHoney: false,
     };
     await saveUser(updated);
   };
@@ -499,11 +499,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
       };
       updated = { ...updated, coupons: [c, ...(updated.coupons || [])] };
     } else if ((selected as any).bonus === "double") {
-      updated = { ...updated, doubleNextHoney: true };
+      updated = { ...updated, honeyBoosterUntil: Date.now() + 30 * 60 * 1000 };
     } else if (pointsWon > 0) {
-      const gain = updated.doubleNextHoney ? pointsWon * 2 : pointsWon;
+      const isBoosted = updated.honeyBoosterUntil > Date.now();
+      const gain = isBoosted ? pointsWon * 2 : pointsWon;
       const newPoints = updated.honeyPoints + gain;
-      updated = { ...updated, honeyPoints: newPoints, level: computeLevel(newPoints), doubleNextHoney: false };
+      updated = { ...updated, honeyPoints: newPoints, level: computeLevel(newPoints) };
     }
 
     await saveUser(updated);
@@ -546,8 +547,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const isReady = elapsed >= FLOWER_GROWTH_TIME_MS;
     if (!isReady) return 0;
 
+    const isBoosted = user.honeyBoosterUntil > Date.now();
     let honeyEarned = Math.floor(Math.random() * 16) + 15;
-    if (user.doubleNextHoney) {
+    if (isBoosted) {
       honeyEarned *= 2;
     }
 
@@ -560,7 +562,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
       honeyPoints: newPoints,
       level: computeLevel(newPoints),
       totalHarvested: (user.totalHarvested || 0) + 1,
-      doubleNextHoney: false,
     });
     return honeyEarned;
   };
@@ -573,10 +574,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
     );
     if (readyFlowers.length === 0) return 0;
 
+    const isBoosted = user.honeyBoosterUntil > Date.now();
     let totalEarned = 0;
-    readyFlowers.forEach((f, idx) => {
+    readyFlowers.forEach((f) => {
       let earned = Math.floor(Math.random() * 16) + 15;
-      if (idx === 0 && user.doubleNextHoney) {
+      if (isBoosted) {
         earned *= 2;
       }
       totalEarned += earned;
@@ -592,7 +594,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
       honeyPoints: newPoints,
       level: computeLevel(newPoints),
       totalHarvested: (user.totalHarvested || 0) + readyFlowers.length,
-      doubleNextHoney: false,
     });
 
     return totalEarned;
@@ -901,16 +902,37 @@ export function UserProvider({ children }: { children: ReactNode }) {
     return true;
   };
 
-  const pickOffer: UserContextValue["pickOffer"] = async (checkId, offerId) => {
+  const pickOffer: UserContextValue["pickOffer"] = async (checkId, offerId, couponId) => {
     if (!user) return;
     const req = (user.offerRequests || []).find((r) => r.checkId === checkId);
     if (!req) return;
 
-    const offer = req.offers.find((o) => o.id === offerId);
-    if (!offer) return;
+    const originalOffer = req.offers.find((o) => o.id === offerId);
+    if (!originalOffer) return;
 
     const check = (user.checks || []).find((c) => c.id === checkId);
     if (!check) return;
+
+    let offer = { ...originalOffer };
+    let coupons = [...(user.coupons || [])];
+
+    if (couponId) {
+      const cIdx = coupons.findIndex((c) => c.id === couponId && !c.used);
+      if (cIdx >= 0) {
+        const coupon = coupons[cIdx];
+        coupons[cIdx] = { ...coupon, used: true };
+
+        if (coupon.kind === "discount") {
+          const factoringCost = check.amount - offer.netPay;
+          const discount = Math.round(factoringCost * (coupon.value / 100));
+          offer.netPay += discount;
+          offer.notes = (offer.notes ? offer.notes + " + " : "") + `%${coupon.value} Kupon İndirimi`;
+        } else if (coupon.kind === "fee") {
+          offer.netPay += coupon.value;
+          offer.notes = (offer.notes ? offer.notes + " + " : "") + `₺${coupon.value} Bonus`;
+        }
+      }
+    }
 
     const completed: CompletedTransaction = {
       id: `tx_${Date.now()}`,
@@ -938,6 +960,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       checks: updatedChecks,
       offerRequests: updatedRequests,
       completedTransactions: [completed, ...(user.completedTransactions || [])],
+      coupons,
       activities: [
         {
           id: `act_${Date.now()}`,

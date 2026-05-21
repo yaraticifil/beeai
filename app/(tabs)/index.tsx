@@ -119,6 +119,9 @@ export default function PanelScreen() {
               <Text style={styles.companyText} numberOfLines={1}>
                 {user.companyName}
               </Text>
+              <View style={styles.levelProgressContainer}>
+                <View style={[styles.levelProgressBar, { width: `${user.honeyPoints % 100}%` }]} />
+              </View>
             </View>
           </Animated.View>
 
@@ -278,6 +281,8 @@ const styles = StyleSheet.create({
   avatarText: { fontSize: 24 },
   welcomeText: { fontSize: 13, fontFamily: "Poppins_400Regular", color: "rgba(255,255,255,0.7)" },
   companyText: { fontSize: 18, fontFamily: "Poppins_800ExtraBold", color: Colors.white },
+  levelProgressContainer: { height: 4, backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 2, marginTop: 6, width: 100, overflow: "hidden" },
+  levelProgressBar: { height: "100%", backgroundColor: Colors.gold },
   logoutBtn: { width: 44, height: 44, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.12)" },
 
   pulseContainer: { marginTop: 4 },

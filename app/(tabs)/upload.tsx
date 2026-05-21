@@ -11,6 +11,7 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 import Colors from "@/constants/colors";
 import { useUser } from "@/contexts/UserContext";
 import { GlassCard } from "@/components/GlassCard";
+import { ScanningOverlay } from "@/components/ScanningOverlay";
 import { formatCurrency, formatDate, parseCurrency } from "@/shared/utils/format";
 
 export default function UploadScreen() {
@@ -68,27 +69,30 @@ export default function UploadScreen() {
       isoDate = `${y}-${m}-${d}`;
     }
 
-    const id = await addCheck({
-      checkNo,
-      issuerName,
-      bankName,
-      amount: a,
-      dueDate: isoDate,
-      imageUri,
-      source: "manual",
-    });
+    // Artificial delay for ScanningOverlay effect
+    setTimeout(async () => {
+      const id = await addCheck({
+        checkNo,
+        issuerName,
+        bankName,
+        amount: a,
+        dueDate: isoDate,
+        imageUri,
+        source: "manual",
+      });
 
-    if (!id) {
+      if (!id) {
+        setLoading(false);
+        Alert.alert("Eksik Bilgi", "Çek no, keşideci, tutar ve vade zorunlu.");
+        return;
+      }
+
+      await startOfferCollection(id);
       setLoading(false);
-      Alert.alert("Eksik Bilgi", "Çek no, keşideci, tutar ve vade zorunlu.");
-      return;
-    }
-
-    await startOfferCollection(id);
-    setLoading(false);
-    Alert.alert("Alındı", "Çek kovana eklendi. Teklif toplama başlatıldı.", [
-      { text: "Tamam", onPress: () => router.push("/(tabs)/offers") },
-    ]);
+      Alert.alert("Alındı", "Çek kovana eklendi. Teklif toplama başlatıldı.", [
+        { text: "Tamam", onPress: () => router.push("/(tabs)/offers") },
+      ]);
+    }, 2000);
   };
 
   const topInset = Platform.OS === "web" ? 60 : insets.top;
@@ -112,6 +116,7 @@ export default function UploadScreen() {
       >
         <Animated.View entering={FadeInDown.delay(200).springify()}>
           <GlassCard style={styles.card}>
+            {loading && <ScanningOverlay />}
             {imageUri ? (
               <View style={styles.previewContainer}>
                 <Image source={{ uri: imageUri }} style={styles.previewImage} contentFit="cover" />
