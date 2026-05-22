@@ -44,6 +44,7 @@ export default function OffersScreen() {
     check: CheckItem;
     req?: OfferRequest;
   } | null>(null);
+  const [selectedCouponId, setSelectedCouponId] = useState<string | undefined>(undefined);
   const [now, setNow] = useState(Date.now());
   const [tab, setTab] = useState<"active" | "history">("active");
 
@@ -106,6 +107,7 @@ export default function OffersScreen() {
   const open = (check: CheckItem) => {
     const req = getReq(check.id);
     setSelected({ check, req });
+    setSelectedCouponId(undefined);
   };
 
   const start = async (check: CheckItem) => {
@@ -510,6 +512,7 @@ export default function OffersScreen() {
                                   await pickOffer(
                                     refreshSelected.check.id,
                                     o.id,
+                                    selectedCouponId,
                                   );
                                   setSelected(null);
                                 }
@@ -523,6 +526,27 @@ export default function OffersScreen() {
                           )}
                         </GlassCard>
                       ))}
+
+                      {(user?.coupons || []).filter(c => !c.used).length > 0 && (
+                        <View style={styles.couponSection}>
+                          <Text style={styles.couponSectionTitle}>Kullanılabilir Kuponlar</Text>
+                          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.couponScroll}>
+                            {(user?.coupons || []).filter(c => !c.used).map(c => (
+                              <Pressable
+                                key={c.id}
+                                onPress={() => setSelectedCouponId(selectedCouponId === c.id ? undefined : c.id)}
+                                style={[
+                                  styles.couponChip,
+                                  selectedCouponId === c.id && styles.couponChipActive
+                                ]}
+                              >
+                                <Ionicons name="ticket" size={12} color={selectedCouponId === c.id ? Colors.slate : Colors.gold} />
+                                <Text style={[styles.couponText, selectedCouponId === c.id && styles.couponTextActive]}>{c.title}</Text>
+                              </Pressable>
+                            ))}
+                          </ScrollView>
+                        </View>
+                      )}
 
                       {refreshSelected.req.offers.length === 0 && (
                         <View style={styles.waitBox}>
@@ -1006,6 +1030,43 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.4)",
     marginTop: 10,
     fontStyle: "italic",
+  },
+
+  couponSection: {
+    marginBottom: 20,
+  },
+  couponSectionTitle: {
+    fontSize: 12,
+    fontFamily: 'Poppins_700Bold',
+    color: 'rgba(255,255,255,0.6)',
+    marginBottom: 10,
+  },
+  couponScroll: {
+    marginHorizontal: -4,
+  },
+  couponChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    marginHorizontal: 4,
+  },
+  couponChipActive: {
+    backgroundColor: Colors.gold,
+    borderColor: Colors.gold,
+  },
+  couponText: {
+    fontSize: 11,
+    fontFamily: 'Poppins_600SemiBold',
+    color: Colors.gold,
+  },
+  couponTextActive: {
+    color: Colors.slate,
   },
 
   waitBox: { alignItems: "center", padding: 20, gap: 12 },
