@@ -62,7 +62,7 @@ function ActionItem({
 
 export default function PanelScreen() {
   const insets = useSafeAreaInsets();
-  const { user, logout, checkDailySpins, getDailyPulse } = useUser();
+  const { user, logout, checkDailySpins, getDailyPulse, isBoosterActive } = useUser();
 
   useEffect(() => {
     if (user) checkDailySpins();
@@ -134,7 +134,14 @@ export default function PanelScreen() {
                 <View style={[styles.pulseDot, { backgroundColor: pulse.mood === "sert" ? Colors.danger : pulse.mood === "yumuşak" ? Colors.primary : Colors.gold }]} />
                 <Text style={styles.pulseStatus}>{pulse.mood.toUpperCase()} PİYASA</Text>
               </View>
-              <Text style={styles.pointsText}>{user.honeyPoints} 🍯</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                {isBoosterActive && (
+                  <View style={styles.boosterBadge}>
+                    <Text style={styles.boosterBadgeText}>2X</Text>
+                  </View>
+                )}
+                <Text style={styles.pointsText}>{user.honeyPoints} 🍯</Text>
+              </View>
             </View>
             <View style={styles.pulseContent}>
               <View style={{ flex: 1 }}>
@@ -184,7 +191,17 @@ export default function PanelScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Son Hareketler</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Son Hareketler</Text>
+            <Pressable
+              onPress={() => {
+                haptics.light();
+                router.push("/labs/activities");
+              }}
+            >
+              <Text style={styles.seeAllText}>Tümünü Gör</Text>
+            </Pressable>
+          </View>
           {user.activities && user.activities.length > 0 ? (
             <GlassCard style={styles.activityCard}>
               {user.activities.slice(0, 3).map((act, idx) => (
@@ -233,21 +250,32 @@ export default function PanelScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Arı Kovanın</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.beesScroll}>
-            {(user.bees || []).map((b, idx) => (
-              <Animated.View key={b.id} entering={FadeInDown.delay(700 + idx * 100).springify()}>
-                <GlassCard style={styles.beeCard}>
-                  <Text style={styles.beeEmoji}>{b.emoji}</Text>
-                  <Text style={styles.beeName}>{b.name}</Text>
-                  <View style={styles.xpBarBackground}>
-                    <View style={[styles.xpBarFill, { width: `${b.xp}%` }]} />
-                  </View>
-                  <View style={styles.beeInfoRow}>
-                    <Text style={styles.beeLevel}>Sv {b.level}</Text>
-                    <Text style={styles.beeStatus}>• Aktif</Text>
-                  </View>
-                </GlassCard>
-              </Animated.View>
-            ))}
+            {(user.bees || []).map((b, idx) => {
+              const specialty =
+                b.role === "İzci" ? "Analiz" :
+                b.role === "Aracı" ? "Pazarlık" :
+                b.role === "Kâtip" ? "Operasyon" :
+                b.role === "Nabız" ? "Veri" : "";
+
+              return (
+                <Animated.View key={b.id} entering={FadeInDown.delay(700 + idx * 100).springify()}>
+                  <GlassCard style={styles.beeCard}>
+                    <Text style={styles.beeEmoji}>{b.emoji}</Text>
+                    <Text style={styles.beeName}>{b.name}</Text>
+                    <View style={styles.beeRoleBadge}>
+                      <Text style={styles.beeRoleText}>{b.role}</Text>
+                    </View>
+                    <View style={styles.xpBarBackground}>
+                      <View style={[styles.xpBarFill, { width: `${b.xp}%` }]} />
+                    </View>
+                    <View style={styles.beeInfoRow}>
+                      <Text style={styles.beeLevel}>Sv {b.level}</Text>
+                      <Text style={styles.beeSpecialty}>• {specialty}</Text>
+                    </View>
+                  </GlassCard>
+                </Animated.View>
+              );
+            })}
           </ScrollView>
         </View>
       </ScrollView>
@@ -287,13 +315,26 @@ const styles = StyleSheet.create({
   pulseDot: { width: 6, height: 6, borderRadius: 3 },
   pulseStatus: { color: Colors.white, fontSize: 10, fontFamily: "Poppins_700Bold", letterSpacing: 0.5 },
   pointsText: { color: Colors.gold, fontSize: 16, fontFamily: "Poppins_800ExtraBold" },
+  boosterBadge: {
+    backgroundColor: Colors.gold,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  boosterBadgeText: {
+    fontSize: 10,
+    fontFamily: "Poppins_800ExtraBold",
+    color: Colors.slate,
+  },
   pulseContent: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   pulseNote: { color: "rgba(255,255,255,0.85)", fontSize: 12, lineHeight: 18, fontFamily: "Poppins_400Regular" },
   miniChart: { width: 80, height: 40, opacity: 0.8 },
 
   scroll: { flex: 1, paddingHorizontal: 20, marginTop: 14 },
   section: { marginBottom: 24 },
-  sectionTitle: { fontSize: 16, fontFamily: "Poppins_800ExtraBold", color: Colors.slate, marginBottom: 14 },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
+  sectionTitle: { fontSize: 16, fontFamily: "Poppins_800ExtraBold", color: Colors.slate },
+  seeAllText: { fontSize: 12, fontFamily: 'Poppins_600SemiBold', color: Colors.primary },
 
   statGrid: { gap: 12 },
   statRow: { flexDirection: 'row', gap: 12 },
@@ -344,11 +385,23 @@ const styles = StyleSheet.create({
 
   beesScroll: { marginHorizontal: -20, paddingHorizontal: 20 },
   beeCard: { width: 140, marginRight: 12, padding: 14, alignItems: 'center' },
-  beeEmoji: { fontSize: 32, marginBottom: 8 },
-  beeName: { fontSize: 13, fontFamily: 'Poppins_700Bold', color: Colors.slate, marginBottom: 8 },
+  beeEmoji: { fontSize: 32, marginBottom: 4 },
+  beeName: { fontSize: 12, fontFamily: 'Poppins_700Bold', color: Colors.slate, marginBottom: 2 },
+  beeRoleBadge: {
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    marginBottom: 8,
+  },
+  beeRoleText: {
+    fontSize: 9,
+    fontFamily: 'Poppins_600SemiBold',
+    color: Colors.textMuted,
+  },
   xpBarBackground: { width: '100%', height: 4, backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: 2, marginBottom: 4 },
   xpBarFill: { height: 4, backgroundColor: Colors.primary, borderRadius: 2 },
   beeInfoRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   beeLevel: { fontSize: 10, fontFamily: 'Poppins_600SemiBold', color: Colors.textMuted },
-  beeStatus: { fontSize: 10, fontFamily: 'Poppins_600SemiBold', color: Colors.primary },
+  beeSpecialty: { fontSize: 10, fontFamily: 'Poppins_600SemiBold', color: Colors.primary },
 });
