@@ -61,6 +61,12 @@ export default function LabsHome() {
           icon="bag"
           onPress={() => router.push("/labs/shop")}
         />
+        <LabCard
+          title="Hareket Geçmişi"
+          subtitle="Kovanınızdaki tüm otonom süreçler"
+          icon="list"
+          onPress={() => router.push("/labs/activities")}
+        />
       </ScrollView>
     </LinearGradient>
   );

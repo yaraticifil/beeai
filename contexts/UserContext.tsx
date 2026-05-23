@@ -107,6 +107,14 @@ export interface OfferRequest {
 
 export type PulseMode = "weather" | "band";
 
+export interface SpinPrize {
+  prize: string;
+  min: number;
+  max: number;
+  weight: number;
+  bonus?: "flower" | "coupon" | "double";
+}
+
 export interface UserSettings {
   pulseMode: PulseMode;
 }
@@ -201,6 +209,14 @@ function hashStringToInt(s: string): number {
 
 function computeLevel(points: number): number {
   return Math.floor(points / 100) + 1;
+}
+
+function checkBoosterActive(boosterUntil: number): boolean {
+  return boosterUntil > Date.now();
+}
+
+function calculateHoneyGain(amount: number, boosterUntil: number): number {
+  return checkBoosterActive(boosterUntil) ? amount * 2 : amount;
 }
 
 function makeBeeAgents(): BeeAgent[] {
@@ -351,6 +367,8 @@ interface UserContextValue {
   setPulseMode: (mode: PulseMode) => Promise<void>;
   awardBeeXP: (role: BeeRole, xp: number) => Promise<void>;
   checkPulseXP: () => Promise<boolean>;
+
+  isBoosterActive: boolean;
 }
 
 const UserContext = createContext<UserContextValue | null>(null);
@@ -380,7 +398,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
           coupons: parsed.coupons || [],
           flowerSeeds: parsed.flowerSeeds || 0,
           flowerBoosts: parsed.flowerBoosts || 0,
-          honeyBoosterUntil: parsed.honeyBoosterUntil || ((parsed as any).doubleNextHoney ? Date.now() + 600000 : 0),
+          honeyBoosterUntil: parsed.honeyBoosterUntil || ((parsed as User & { doubleNextHoney?: boolean }).doubleNextHoney ? Date.now() + 600000 : 0),
         };
         hydrated.level = computeLevel(hydrated.honeyPoints);
         setUser(hydrated);
@@ -432,8 +450,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const addHoney = async (amount: number) => {
     if (!user) return;
 
-    const isBoosted = user.honeyBoosterUntil > Date.now();
-    const gain = isBoosted ? amount * 2 : amount;
+    const gain = calculateHoneyGain(amount, user.honeyBoosterUntil);
     const newPoints = user.honeyPoints + gain;
 
     const updated: User = {
@@ -462,11 +479,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const spin = async (): Promise<{ pointsWon: number; prize: string } | null> => {
     if (!user || user.spinCount <= 0) return null;
 
-    const prizes = [
+    const prizes: SpinPrize[] = [
       { prize: "10-50 Bal", min: 10, max: 50, weight: 40 },
-      { prize: "Çiçek Tohumu", min: 0, max: 0, weight: 20, bonus: "flower" as const },
-      { prize: "Kupon %5", min: 0, max: 0, weight: 15, bonus: "coupon" as const },
-      { prize: "2x Bal", min: 0, max: 0, weight: 15, bonus: "double" as const },
+      { prize: "Çiçek Tohumu", min: 0, max: 0, weight: 20, bonus: "flower" },
+      { prize: "Kupon %5", min: 0, max: 0, weight: 15, bonus: "coupon" },
+      { prize: "2x Bal", min: 0, max: 0, weight: 15, bonus: "double" },
       { prize: "BÜYÜK İKRAMİYE", min: 200, max: 500, weight: 5 },
       { prize: "5-25 Bal", min: 5, max: 25, weight: 5 },
     ];
@@ -475,7 +492,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
     let rand = Math.random() * total;
     let selected = prizes[0];
     for (const p of prizes) {
-      if (rand < p.weight) { selected = p; break; }
+      if (rand < p.weight) {
+        selected = p;
+        break;
+      }
       rand -= p.weight;
     }
 
@@ -489,9 +509,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
     let updated: User = { ...user, spinCount: newSpinCount, lastSpinDate: today };
 
-    if ((selected as any).bonus === "flower") {
+    if (selected.bonus === "flower") {
       updated = { ...updated, flowerSeeds: (updated.flowerSeeds || 0) + 1 };
-    } else if ((selected as any).bonus === "coupon") {
+    } else if (selected.bonus === "coupon") {
       const c: Coupon = {
         id: `coupon_${Date.now()}`,
         title: "Pilot Kupon %5",
@@ -501,11 +521,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
         used: false,
       };
       updated = { ...updated, coupons: [c, ...(updated.coupons || [])] };
-    } else if ((selected as any).bonus === "double") {
+    } else if (selected.bonus === "double") {
       updated = { ...updated, honeyBoosterUntil: Date.now() + 15 * 60 * 1000 };
     } else if (pointsWon > 0) {
-      const isBoosted = updated.honeyBoosterUntil > Date.now();
-      const gain = isBoosted ? pointsWon * 2 : pointsWon;
+      const gain = calculateHoneyGain(pointsWon, updated.honeyBoosterUntil);
       const newPoints = updated.honeyPoints + gain;
       updated = { ...updated, honeyPoints: newPoints, level: computeLevel(newPoints) };
     }
@@ -550,11 +569,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const isReady = elapsed >= FLOWER_GROWTH_TIME_MS;
     if (!isReady) return 0;
 
-    const isBoosted = user.honeyBoosterUntil > Date.now();
-    let honeyEarned = Math.floor(Math.random() * 16) + 15;
-    if (isBoosted) {
-      honeyEarned *= 2;
-    }
+    const honeyEarned = calculateHoneyGain(Math.floor(Math.random() * 16) + 15, user.honeyBoosterUntil);
 
     const newFlowers = (user.flowers || []).filter((f) => f.id !== flowerId);
     const newPoints = user.honeyPoints + honeyEarned;
@@ -577,14 +592,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
     );
     if (readyFlowers.length === 0) return 0;
 
-    const isBoosted = user.honeyBoosterUntil > Date.now();
     let totalEarned = 0;
-    readyFlowers.forEach((f) => {
-      let earned = Math.floor(Math.random() * 16) + 15;
-      if (isBoosted) {
-        earned *= 2;
-      }
-      totalEarned += earned;
+    readyFlowers.forEach(() => {
+      totalEarned += calculateHoneyGain(Math.floor(Math.random() * 16) + 15, user.honeyBoosterUntil);
     });
 
     const readyIds = readyFlowers.map((f) => f.id);
@@ -1046,6 +1056,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       setPulseMode,
       awardBeeXP,
       checkPulseXP,
+      isBoosterActive: user ? checkBoosterActive(user.honeyBoosterUntil) : false,
     }),
     [user, isLoading]
   );

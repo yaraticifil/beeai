@@ -102,7 +102,7 @@ function FlowerItem({
 
 export default function GardenScreen() {
   const insets = useSafeAreaInsets();
-  const { user, plantFlower, harvestFlower, harvestAllFlowers, boostFlower } = useUser();
+  const { user, plantFlower, harvestFlower, harvestAllFlowers, boostFlower, isBoosterActive } = useUser();
   const [harvestResult, setHarvestResult] = useState<number | null>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -174,8 +174,15 @@ export default function GardenScreen() {
       >
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Arı Bahçesi</Text>
-          <View style={styles.balanceChip}>
-            <Text style={styles.balanceText}>{user.honeyPoints} 🍯</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            {isBoosterActive && (
+              <View style={styles.boosterBadge}>
+                <Text style={styles.boosterBadgeText}>2X</Text>
+              </View>
+            )}
+            <View style={styles.balanceChip}>
+              <Text style={styles.balanceText}>{user.honeyPoints} 🍯</Text>
+            </View>
           </View>
         </View>
 
@@ -310,6 +317,17 @@ export default function GardenScreen() {
 }
 
 const styles = StyleSheet.create({
+  boosterBadge: {
+    backgroundColor: Colors.gold,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  boosterBadgeText: {
+    fontSize: 10,
+    fontFamily: "Poppins_800ExtraBold",
+    color: Colors.slate,
+  },
   container: {
     flex: 1,
     backgroundColor: Colors.background,
