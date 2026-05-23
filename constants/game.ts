@@ -7,6 +7,7 @@ export const XP_REWARDS = {
   CHECK_ADDED: 15,
   OFFER_PICKED: 25,
   REVISION: 10,
+  PULSE_CHECKED: 10,
 };
 
 export const CONSUMABLE_ITEMS = {

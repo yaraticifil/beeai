@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useEffect } from "react";
 import { View, Text, StyleSheet, Pressable, ScrollView, Platform } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -8,10 +8,18 @@ import Colors from "@/constants/colors";
 import { useUser } from "@/contexts/UserContext";
 import { GlassCard } from "@/components/GlassCard";
 import { TrendChart } from "@/components/TrendChart";
+import { DynamicItem } from "@/components/DynamicItem";
+import { XP_REWARDS } from "@/constants/game";
 
 export default function PulseScreen() {
   const insets = useSafeAreaInsets();
-  const { user, getDailyPulse, setPulseMode } = useUser();
+  const { user, getDailyPulse, setPulseMode, checkPulseXP } = useUser();
+
+  useEffect(() => {
+    if (user) {
+      checkPulseXP();
+    }
+  }, [user, checkPulseXP]);
 
   const pulse = getDailyPulse();
   const mode = user?.settings?.pulseMode || "weather";
@@ -111,6 +119,33 @@ export default function PulseScreen() {
           </GlassCard>
         </Animated.View>
 
+        <Animated.View entering={FadeInDown.delay(200).springify()} style={styles.section}>
+          <Text style={styles.sectionTitle}>Piyasa Dinamikleri</Text>
+          <View style={styles.dynamicGrid}>
+            <DynamicItem
+              icon="analytics"
+              label="Ortalama İskonto"
+              value={`%${pulse.band90.min} - %${pulse.band90.max}`}
+              iconBgColor={Colors.primaryLight}
+              iconColor={Colors.primary}
+            />
+            <DynamicItem
+              icon="people"
+              label="Partner İştahı"
+              value={pulse.mood === 'sert' ? 'Düşük' : pulse.mood === 'yumuşak' ? 'Yüksek' : 'Dengeli'}
+              iconBgColor={Colors.goldLight}
+              iconColor={Colors.gold}
+            />
+            <DynamicItem
+              icon="flash"
+              label="İşlem Hızı"
+              value={pulse.mood === 'yumuşak' ? 'Yüksek (12dk)' : 'Normal (15dk)'}
+              iconBgColor="#e0e7ff"
+              iconColor="#4f46e5"
+            />
+          </View>
+        </Animated.View>
+
         <Animated.View entering={FadeInDown.delay(300).springify()}>
           <View style={styles.infoRow}>
             <Ionicons name="shield-checkmark-outline" size={16} color={Colors.textMuted} />
@@ -132,7 +167,7 @@ const styles = StyleSheet.create({
   h2: { fontSize: 13, fontFamily: "Poppins_400Regular", color: "rgba(255,255,255,0.7)", lineHeight: 20 },
 
   scroll: { flex: 1, paddingHorizontal: 20, marginTop: -20 },
-  card: { padding: 20, borderRadius: 28 },
+  card: { padding: 20, borderRadius: 28, marginBottom: 20 },
 
   topRow: { flexDirection: "row", alignItems: "center", gap: 14, marginBottom: 20 },
   iconWrap: { width: 48, height: 48, borderRadius: 16, backgroundColor: Colors.slate, alignItems: "center", justifyContent: "center" },
@@ -168,6 +203,10 @@ const styles = StyleSheet.create({
   noteTitle: { fontSize: 13, fontFamily: "Poppins_700Bold", color: Colors.gold },
   noteText: { fontSize: 12, fontFamily: "Poppins_400Regular", color: "rgba(255,255,255,0.7)", lineHeight: 20 },
 
-  infoRow: { marginTop: 20, flexDirection: "row", gap: 10, alignItems: "center", paddingHorizontal: 10 },
+  section: { marginTop: 4, marginBottom: 20 },
+  sectionTitle: { fontSize: 16, fontFamily: "Poppins_800ExtraBold", color: Colors.slate, marginBottom: 12 },
+  dynamicGrid: { gap: 10 },
+
+  infoRow: { marginTop: 10, flexDirection: "row", gap: 10, alignItems: "center", paddingHorizontal: 10 },
   footerText: { fontSize: 11, fontFamily: "Poppins_400Regular", color: Colors.textMuted, lineHeight: 18, flex: 1 },
 });

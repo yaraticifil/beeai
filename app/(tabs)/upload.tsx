@@ -11,6 +11,7 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 import Colors from "@/constants/colors";
 import { useUser } from "@/contexts/UserContext";
 import { GlassCard } from "@/components/GlassCard";
+import { ScanningOverlay } from "@/components/ScanningOverlay";
 import { formatCurrency, formatDate, parseCurrency } from "@/shared/utils/format";
 
 export default function UploadScreen() {
@@ -58,6 +59,9 @@ export default function UploadScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
     setLoading(true);
+
+    // Pilot: Simulate AI analysis
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
     const a = parseCurrency(amount);
 
@@ -112,6 +116,7 @@ export default function UploadScreen() {
       >
         <Animated.View entering={FadeInDown.delay(200).springify()}>
           <GlassCard style={styles.card}>
+            {loading && <ScanningOverlay />}
             {imageUri ? (
               <View style={styles.previewContainer}>
                 <Image source={{ uri: imageUri }} style={styles.previewImage} contentFit="cover" />
