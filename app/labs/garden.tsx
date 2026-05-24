@@ -104,6 +104,7 @@ export default function GardenScreen() {
   const insets = useSafeAreaInsets();
   const { user, plantFlower, harvestFlower, harvestAllFlowers, boostFlower } = useUser();
   const [harvestResult, setHarvestResult] = useState<number | null>(null);
+  const [timeLeft, setTimeLeft] = useState<number>(0);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   const topInset = Platform.OS === "web" ? 67 : insets.top;
@@ -160,7 +161,28 @@ export default function GardenScreen() {
     }
   };
 
+  useEffect(() => {
+    if (!user?.honeyBoosterUntil) return;
+
+    const updateTimer = () => {
+      const remaining = Math.max(0, user.honeyBoosterUntil - Date.now());
+      setTimeLeft(Math.floor(remaining / 1000));
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
+  }, [user?.honeyBoosterUntil]);
+
+  const formatBoosterTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  };
+
   if (!user) return null;
+
+  const isBoosted = user.honeyBoosterUntil > Date.now();
 
   const readyCount = user.flowers.filter(
     (f) => Date.now() - f.plantedAt >= GROW_TIME
@@ -174,8 +196,15 @@ export default function GardenScreen() {
       >
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Arı Bahçesi</Text>
-          <View style={styles.balanceChip}>
-            <Text style={styles.balanceText}>{user.honeyPoints} 🍯</Text>
+          <View style={{ alignItems: 'flex-end', gap: 4 }}>
+             <View style={styles.balanceChip}>
+               <Text style={styles.balanceText}>{user.honeyPoints} 🍯</Text>
+             </View>
+             {isBoosted && (
+               <View style={styles.boosterBadgeSmall}>
+                  <Text style={styles.boosterTextSmall}>2x BAL AKTİF: {formatBoosterTime(timeLeft)}</Text>
+               </View>
+             )}
           </View>
         </View>
 
@@ -339,6 +368,17 @@ const styles = StyleSheet.create({
   balanceText: {
     fontSize: 13,
     fontFamily: "Poppins_700Bold",
+    color: Colors.white,
+  },
+  boosterBadgeSmall: {
+    backgroundColor: Colors.gold,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  boosterTextSmall: {
+    fontSize: 9,
+    fontFamily: 'Poppins_700Bold',
     color: Colors.white,
   },
   gardenStats: {
