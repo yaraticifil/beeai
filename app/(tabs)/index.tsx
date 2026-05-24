@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, ScrollView, Pressable, Platform, Alert } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -6,7 +6,7 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 import Colors from "@/constants/colors";
-import { useUser } from "@/contexts/UserContext";
+import { useUser, BeeAgent } from "@/contexts/UserContext";
 import { GlassCard } from "@/components/GlassCard";
 import { TrendChart } from "@/components/TrendChart";
 import { haptics } from "@/shared/utils/haptics";
@@ -63,10 +63,24 @@ function ActionItem({
 export default function PanelScreen() {
   const insets = useSafeAreaInsets();
   const { user, logout, checkDailySpins, getDailyPulse } = useUser();
+  const [timeLeft, setTimeLeft] = useState<number>(0);
 
   useEffect(() => {
     if (user) checkDailySpins();
   }, [user, checkDailySpins]);
+
+  useEffect(() => {
+    if (!user?.honeyBoosterUntil) return;
+
+    const updateTimer = () => {
+      const remaining = Math.max(0, user.honeyBoosterUntil - Date.now());
+      setTimeLeft(Math.floor(remaining / 1000));
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
+  }, [user?.honeyBoosterUntil]);
 
   useEffect(() => {
     if (!user) router.replace("/");
@@ -75,6 +89,7 @@ export default function PanelScreen() {
   if (!user) return null;
 
   const pulse = getDailyPulse();
+  const isBoosted = user.honeyBoosterUntil > Date.now();
   const checksCount = user.checks?.length || 0;
   const activeReqs = (user.offerRequests || []).filter((r) => r.status === "collecting").length;
   const offersReady = (user.offerRequests || []).filter((r) => r.status === "ready").length;
@@ -82,6 +97,36 @@ export default function PanelScreen() {
   const totalAmount = (user.checks || []).reduce((sum, c) => sum + (c.amount || 0), 0);
 
   const topInset = Platform.OS === "web" ? 60 : insets.top;
+
+  const formatBoosterTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  };
+
+  const handleBeePress = (bee: BeeAgent) => {
+    haptics.light();
+    let tip = "";
+    switch (bee.role) {
+      case "İzci":
+        tip = "İzci arı, piyasadaki en iyi teklifleri koklayarak bulur. Seviyesi arttıkça daha nadir fırsatlar yakalar.";
+        break;
+      case "Aracı":
+        tip = "Müzakereci arı, teklifler geldikten sonra revize turunda daha iyi oranlar koparır.";
+        break;
+      case "Kâtip":
+        tip = "Kâtip arı, çekleri sisteme girerken hata yapmaz ve her girişte size bonus bal kazandırır.";
+        break;
+      case "Nabız":
+        tip = "Nabız arısı, piyasa dinamiklerini analiz ederek size stratejik tavsiyeler verir.";
+        break;
+    }
+    Alert.alert(
+      `${bee.emoji} ${bee.name}`,
+      `${bee.role} (Seviye ${bee.level})\n\n${tip}\n\nXP: ${bee.xp}/100`,
+      [{ text: "Anladım", style: "default" }]
+    );
+  };
 
   const handleLogout = () => {
     haptics.medium();
@@ -128,6 +173,19 @@ export default function PanelScreen() {
         </View>
 
         <View style={styles.pulseContainer}>
+          {isBoosted && (
+            <Animated.View entering={FadeInUp} style={styles.boosterBadge}>
+              <LinearGradient
+                colors={[Colors.gold, Colors.goldDark]}
+                style={styles.boosterGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+              >
+                <Ionicons name="flash" size={12} color={Colors.white} />
+                <Text style={styles.boosterText}>2x BAL AKTİF: {formatBoosterTime(timeLeft)}</Text>
+              </LinearGradient>
+            </Animated.View>
+          )}
           <GlassCard style={styles.pulseCard} intensity={20}>
             <View style={styles.pulseHeader}>
               <View style={styles.pulseIndicator}>
@@ -235,17 +293,19 @@ export default function PanelScreen() {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.beesScroll}>
             {(user.bees || []).map((b, idx) => (
               <Animated.View key={b.id} entering={FadeInDown.delay(700 + idx * 100).springify()}>
-                <GlassCard style={styles.beeCard}>
-                  <Text style={styles.beeEmoji}>{b.emoji}</Text>
-                  <Text style={styles.beeName}>{b.name}</Text>
-                  <View style={styles.xpBarBackground}>
-                    <View style={[styles.xpBarFill, { width: `${b.xp}%` }]} />
-                  </View>
-                  <View style={styles.beeInfoRow}>
-                    <Text style={styles.beeLevel}>Sv {b.level}</Text>
-                    <Text style={styles.beeStatus}>• Aktif</Text>
-                  </View>
-                </GlassCard>
+                <Pressable onPress={() => handleBeePress(b)}>
+                  <GlassCard style={styles.beeCard}>
+                    <Text style={styles.beeEmoji}>{b.emoji}</Text>
+                    <Text style={styles.beeName}>{b.name}</Text>
+                    <View style={styles.xpBarBackground}>
+                      <View style={[styles.xpBarFill, { width: `${b.xp}%` }]} />
+                    </View>
+                    <View style={styles.beeInfoRow}>
+                      <Text style={styles.beeLevel}>Sv {b.level}</Text>
+                      <Text style={styles.beeStatus}>• Aktif</Text>
+                    </View>
+                  </GlassCard>
+                </Pressable>
               </Animated.View>
             ))}
           </ScrollView>
@@ -281,6 +341,28 @@ const styles = StyleSheet.create({
   logoutBtn: { width: 44, height: 44, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.12)" },
 
   pulseContainer: { marginTop: 4 },
+  boosterBadge: {
+    alignSelf: 'center',
+    marginBottom: -10,
+    zIndex: 10,
+    shadowColor: Colors.gold,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  boosterGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  boosterText: {
+    color: Colors.white,
+    fontSize: 10,
+    fontFamily: 'Poppins_700Bold',
+  },
   pulseCard: { padding: 16, borderRadius: 24 },
   pulseHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
   pulseIndicator: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: 'rgba(0,0,0,0.3)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
