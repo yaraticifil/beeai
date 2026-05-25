@@ -72,16 +72,36 @@ export default function PanelScreen() {
     if (!user) router.replace("/");
   }, [user]);
 
-  if (!user) return null;
-
   const pulse = getDailyPulse();
-  const checksCount = user.checks?.length || 0;
-  const activeReqs = (user.offerRequests || []).filter((r) => r.status === "collecting").length;
-  const offersReady = (user.offerRequests || []).filter((r) => r.status === "ready").length;
+  const checksCount = user?.checks?.length || 0;
+  const activeReqs = (user?.offerRequests || []).filter((r) => r.status === "collecting").length;
+  const offersReady = (user?.offerRequests || []).filter((r) => r.status === "ready").length;
 
-  const totalAmount = (user.checks || []).reduce((sum, c) => sum + (c.amount || 0), 0);
+  const totalAmount = (user?.checks || []).reduce((sum, c) => sum + (c.amount || 0), 0);
+
+  const boosterActive = user ? user.honeyBoosterUntil > Date.now() : false;
+  const [boosterTimeLeft, setBoosterTimeLeft] = React.useState(user ? Math.max(0, user.honeyBoosterUntil - Date.now()) : 0);
+
+  useEffect(() => {
+    if (!boosterActive) return;
+    const interval = setInterval(() => {
+      const left = Math.max(0, user.honeyBoosterUntil - Date.now());
+      setBoosterTimeLeft(left);
+      if (left <= 0) clearInterval(interval);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [boosterActive, user.honeyBoosterUntil]);
+
+  const formatBoosterTime = (ms: number) => {
+    const totalSeconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+  };
 
   const topInset = Platform.OS === "web" ? 60 : insets.top;
+
+  if (!user) return null;
 
   const handleLogout = () => {
     haptics.medium();
@@ -119,6 +139,12 @@ export default function PanelScreen() {
               <Text style={styles.companyText} numberOfLines={1}>
                 {user.companyName}
               </Text>
+              <View style={styles.levelContainer}>
+                <View style={styles.levelProgressBg}>
+                   <View style={[styles.levelProgressFill, { width: `${user.honeyPoints % 100}%` }]} />
+                </View>
+                <Text style={styles.levelText}>Sv {user.level}</Text>
+              </View>
             </View>
           </Animated.View>
 
@@ -134,7 +160,15 @@ export default function PanelScreen() {
                 <View style={[styles.pulseDot, { backgroundColor: pulse.mood === "sert" ? Colors.danger : pulse.mood === "yumuşak" ? Colors.primary : Colors.gold }]} />
                 <Text style={styles.pulseStatus}>{pulse.mood.toUpperCase()} PİYASA</Text>
               </View>
-              <Text style={styles.pointsText}>{user.honeyPoints} 🍯</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                {boosterActive && (
+                  <View style={styles.boosterBadge}>
+                    <Ionicons name="flash" size={10} color={Colors.white} />
+                    <Text style={styles.boosterText}>{formatBoosterTime(boosterTimeLeft)}</Text>
+                  </View>
+                )}
+                <Text style={styles.pointsText}>{user.honeyPoints} 🍯</Text>
+              </View>
             </View>
             <View style={styles.pulseContent}>
               <View style={{ flex: 1 }}>
@@ -277,7 +311,11 @@ const styles = StyleSheet.create({
   },
   avatarText: { fontSize: 24 },
   welcomeText: { fontSize: 13, fontFamily: "Poppins_400Regular", color: "rgba(255,255,255,0.7)" },
-  companyText: { fontSize: 18, fontFamily: "Poppins_800ExtraBold", color: Colors.white },
+  companyText: { fontSize: 18, fontFamily: "Poppins_800ExtraBold", color: Colors.white, lineHeight: 24 },
+  levelContainer: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
+  levelProgressBg: { flex: 1, maxWidth: 80, height: 4, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 2 },
+  levelProgressFill: { height: '100%', backgroundColor: Colors.gold, borderRadius: 2 },
+  levelText: { fontSize: 10, fontFamily: 'Poppins_700Bold', color: Colors.gold },
   logoutBtn: { width: 44, height: 44, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.12)" },
 
   pulseContainer: { marginTop: 4 },
@@ -286,6 +324,8 @@ const styles = StyleSheet.create({
   pulseIndicator: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: 'rgba(0,0,0,0.3)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
   pulseDot: { width: 6, height: 6, borderRadius: 3 },
   pulseStatus: { color: Colors.white, fontSize: 10, fontFamily: "Poppins_700Bold", letterSpacing: 0.5 },
+  boosterBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: Colors.primary, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10 },
+  boosterText: { color: Colors.white, fontSize: 10, fontFamily: 'Poppins_700Bold' },
   pointsText: { color: Colors.gold, fontSize: 16, fontFamily: "Poppins_800ExtraBold" },
   pulseContent: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   pulseNote: { color: "rgba(255,255,255,0.85)", fontSize: 12, lineHeight: 18, fontFamily: "Poppins_400Regular" },

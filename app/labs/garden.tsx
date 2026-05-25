@@ -106,6 +106,26 @@ export default function GardenScreen() {
   const [harvestResult, setHarvestResult] = useState<number | null>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
+  const boosterActive = user ? user.honeyBoosterUntil > Date.now() : false;
+  const [boosterTimeLeft, setBoosterTimeLeft] = useState(user ? Math.max(0, user.honeyBoosterUntil - Date.now()) : 0);
+
+  useEffect(() => {
+    if (!boosterActive) return;
+    const interval = setInterval(() => {
+      const left = Math.max(0, (user?.honeyBoosterUntil || 0) - Date.now());
+      setBoosterTimeLeft(left);
+      if (left <= 0) clearInterval(interval);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [boosterActive, user?.honeyBoosterUntil]);
+
+  const formatBoosterTime = (ms: number) => {
+    const totalSeconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+  };
+
   const topInset = Platform.OS === "web" ? 67 : insets.top;
 
   const showHarvestResult = (honey: number) => {
@@ -174,8 +194,16 @@ export default function GardenScreen() {
       >
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Arı Bahçesi</Text>
-          <View style={styles.balanceChip}>
-            <Text style={styles.balanceText}>{user.honeyPoints} 🍯</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            {boosterActive && (
+              <View style={styles.boosterBadge}>
+                <Ionicons name="flash" size={10} color={Colors.white} />
+                <Text style={styles.boosterText}>{formatBoosterTime(boosterTimeLeft)}</Text>
+              </View>
+            )}
+            <View style={styles.balanceChip}>
+              <Text style={styles.balanceText}>{user.honeyPoints} 🍯</Text>
+            </View>
           </View>
         </View>
 
@@ -340,6 +368,20 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: "Poppins_700Bold",
     color: Colors.white,
+  },
+  boosterBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+  },
+  boosterText: {
+    color: Colors.white,
+    fontSize: 10,
+    fontFamily: 'Poppins_700Bold',
   },
   gardenStats: {
     flexDirection: "row",
