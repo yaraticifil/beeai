@@ -100,6 +100,31 @@ function FlowerItem({
   );
 }
 
+function BoosterBadge({ until }: { until: number }) {
+  const [timeLeft, setTimeLeft] = useState(Math.max(0, until - Date.now()));
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const remaining = Math.max(0, until - Date.now());
+      setTimeLeft(remaining);
+      if (remaining <= 0) clearInterval(interval);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [until]);
+
+  if (timeLeft <= 0) return null;
+
+  const mins = Math.floor(timeLeft / 60000);
+  const secs = Math.floor((timeLeft % 60000) / 1000);
+
+  return (
+    <View style={styles.boosterBadge}>
+      <Ionicons name="flash" size={10} color={Colors.white} />
+      <Text style={styles.boosterText}>2x Bal Aktif • {mins}:{secs.toString().padStart(2, '0')}</Text>
+    </View>
+  );
+}
+
 export default function GardenScreen() {
   const insets = useSafeAreaInsets();
   const { user, plantFlower, harvestFlower, harvestAllFlowers, boostFlower } = useUser();
@@ -174,8 +199,11 @@ export default function GardenScreen() {
       >
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Arı Bahçesi</Text>
-          <View style={styles.balanceChip}>
-            <Text style={styles.balanceText}>{user.honeyPoints} 🍯</Text>
+          <View style={{ alignItems: 'flex-end' }}>
+            <View style={styles.balanceChip}>
+              <Text style={styles.balanceText}>{user.honeyPoints} 🍯</Text>
+            </View>
+            <BoosterBadge until={user.honeyBoosterUntil || 0} />
           </View>
         </View>
 
@@ -340,6 +368,21 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: "Poppins_700Bold",
     color: Colors.white,
+  },
+  boosterBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    marginTop: 4,
+  },
+  boosterText: {
+    color: Colors.white,
+    fontSize: 8,
+    fontFamily: 'Poppins_700Bold',
   },
   gardenStats: {
     flexDirection: "row",
