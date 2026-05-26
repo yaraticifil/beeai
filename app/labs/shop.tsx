@@ -203,8 +203,19 @@ export default function ShopScreen() {
               } else if (item.id === "flower_boost") {
                 updates.flowerBoosts = (user.flowerBoosts || 0) + 1;
               } else if (item.id === "double_honey") {
-                updates.honeyBoosterUntil = Date.now() + 30 * 60 * 1000;
+                const currentBooster = Math.max(Date.now(), user.honeyBoosterUntil || 0);
+                updates.honeyBoosterUntil = currentBooster + 30 * 60 * 1000;
               }
+
+              updates.activities = [
+                {
+                  id: `act_shop_${Date.now()}`,
+                  type: "shop_buy",
+                  message: `${item.name} satın alındı.`,
+                  time: Date.now(),
+                },
+                ...(user.activities || []),
+              ].slice(0, 10);
 
               await updateUser(updates);
               if (Platform.OS !== 'web') {

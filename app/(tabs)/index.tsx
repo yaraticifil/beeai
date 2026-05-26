@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, ScrollView, Pressable, Platform, Alert } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -57,6 +57,31 @@ function ActionItem({
         <Ionicons name="chevron-forward" size={18} color={Colors.textMuted} />
       </Pressable>
     </Animated.View>
+  );
+}
+
+function BoosterBadge({ until }: { until: number }) {
+  const [timeLeft, setTimeLeft] = useState(Math.max(0, until - Date.now()));
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const remaining = Math.max(0, until - Date.now());
+      setTimeLeft(remaining);
+      if (remaining <= 0) clearInterval(interval);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [until]);
+
+  if (timeLeft <= 0) return null;
+
+  const mins = Math.floor(timeLeft / 60000);
+  const secs = Math.floor((timeLeft % 60000) / 1000);
+
+  return (
+    <View style={styles.boosterBadge}>
+      <Ionicons name="flash" size={10} color={Colors.white} />
+      <Text style={styles.boosterText}>2x Bal Aktif • {mins}:{secs.toString().padStart(2, '0')}</Text>
+    </View>
   );
 }
 
@@ -134,7 +159,10 @@ export default function PanelScreen() {
                 <View style={[styles.pulseDot, { backgroundColor: pulse.mood === "sert" ? Colors.danger : pulse.mood === "yumuşak" ? Colors.primary : Colors.gold }]} />
                 <Text style={styles.pulseStatus}>{pulse.mood.toUpperCase()} PİYASA</Text>
               </View>
-              <Text style={styles.pointsText}>{user.honeyPoints} 🍯</Text>
+              <View style={{ alignItems: 'flex-end' }}>
+                <Text style={styles.pointsText}>{user.honeyPoints} 🍯</Text>
+                <BoosterBadge until={user.honeyBoosterUntil || 0} />
+              </View>
             </View>
             <View style={styles.pulseContent}>
               <View style={{ flex: 1 }}>
@@ -287,6 +315,21 @@ const styles = StyleSheet.create({
   pulseDot: { width: 6, height: 6, borderRadius: 3 },
   pulseStatus: { color: Colors.white, fontSize: 10, fontFamily: "Poppins_700Bold", letterSpacing: 0.5 },
   pointsText: { color: Colors.gold, fontSize: 16, fontFamily: "Poppins_800ExtraBold" },
+  boosterBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    marginTop: 2,
+  },
+  boosterText: {
+    color: Colors.white,
+    fontSize: 8,
+    fontFamily: 'Poppins_700Bold',
+  },
   pulseContent: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   pulseNote: { color: "rgba(255,255,255,0.85)", fontSize: 12, lineHeight: 18, fontFamily: "Poppins_400Regular" },
   miniChart: { width: 80, height: 40, opacity: 0.8 },

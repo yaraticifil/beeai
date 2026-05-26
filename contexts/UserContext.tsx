@@ -203,6 +203,11 @@ function computeLevel(points: number): number {
   return Math.floor(points / 100) + 1;
 }
 
+function calculateHoneyGain(baseAmount: number, boosterUntil: number): number {
+  const isBoosted = (boosterUntil || 0) > Date.now();
+  return isBoosted ? baseAmount * 2 : baseAmount;
+}
+
 function makeBeeAgents(): BeeAgent[] {
   const now = Date.now();
   return [
@@ -429,11 +434,36 @@ export function UserProvider({ children }: { children: ReactNode }) {
     await saveUser(updated);
   };
 
+  const awardBeeXPInternal = (u: User, roles: BeeRole[], xp: number): User => {
+    let currentActivities = [...(u.activities || [])];
+    const bees = (u.bees || []).map((b) => {
+      if (roles.includes(b.role)) {
+        let newXp = b.xp + xp;
+        let newLevel = b.level;
+        if (newXp >= 100) {
+          newXp -= 100;
+          newLevel += 1;
+          currentActivities = [
+            {
+              id: `act_lvl_${Date.now()}_${b.id}`,
+              type: "level_up",
+              message: `Tebrikler! ${b.name} seviye atladı (Sv. ${newLevel})`,
+              time: Date.now(),
+            },
+            ...currentActivities,
+          ].slice(0, 10);
+        }
+        return { ...b, xp: newXp, level: newLevel };
+      }
+      return b;
+    });
+    return { ...u, bees, activities: currentActivities };
+  };
+
   const addHoney = async (amount: number) => {
     if (!user) return;
 
-    const isBoosted = user.honeyBoosterUntil > Date.now();
-    const gain = isBoosted ? amount * 2 : amount;
+    const gain = calculateHoneyGain(amount, user.honeyBoosterUntil);
     const newPoints = user.honeyPoints + gain;
 
     const updated: User = {
@@ -502,13 +532,23 @@ export function UserProvider({ children }: { children: ReactNode }) {
       };
       updated = { ...updated, coupons: [c, ...(updated.coupons || [])] };
     } else if ((selected as any).bonus === "double") {
-      updated = { ...updated, honeyBoosterUntil: Date.now() + 15 * 60 * 1000 };
+      const currentBooster = Math.max(Date.now(), updated.honeyBoosterUntil || 0);
+      updated = { ...updated, honeyBoosterUntil: currentBooster + 15 * 60 * 1000 };
     } else if (pointsWon > 0) {
-      const isBoosted = updated.honeyBoosterUntil > Date.now();
-      const gain = isBoosted ? pointsWon * 2 : pointsWon;
+      const gain = calculateHoneyGain(pointsWon, updated.honeyBoosterUntil);
       const newPoints = updated.honeyPoints + gain;
       updated = { ...updated, honeyPoints: newPoints, level: computeLevel(newPoints) };
     }
+
+    updated.activities = [
+      {
+        id: `act_spin_${Date.now()}`,
+        type: "wheel_win",
+        message: `Çarktan kazandınız: ${selected.prize}${pointsWon > 0 ? ` (+${calculateHoneyGain(pointsWon, updated.honeyBoosterUntil)} Bal)` : ''}`,
+        time: Date.now(),
+      },
+      ...(updated.activities || []),
+    ].slice(0, 10);
 
     await saveUser(updated);
     return { pointsWon: pointsWon, prize: selected.prize };
@@ -550,11 +590,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const isReady = elapsed >= FLOWER_GROWTH_TIME_MS;
     if (!isReady) return 0;
 
-    const isBoosted = user.honeyBoosterUntil > Date.now();
-    let honeyEarned = Math.floor(Math.random() * 16) + 15;
-    if (isBoosted) {
-      honeyEarned *= 2;
-    }
+    const honeyEarned = calculateHoneyGain(Math.floor(Math.random() * 16) + 15, user.honeyBoosterUntil);
 
     const newFlowers = (user.flowers || []).filter((f) => f.id !== flowerId);
     const newPoints = user.honeyPoints + honeyEarned;
@@ -577,14 +613,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
     );
     if (readyFlowers.length === 0) return 0;
 
-    const isBoosted = user.honeyBoosterUntil > Date.now();
     let totalEarned = 0;
     readyFlowers.forEach((f) => {
-      let earned = Math.floor(Math.random() * 16) + 15;
-      if (isBoosted) {
-        earned *= 2;
-      }
-      totalEarned += earned;
+      totalEarned += calculateHoneyGain(Math.floor(Math.random() * 16) + 15, user.honeyBoosterUntil);
     });
 
     const readyIds = readyFlowers.map((f) => f.id);
@@ -656,28 +687,27 @@ export function UserProvider({ children }: { children: ReactNode }) {
       lane,
     };
 
-    const bees = (user.bees || []).map(b => {
-      if (b.role === "Kâtip") {
-        let newXp = b.xp + XP_REWARDS.CHECK_ADDED;
-        let newLevel = b.level;
-        if (newXp >= 100) { newXp -= 100; newLevel += 1; }
-        return { ...b, xp: newXp, level: newLevel };
-      }
-      return b;
-    });
+    const katip = (user.bees || []).find(b => b.role === "Kâtip");
+    const katipBonus = katip ? katip.level * 5 : 0;
 
-    const updated: User = {
-      ...user,
-      bees,
-      checks: [check, ...(user.checks || [])],
+    let updated = awardBeeXPInternal(user, ["Kâtip"], XP_REWARDS.CHECK_ADDED);
+
+    if (katipBonus > 0) {
+      updated.honeyPoints += katipBonus;
+      updated.level = computeLevel(updated.honeyPoints);
+    }
+
+    updated = {
+      ...updated,
+      checks: [check, ...(updated.checks || [])],
       activities: [
         {
           id: `act_${Date.now()}`,
           type: "check_add",
-          message: `${check.issuerName} firmasına ait çek eklendi.`,
+          message: `${check.issuerName} firmasına ait çek eklendi.${katipBonus > 0 ? ` (+${katipBonus} Bal)` : ''}`,
           time: Date.now(),
         },
-        ...(user.activities || []),
+        ...(updated.activities || []),
       ].slice(0, 10),
     };
     await saveUser(updated);
@@ -833,13 +863,27 @@ export function UserProvider({ children }: { children: ReactNode }) {
     // Pilot hızlandırılmış: teklifler 15s, 45s, 90s
     const targetCount = elapsed >= 90000 ? 3 : elapsed >= 45000 ? 2 : elapsed >= 15000 ? 1 : 0;
 
+    if (targetCount <= req.offers.length && now <= req.deadlineAt && req.status !== "expired") {
+      // No new offers to add, and not expired yet, and already have something?
+      // Actually if status would change from collecting to ready, we should continue.
+      const pulseForStatus = computeDailyPulseInternal(user.companyName);
+      let expectedStatus: OfferRequest["status"] = req.status;
+      if (now > req.deadlineAt && req.offers.length < 3) expectedStatus = "expired";
+      if (req.offers.length >= 3) expectedStatus = "ready";
+      if (expectedStatus === "expired" && req.offers.length > 0) expectedStatus = "ready";
+
+      if (expectedStatus === req.status && targetCount <= req.offers.length) {
+        return; // No change needed
+      }
+    }
+
     const pulse = computeDailyPulseInternal(user.companyName);
     const newOffers = targetCount > req.offers.length ? computeOffers(check, pulse, req.offers.length) : [];
 
     let status: OfferRequest["status"] = req.status;
-    if (now > req.deadlineAt && req.offers.length < 3) status = "expired";
+    if (now > req.deadlineAt && req.offers.length + newOffers.length < 3) status = "expired";
     if (req.offers.length + newOffers.length >= 3) status = "ready";
-    if (status === "expired" && req.offers.length > 0) status = "ready";
+    if (status === "expired" && req.offers.length + newOffers.length > 0) status = "ready";
 
     const updatedReq: OfferRequest = {
       ...req,
@@ -875,22 +919,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
       return { ...o, discountRate: Number(discountRate.toFixed(2)), fees, netPay, notes: "Revize turu" };
     });
 
-    const updatedBees = (user.bees || []).map(b => {
-      if (b.role === "Aracı") {
-        let newXp = b.xp + XP_REWARDS.REVISION;
-        let newLevel = b.level;
-        if (newXp >= 100) { newXp -= 100; newLevel += 1; }
-        return { ...b, xp: newXp, level: newLevel };
-      }
-      return b;
-    });
+    let updated = awardBeeXPInternal(user, ["Aracı"], XP_REWARDS.REVISION);
 
     const updatedReq: OfferRequest = { ...req, revisionUsed: true, offers: revised, status: "ready" };
-    const updatedRequests = [...user.offerRequests];
+    const updatedRequests = [...updated.offerRequests];
     updatedRequests[idx] = updatedReq;
-    await saveUser({
-      ...user,
-      bees: updatedBees,
+
+    updated = {
+      ...updated,
       offerRequests: updatedRequests,
       activities: [
         {
@@ -899,9 +935,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
           message: "Teklifler için revize talebi iletildi.",
           time: Date.now(),
         },
-        ...(user.activities || []),
+        ...(updated.activities || []),
       ].slice(0, 10),
-    });
+    };
+    await saveUser(updated);
     return true;
   };
 
@@ -942,23 +979,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const updatedRequests = (user.offerRequests || []).filter((r) => r.checkId !== checkId);
     const updatedChecks = (user.checks || []).filter((c) => c.id !== checkId);
 
-    const updatedBees = (user.bees || []).map(b => {
-      if (b.role === "Aracı" || b.role === "İzci") {
-        let newXp = b.xp + XP_REWARDS.OFFER_PICKED;
-        let newLevel = b.level;
-        if (newXp >= 100) { newXp -= 100; newLevel += 1; }
-        return { ...b, xp: newXp, level: newLevel };
-      }
-      return b;
-    });
+    let updated = awardBeeXPInternal(user, ["Aracı", "İzci"], XP_REWARDS.OFFER_PICKED);
 
-    await saveUser({
-      ...user,
-      bees: updatedBees,
+    updated = {
+      ...updated,
       checks: updatedChecks,
       offerRequests: updatedRequests,
       coupons: updatedCoupons,
-      completedTransactions: [completed, ...(user.completedTransactions || [])],
+      completedTransactions: [completed, ...(updated.completedTransactions || [])],
       activities: [
         {
           id: `act_${Date.now()}`,
@@ -966,9 +994,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
           message: `${offer.partnerCode} teklifi seçildi, işlem tamamlanıyor.`,
           time: Date.now(),
         },
-        ...(user.activities || []),
+        ...(updated.activities || []),
       ].slice(0, 10),
-    });
+    };
+    await saveUser(updated);
   };
 
   const getDailyPulse = (): DailyPulse => {
@@ -982,19 +1011,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   const awardBeeXP: UserContextValue["awardBeeXP"] = async (role, xp) => {
     if (!user) return;
-    const bees = (user.bees || []).map((b) => {
-      if (b.role === role) {
-        let newXp = b.xp + xp;
-        let newLevel = b.level;
-        if (newXp >= 100) {
-          newXp -= 100;
-          newLevel += 1;
-        }
-        return { ...b, xp: newXp, level: newLevel };
-      }
-      return b;
-    });
-    await saveUser({ ...user, bees });
+    const updated = awardBeeXPInternal(user, [role], xp);
+    await saveUser(updated);
   };
 
   const checkPulseXP = async (): Promise<boolean> => {
@@ -1002,20 +1020,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const today = todayKey();
     if (user.lastPulseCheckDate === today) return false;
 
-    const bees = (user.bees || []).map((b) => {
-      if (b.role === "Nabız") {
-        let newXp = b.xp + XP_REWARDS.PULSE_CHECKED;
-        let newLevel = b.level;
-        if (newXp >= 100) {
-          newXp -= 100;
-          newLevel += 1;
-        }
-        return { ...b, xp: newXp, level: newLevel };
-      }
-      return b;
-    });
+    let updated = awardBeeXPInternal(user, ["Nabız"], XP_REWARDS.PULSE_CHECKED);
+    updated.lastPulseCheckDate = today;
 
-    await saveUser({ ...user, bees, lastPulseCheckDate: today });
+    await saveUser(updated);
     return true;
   };
 
