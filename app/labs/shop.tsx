@@ -206,6 +206,16 @@ export default function ShopScreen() {
                 updates.honeyBoosterUntil = Date.now() + 30 * 60 * 1000;
               }
 
+              updates.activities = [
+                {
+                  id: `act_shop_${Date.now()}`,
+                  type: "shop_buy",
+                  message: `${item.name} satın alındı.`,
+                  time: Date.now(),
+                },
+                ...(user.activities || []),
+              ].slice(0, 10);
+
               await updateUser(updates);
               if (Platform.OS !== 'web') {
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

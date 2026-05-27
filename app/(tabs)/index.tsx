@@ -63,6 +63,23 @@ function ActionItem({
 export default function PanelScreen() {
   const insets = useSafeAreaInsets();
   const { user, logout, checkDailySpins, getDailyPulse } = useUser();
+  const [boosterTimeLeft, setBoosterTimeLeft] = React.useState(0);
+
+  React.useEffect(() => {
+    if (!user?.honeyBoosterUntil) {
+      setBoosterTimeLeft(0);
+      return;
+    }
+
+    const updateTimer = () => {
+      const remaining = Math.max(0, user.honeyBoosterUntil - Date.now());
+      setBoosterTimeLeft(remaining);
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
+  }, [user?.honeyBoosterUntil]);
 
   useEffect(() => {
     if (user) checkDailySpins();
@@ -134,8 +151,26 @@ export default function PanelScreen() {
                 <View style={[styles.pulseDot, { backgroundColor: pulse.mood === "sert" ? Colors.danger : pulse.mood === "yumuşak" ? Colors.primary : Colors.gold }]} />
                 <Text style={styles.pulseStatus}>{pulse.mood.toUpperCase()} PİYASA</Text>
               </View>
-              <Text style={styles.pointsText}>{user.honeyPoints} 🍯</Text>
+              <View style={{ alignItems: 'flex-end' }}>
+                <Text style={styles.pointsText}>{user.honeyPoints} 🍯</Text>
+                {boosterTimeLeft > 0 && (
+                   <View style={styles.activeBoosterBadge}>
+                      <Ionicons name="flash" size={10} color={Colors.gold} />
+                      <Text style={styles.activeBoosterText}>
+                        {Math.floor(boosterTimeLeft / 60000)}:{Math.floor((boosterTimeLeft % 60000) / 1000).toString().padStart(2, '0')}
+                      </Text>
+                   </View>
+                )}
+              </View>
             </View>
+
+            <View style={styles.levelProgressContainer}>
+               <View style={styles.levelProgressBar}>
+                  <View style={[styles.levelProgressFill, { width: `${user.honeyPoints % 100}%` }]} />
+               </View>
+               <Text style={styles.levelProgressText}>Sv {user.level} İlerlemesi</Text>
+            </View>
+
             <View style={styles.pulseContent}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.pulseNote} numberOfLines={2}>{pulse.note}</Text>
@@ -287,6 +322,14 @@ const styles = StyleSheet.create({
   pulseDot: { width: 6, height: 6, borderRadius: 3 },
   pulseStatus: { color: Colors.white, fontSize: 10, fontFamily: "Poppins_700Bold", letterSpacing: 0.5 },
   pointsText: { color: Colors.gold, fontSize: 16, fontFamily: "Poppins_800ExtraBold" },
+  activeBoosterBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(251, 191, 36, 0.15)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, marginTop: 2 },
+  activeBoosterText: { color: Colors.gold, fontSize: 10, fontFamily: "Poppins_700Bold" },
+
+  levelProgressContainer: { marginTop: 12, marginBottom: 12 },
+  levelProgressBar: { height: 4, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 2, overflow: 'hidden', marginBottom: 4 },
+  levelProgressFill: { height: '100%', backgroundColor: Colors.gold, borderRadius: 2 },
+  levelProgressText: { color: 'rgba(255,255,255,0.5)', fontSize: 9, fontFamily: 'Poppins_600SemiBold', textAlign: 'right' },
+
   pulseContent: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   pulseNote: { color: "rgba(255,255,255,0.85)", fontSize: 12, lineHeight: 18, fontFamily: "Poppins_400Regular" },
   miniChart: { width: 80, height: 40, opacity: 0.8 },
