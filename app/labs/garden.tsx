@@ -21,6 +21,30 @@ const { width } = Dimensions.get("window");
 
 const GROW_TIME = 30000;
 
+function BoosterCountdown({ until }: { until: number }) {
+  const [timeLeft, setTimeLeft] = useState(Math.max(0, until - Date.now()));
+
+  useEffect(() => {
+    const t = setInterval(() => {
+      const remaining = Math.max(0, until - Date.now());
+      setTimeLeft(remaining);
+      if (remaining <= 0) clearInterval(t);
+    }, 1000);
+    return () => clearInterval(t);
+  }, [until]);
+
+  if (timeLeft <= 0) return null;
+
+  const mins = Math.floor(timeLeft / 60000);
+  const secs = Math.floor((timeLeft % 60000) / 1000);
+
+  return (
+    <Text style={styles.boosterTime}>
+      {mins}:{secs < 10 ? '0' : ''}{secs}
+    </Text>
+  );
+}
+
 function FlowerItem({
   flower,
   onHarvest,
@@ -162,6 +186,7 @@ export default function GardenScreen() {
 
   if (!user) return null;
 
+  const boosterActive = (user?.honeyBoosterUntil || 0) > Date.now();
   const readyCount = user.flowers.filter(
     (f) => Date.now() - f.plantedAt >= GROW_TIME
   ).length;
@@ -206,6 +231,13 @@ export default function GardenScreen() {
             <Text style={styles.gardenStatLabel}>Hızlandır</Text>
           </View>
         </View>
+
+        {boosterActive && (
+           <View style={styles.boosterBadge}>
+              <Text style={styles.boosterBadgeText}>2x BAL AKTİF</Text>
+              <BoosterCountdown until={user?.honeyBoosterUntil || 0} />
+           </View>
+        )}
       </LinearGradient>
 
       <ScrollView
@@ -310,6 +342,32 @@ export default function GardenScreen() {
 }
 
 const styles = StyleSheet.create({
+  boosterBadge: {
+    marginTop: 12,
+    backgroundColor: Colors.gold,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    alignSelf: 'center',
+  },
+  boosterBadgeText: {
+    fontSize: 10,
+    fontFamily: 'Poppins_800ExtraBold',
+    color: Colors.white,
+  },
+  boosterTime: {
+    fontSize: 10,
+    fontFamily: 'Poppins_800ExtraBold',
+    color: Colors.white,
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
   container: {
     flex: 1,
     backgroundColor: Colors.background,
