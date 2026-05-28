@@ -16,10 +16,11 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import { useUser, Flower } from "@/contexts/UserContext";
+import { FLOWER_GROWTH_TIME_MS } from "@/constants/game";
 
 const { width } = Dimensions.get("window");
 
-const GROW_TIME = 30000;
+const GROW_TIME = FLOWER_GROWTH_TIME_MS;
 
 function FlowerItem({
   flower,
@@ -105,8 +106,21 @@ export default function GardenScreen() {
   const { user, plantFlower, harvestFlower, harvestAllFlowers, boostFlower } = useUser();
   const [harvestResult, setHarvestResult] = useState<number | null>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const [boosterTimeLeft, setBoosterTimeLeft] = useState(0);
 
   const topInset = Platform.OS === "web" ? 67 : insets.top;
+
+  useEffect(() => {
+    const calculateLeft = () => Math.max(0, (user?.honeyBoosterUntil || 0) - Date.now());
+    setBoosterTimeLeft(calculateLeft());
+
+    const interval = setInterval(() => {
+      const left = calculateLeft();
+      setBoosterTimeLeft(left);
+      if (left <= 0) clearInterval(interval);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [user?.honeyBoosterUntil]);
 
   const showHarvestResult = (honey: number) => {
     setHarvestResult(honey);
@@ -166,6 +180,12 @@ export default function GardenScreen() {
     (f) => Date.now() - f.plantedAt >= GROW_TIME
   ).length;
 
+  const formatBoosterTime = (ms: number) => {
+    const mins = Math.floor(ms / 60000);
+    const secs = Math.floor((ms % 60000) / 1000);
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -173,7 +193,15 @@ export default function GardenScreen() {
         style={[styles.topGradient, { paddingTop: topInset }]}
       >
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Arı Bahçesi</Text>
+          <View>
+            <Text style={styles.headerTitle}>Arı Bahçesi</Text>
+            {boosterTimeLeft > 0 && (
+              <View style={styles.boosterBadge}>
+                <Ionicons name="flash" size={10} color={Colors.white} />
+                <Text style={styles.boosterText}>2x Bal Aktif ({formatBoosterTime(boosterTimeLeft)})</Text>
+              </View>
+            )}
+          </View>
           <View style={styles.balanceChip}>
             <Text style={styles.balanceText}>{user.honeyPoints} 🍯</Text>
           </View>
@@ -339,6 +367,22 @@ const styles = StyleSheet.create({
   balanceText: {
     fontSize: 13,
     fontFamily: "Poppins_700Bold",
+    color: Colors.white,
+  },
+  boosterBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+    marginTop: 2,
+    alignSelf: 'flex-start',
+  },
+  boosterText: {
+    fontSize: 10,
+    fontFamily: 'Poppins_700Bold',
     color: Colors.white,
   },
   gardenStats: {
