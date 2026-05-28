@@ -63,6 +63,7 @@ function ActionItem({
 export default function PanelScreen() {
   const insets = useSafeAreaInsets();
   const { user, logout, checkDailySpins, getDailyPulse } = useUser();
+  const [boosterTimeLeft, setBoosterTimeLeft] = React.useState(0);
 
   useEffect(() => {
     if (user) checkDailySpins();
@@ -71,6 +72,18 @@ export default function PanelScreen() {
   useEffect(() => {
     if (!user) router.replace("/");
   }, [user]);
+
+  useEffect(() => {
+    const calculateLeft = () => Math.max(0, (user?.honeyBoosterUntil || 0) - Date.now());
+    setBoosterTimeLeft(calculateLeft());
+
+    const interval = setInterval(() => {
+      const left = calculateLeft();
+      setBoosterTimeLeft(left);
+      if (left <= 0) clearInterval(interval);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [user?.honeyBoosterUntil]);
 
   if (!user) return null;
 
@@ -99,10 +112,23 @@ export default function PanelScreen() {
     ]);
   };
 
+  const headerColors =
+    pulse.mood === "sert"
+      ? ["#450a0a", "#1e293b", Colors.slate]
+      : pulse.mood === "yumuşak"
+      ? ["#064e3b", "#1e293b", Colors.slate]
+      : [Colors.slate, "#1e293b", "#0f172a"];
+
+  const formatBoosterTime = (ms: number) => {
+    const mins = Math.floor(ms / 60000);
+    const secs = Math.floor((ms % 60000) / 1000);
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={[Colors.slate, "#1e293b", "#0f172a"]}
+        colors={headerColors}
         style={[styles.header, { paddingTop: topInset + 10 }]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -115,7 +141,15 @@ export default function PanelScreen() {
               </View>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.welcomeText}>Hoş Geldin,</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Text style={styles.welcomeText}>Hoş Geldin,</Text>
+                {boosterTimeLeft > 0 && (
+                  <View style={styles.boosterBadge}>
+                    <Ionicons name="flash" size={10} color={Colors.white} />
+                    <Text style={styles.boosterText}>2x {formatBoosterTime(boosterTimeLeft)}</Text>
+                  </View>
+                )}
+              </View>
               <Text style={styles.companyText} numberOfLines={1}>
                 {user.companyName}
               </Text>
@@ -277,6 +311,20 @@ const styles = StyleSheet.create({
   },
   avatarText: { fontSize: 24 },
   welcomeText: { fontSize: 13, fontFamily: "Poppins_400Regular", color: "rgba(255,255,255,0.7)" },
+  boosterBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  boosterText: {
+    fontSize: 10,
+    fontFamily: 'Poppins_700Bold',
+    color: Colors.white,
+  },
   companyText: { fontSize: 18, fontFamily: "Poppins_800ExtraBold", color: Colors.white },
   logoutBtn: { width: 44, height: 44, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.12)" },
 
