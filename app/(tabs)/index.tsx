@@ -9,6 +9,7 @@ import Colors from "@/constants/colors";
 import { useUser } from "@/contexts/UserContext";
 import { GlassCard } from "@/components/GlassCard";
 import { TrendChart } from "@/components/TrendChart";
+import { HoneyBoosterBadge } from "@/components/HoneyBoosterBadge";
 import { haptics } from "@/shared/utils/haptics";
 import { formatCompactNumber } from "@/shared/utils/format";
 
@@ -64,6 +65,8 @@ export default function PanelScreen() {
   const insets = useSafeAreaInsets();
   const { user, logout, checkDailySpins, getDailyPulse } = useUser();
 
+  const pulse = React.useMemo(() => getDailyPulse(), [getDailyPulse]);
+
   useEffect(() => {
     if (user) checkDailySpins();
   }, [user, checkDailySpins]);
@@ -74,7 +77,6 @@ export default function PanelScreen() {
 
   if (!user) return null;
 
-  const pulse = getDailyPulse();
   const checksCount = user.checks?.length || 0;
   const activeReqs = (user.offerRequests || []).filter((r) => r.status === "collecting").length;
   const offersReady = (user.offerRequests || []).filter((r) => r.status === "ready").length;
@@ -99,10 +101,16 @@ export default function PanelScreen() {
     ]);
   };
 
+  const headerColors: [string, string, ...string[]] = pulse.mood === "sert"
+    ? ["#334155", "#1e293b", "#0f172a"]
+    : pulse.mood === "yumuşak"
+    ? ["#065f46", "#064e3b", "#022c22"]
+    : [Colors.slate, "#1e293b", "#0f172a"];
+
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={[Colors.slate, "#1e293b", "#0f172a"]}
+        colors={headerColors}
         style={[styles.header, { paddingTop: topInset + 10 }]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -134,7 +142,10 @@ export default function PanelScreen() {
                 <View style={[styles.pulseDot, { backgroundColor: pulse.mood === "sert" ? Colors.danger : pulse.mood === "yumuşak" ? Colors.primary : Colors.gold }]} />
                 <Text style={styles.pulseStatus}>{pulse.mood.toUpperCase()} PİYASA</Text>
               </View>
-              <Text style={styles.pointsText}>{user.honeyPoints} 🍯</Text>
+              <View style={{ alignItems: 'flex-end' }}>
+                <Text style={styles.pointsText}>{user.honeyPoints} 🍯</Text>
+                <HoneyBoosterBadge until={user.honeyBoosterUntil || 0} />
+              </View>
             </View>
             <View style={styles.pulseContent}>
               <View style={{ flex: 1 }}>
@@ -235,17 +246,26 @@ export default function PanelScreen() {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.beesScroll}>
             {(user.bees || []).map((b, idx) => (
               <Animated.View key={b.id} entering={FadeInDown.delay(700 + idx * 100).springify()}>
-                <GlassCard style={styles.beeCard}>
-                  <Text style={styles.beeEmoji}>{b.emoji}</Text>
-                  <Text style={styles.beeName}>{b.name}</Text>
-                  <View style={styles.xpBarBackground}>
-                    <View style={[styles.xpBarFill, { width: `${b.xp}%` }]} />
-                  </View>
-                  <View style={styles.beeInfoRow}>
-                    <Text style={styles.beeLevel}>Sv {b.level}</Text>
-                    <Text style={styles.beeStatus}>• Aktif</Text>
-                  </View>
-                </GlassCard>
+                <Pressable onPress={() => {
+                  haptics.light();
+                  const info = b.role === "İzci" ? "Teklif toplama sürelerini hızlandırır." :
+                               b.role === "Aracı" ? "Revize turlarında daha iyi indirimler alır." :
+                               b.role === "Kâtip" ? "Çek ekleme işlemlerinden bal kazandırır." :
+                               "Piyasa nabzını takip ederek XP kazanır.";
+                  Alert.alert(b.name, `${b.role} rolündedir. ${info}`);
+                }}>
+                  <GlassCard style={styles.beeCard}>
+                    <Text style={styles.beeEmoji}>{b.emoji}</Text>
+                    <Text style={styles.beeName}>{b.name}</Text>
+                    <View style={styles.xpBarBackground}>
+                      <View style={[styles.xpBarFill, { width: `${b.xp}%` }]} />
+                    </View>
+                    <View style={styles.beeInfoRow}>
+                      <Text style={styles.beeLevel}>Sv {b.level}</Text>
+                      <Text style={styles.beeStatus}>• Aktif</Text>
+                    </View>
+                  </GlassCard>
+                </Pressable>
               </Animated.View>
             ))}
           </ScrollView>
