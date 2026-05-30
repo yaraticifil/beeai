@@ -16,10 +16,12 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import { useUser, Flower } from "@/contexts/UserContext";
+import { HoneyBoosterBadge } from "@/components/HoneyBoosterBadge";
+import { FLOWER_GROWTH_TIME_MS } from "@/constants/game";
 
 const { width } = Dimensions.get("window");
 
-const GROW_TIME = 30000;
+const GROW_TIME = FLOWER_GROWTH_TIME_MS;
 
 function FlowerItem({
   flower,
@@ -174,8 +176,11 @@ export default function GardenScreen() {
       >
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Arı Bahçesi</Text>
-          <View style={styles.balanceChip}>
-            <Text style={styles.balanceText}>{user.honeyPoints} 🍯</Text>
+          <View style={{ alignItems: 'flex-end', gap: 4 }}>
+            <View style={styles.balanceChip}>
+              <Text style={styles.balanceText}>{user.honeyPoints} 🍯</Text>
+            </View>
+            <HoneyBoosterBadge honeyBoosterUntil={user.honeyBoosterUntil} />
           </View>
         </View>
 
