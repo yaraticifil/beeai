@@ -9,6 +9,7 @@ import Colors from "@/constants/colors";
 import { useUser } from "@/contexts/UserContext";
 import { GlassCard } from "@/components/GlassCard";
 import { TrendChart } from "@/components/TrendChart";
+import { HoneyBoosterBadge } from "@/components/HoneyBoosterBadge";
 import { haptics } from "@/shared/utils/haptics";
 import { formatCompactNumber } from "@/shared/utils/format";
 
@@ -64,6 +65,8 @@ export default function PanelScreen() {
   const insets = useSafeAreaInsets();
   const { user, logout, checkDailySpins, getDailyPulse } = useUser();
 
+  const pulse = useMemo(() => user ? getDailyPulse() : null, [user, getDailyPulse]);
+
   useEffect(() => {
     if (user) checkDailySpins();
   }, [user, checkDailySpins]);
@@ -72,9 +75,13 @@ export default function PanelScreen() {
     if (!user) router.replace("/");
   }, [user]);
 
-  if (!user) return null;
+  const levelProgress = useMemo(() => {
+    if (!user) return 0;
+    return user.honeyPoints % 100;
+  }, [user]);
 
-  const pulse = getDailyPulse();
+  if (!user || !pulse) return null;
+
   const checksCount = user.checks?.length || 0;
   const activeReqs = (user.offerRequests || []).filter((r) => r.status === "collecting").length;
   const offersReady = (user.offerRequests || []).filter((r) => r.status === "ready").length;
@@ -99,10 +106,16 @@ export default function PanelScreen() {
     ]);
   };
 
+  const headerColors = pulse.mood === "sert"
+    ? ["#450a0a", "#7f1d1d", "#0f172a"]
+    : pulse.mood === "yumuşak"
+    ? ["#064e3b", "#065f46", "#0f172a"]
+    : [Colors.slate, "#1e293b", "#0f172a"];
+
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={[Colors.slate, "#1e293b", "#0f172a"]}
+        colors={headerColors}
         style={[styles.header, { paddingTop: topInset + 10 }]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -119,6 +132,12 @@ export default function PanelScreen() {
               <Text style={styles.companyText} numberOfLines={1}>
                 {user.companyName}
               </Text>
+              <View style={styles.levelContainer}>
+                <View style={styles.levelBarBg}>
+                  <View style={[styles.levelBarFill, { width: `${levelProgress}%` }]} />
+                </View>
+                <Text style={styles.levelSmallText}>Sv.{user.level}</Text>
+              </View>
             </View>
           </Animated.View>
 
@@ -134,7 +153,10 @@ export default function PanelScreen() {
                 <View style={[styles.pulseDot, { backgroundColor: pulse.mood === "sert" ? Colors.danger : pulse.mood === "yumuşak" ? Colors.primary : Colors.gold }]} />
                 <Text style={styles.pulseStatus}>{pulse.mood.toUpperCase()} PİYASA</Text>
               </View>
-              <Text style={styles.pointsText}>{user.honeyPoints} 🍯</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <HoneyBoosterBadge />
+                <Text style={styles.pointsText}>{user.honeyPoints} 🍯</Text>
+              </View>
             </View>
             <View style={styles.pulseContent}>
               <View style={{ flex: 1 }}>
@@ -235,17 +257,30 @@ export default function PanelScreen() {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.beesScroll}>
             {(user.bees || []).map((b, idx) => (
               <Animated.View key={b.id} entering={FadeInDown.delay(700 + idx * 100).springify()}>
-                <GlassCard style={styles.beeCard}>
-                  <Text style={styles.beeEmoji}>{b.emoji}</Text>
-                  <Text style={styles.beeName}>{b.name}</Text>
-                  <View style={styles.xpBarBackground}>
-                    <View style={[styles.xpBarFill, { width: `${b.xp}%` }]} />
-                  </View>
-                  <View style={styles.beeInfoRow}>
-                    <Text style={styles.beeLevel}>Sv {b.level}</Text>
-                    <Text style={styles.beeStatus}>• Aktif</Text>
-                  </View>
-                </GlassCard>
+                <Pressable
+                  onPress={() => {
+                    haptics.light();
+                    const roleInfo = {
+                      "İzci": "Teklif toplama hızını artırır ve en iyi partnerleri bulur.",
+                      "Aracı": "Pazarlık gücüyle tekliflerin iyileştirilmesini sağlar.",
+                      "Kâtip": "Çeklerin sisteme hatasız ve hızlı girilmesini sağlar.",
+                      "Nabız": "Piyasa dinamiklerini analiz ederek strateji üretir."
+                    };
+                    Alert.alert(b.name, `${b.role} Arısı: ${roleInfo[b.role] || "Kovanın emektar üyesi."}`);
+                  }}
+                >
+                  <GlassCard style={styles.beeCard}>
+                    <Text style={styles.beeEmoji}>{b.emoji}</Text>
+                    <Text style={styles.beeName}>{b.name}</Text>
+                    <View style={styles.xpBarBackground}>
+                      <View style={[styles.xpBarFill, { width: `${b.xp}%` }]} />
+                    </View>
+                    <View style={styles.beeInfoRow}>
+                      <Text style={styles.beeLevel}>Sv {b.level}</Text>
+                      <Text style={styles.beeStatus}>• Aktif</Text>
+                    </View>
+                  </GlassCard>
+                </Pressable>
               </Animated.View>
             ))}
           </ScrollView>
@@ -277,7 +312,11 @@ const styles = StyleSheet.create({
   },
   avatarText: { fontSize: 24 },
   welcomeText: { fontSize: 13, fontFamily: "Poppins_400Regular", color: "rgba(255,255,255,0.7)" },
-  companyText: { fontSize: 18, fontFamily: "Poppins_800ExtraBold", color: Colors.white },
+  companyText: { fontSize: 18, fontFamily: "Poppins_800ExtraBold", color: Colors.white, lineHeight: 24 },
+  levelContainer: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
+  levelBarBg: { flex: 1, maxWidth: 100, height: 4, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 2 },
+  levelBarFill: { height: '100%', backgroundColor: Colors.gold, borderRadius: 2 },
+  levelSmallText: { fontSize: 10, fontFamily: 'Poppins_700Bold', color: Colors.gold },
   logoutBtn: { width: 44, height: 44, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.12)" },
 
   pulseContainer: { marginTop: 4 },
