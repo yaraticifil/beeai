@@ -9,6 +9,7 @@ import Colors from "@/constants/colors";
 import { useUser } from "@/contexts/UserContext";
 import { GlassCard } from "@/components/GlassCard";
 import { TrendChart } from "@/components/TrendChart";
+import { HoneyBoosterBadge } from "@/components/HoneyBoosterBadge";
 import { haptics } from "@/shared/utils/haptics";
 import { formatCompactNumber } from "@/shared/utils/format";
 
@@ -136,6 +137,7 @@ export default function PanelScreen() {
               </View>
               <Text style={styles.pointsText}>{user.honeyPoints} 🍯</Text>
             </View>
+            <HoneyBoosterBadge />
             <View style={styles.pulseContent}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.pulseNote} numberOfLines={2}>{pulse.note}</Text>

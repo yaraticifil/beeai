@@ -15,11 +15,13 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
+import { FLOWER_GROWTH_TIME_MS } from "@/constants/game";
 import { useUser, Flower } from "@/contexts/UserContext";
+import { HoneyBoosterBadge } from "@/components/HoneyBoosterBadge";
 
 const { width } = Dimensions.get("window");
 
-const GROW_TIME = 30000;
+const GROW_TIME = FLOWER_GROWTH_TIME_MS;
 
 function FlowerItem({
   flower,
@@ -178,6 +180,8 @@ export default function GardenScreen() {
             <Text style={styles.balanceText}>{user.honeyPoints} 🍯</Text>
           </View>
         </View>
+
+        <HoneyBoosterBadge />
 
         <View style={styles.gardenStats}>
           <View style={styles.gardenStatItem}>

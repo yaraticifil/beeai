@@ -191,7 +191,17 @@ export default function ShopScreen() {
           onPress: async () => {
             const success = await spendHoney(item.cost);
             if (success) {
-              const updates: any = {};
+              const updates: any = {
+                activities: [
+                  {
+                    id: `act_shop_${Date.now()}`,
+                    type: "shop_buy",
+                    message: `${item.name} satın alındı.`,
+                    time: Date.now(),
+                  },
+                  ...(user.activities || []),
+                ].slice(0, 10),
+              };
               if (!isConsumable) {
                 updates.purchasedItems = [...user.purchasedItems, item.id];
               }
