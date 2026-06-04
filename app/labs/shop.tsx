@@ -203,7 +203,8 @@ export default function ShopScreen() {
               } else if (item.id === "flower_boost") {
                 updates.flowerBoosts = (user.flowerBoosts || 0) + 1;
               } else if (item.id === "double_honey") {
-                updates.honeyBoosterUntil = Date.now() + 30 * 60 * 1000;
+                const currentBooster = Math.max(Date.now(), user.honeyBoosterUntil || 0);
+                updates.honeyBoosterUntil = currentBooster + 30 * 60 * 1000;
               }
 
               await updateUser(updates);
