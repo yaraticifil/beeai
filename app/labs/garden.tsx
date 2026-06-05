@@ -16,6 +16,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import { useUser, Flower } from "@/contexts/UserContext";
+import { HoneyBoosterBadge } from "@/components/HoneyBoosterBadge";
 
 const { width } = Dimensions.get("window");
 
@@ -177,6 +178,10 @@ export default function GardenScreen() {
           <View style={styles.balanceChip}>
             <Text style={styles.balanceText}>{user.honeyPoints} 🍯</Text>
           </View>
+        </View>
+
+        <View style={{ marginBottom: 12 }}>
+          <HoneyBoosterBadge />
         </View>
 
         <View style={styles.gardenStats}>
