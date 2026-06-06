@@ -15,11 +15,11 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
+import { FLOWER_GROWTH_TIME_MS } from "@/constants/game";
 import { useUser, Flower } from "@/contexts/UserContext";
+import { HoneyBoosterBadge } from "@/components/HoneyBoosterBadge";
 
 const { width } = Dimensions.get("window");
-
-const GROW_TIME = 30000;
 
 function FlowerItem({
   flower,
@@ -46,9 +46,9 @@ function FlowerItem({
     return () => clearInterval(interval);
   }, [flower.plantedAt, scaleAnim]);
 
-  const isReady = elapsed >= GROW_TIME;
-  const progress = Math.min(elapsed / GROW_TIME, 1);
-  const timeLeft = Math.max(0, Math.ceil((GROW_TIME - elapsed) / 1000));
+  const isReady = elapsed >= FLOWER_GROWTH_TIME_MS;
+  const progress = Math.min(elapsed / FLOWER_GROWTH_TIME_MS, 1);
+  const timeLeft = Math.max(0, Math.ceil((FLOWER_GROWTH_TIME_MS - elapsed) / 1000));
   const mins = Math.floor(timeLeft / 60);
   const secs = timeLeft % 60;
 
@@ -118,9 +118,11 @@ export default function GardenScreen() {
   };
 
   const handlePlant = async () => {
-    if (!user || user.honeyPoints < 10) {
+    if (!user) return;
+    const hasSeed = (user.flowerSeeds || 0) > 0;
+    if (!hasSeed && user.honeyPoints < 10) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert("Yetersiz Bal", "Çiçek dikmek için 10 bal puanı gerekiyor.");
+      Alert.alert("Yetersiz Bal", "Çiçek dikmek için 10 bal puanı veya tohum gerekiyor.");
       return;
     }
     const success = await plantFlower();
@@ -163,7 +165,7 @@ export default function GardenScreen() {
   if (!user) return null;
 
   const readyCount = user.flowers.filter(
-    (f) => Date.now() - f.plantedAt >= GROW_TIME
+    (f) => Date.now() - f.plantedAt >= FLOWER_GROWTH_TIME_MS
   ).length;
 
   return (
@@ -173,7 +175,12 @@ export default function GardenScreen() {
         style={[styles.topGradient, { paddingTop: topInset }]}
       >
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Arı Bahçesi</Text>
+          <View>
+            <Text style={styles.headerTitle}>Arı Bahçesi</Text>
+            <View style={styles.boosterWrapper}>
+               <HoneyBoosterBadge />
+            </View>
+          </View>
           <View style={styles.balanceChip}>
             <Text style={styles.balanceText}>{user.honeyPoints} 🍯</Text>
           </View>
@@ -268,14 +275,14 @@ export default function GardenScreen() {
           style={({ pressed }) => [
             styles.plantBtn,
             pressed && styles.plantBtnPressed,
-            user.honeyPoints < 10 && styles.plantBtnDisabled,
+            (user.flowerSeeds || 0) === 0 && user.honeyPoints < 10 && styles.plantBtnDisabled,
           ]}
           onPress={handlePlant}
-          disabled={user.honeyPoints < 10}
+          disabled={(user.flowerSeeds || 0) === 0 && user.honeyPoints < 10}
         >
           <LinearGradient
             colors={
-              user.honeyPoints >= 10
+              (user.flowerSeeds || 0) > 0 || user.honeyPoints >= 10
                 ? [Colors.primary, Colors.primaryDark]
                 : ["#d1d5db", "#9ca3af"]
             }
@@ -283,8 +290,12 @@ export default function GardenScreen() {
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
           >
-            <Text style={styles.plantBtnEmoji}>🌱</Text>
-            <Text style={styles.plantBtnText}>Çiçek Ek (10 bal)</Text>
+            <Text style={styles.plantBtnEmoji}>{(user.flowerSeeds || 0) > 0 ? "🎒" : "🌱"}</Text>
+            <Text style={styles.plantBtnText}>
+              {(user.flowerSeeds || 0) > 0
+                ? `Tohumla Ek (${user.flowerSeeds} adet)`
+                : "Çiçek Ek (10 bal)"}
+            </Text>
           </LinearGradient>
         </Pressable>
 
@@ -329,6 +340,9 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontFamily: "Poppins_700Bold",
     color: Colors.text,
+  },
+  boosterWrapper: {
+    marginTop: 4,
   },
   balanceChip: {
     backgroundColor: Colors.primary,
