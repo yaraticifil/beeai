@@ -9,6 +9,7 @@ import Colors from "@/constants/colors";
 import { useUser } from "@/contexts/UserContext";
 import { GlassCard } from "@/components/GlassCard";
 import { TrendChart } from "@/components/TrendChart";
+import { HoneyBoosterBadge } from "@/components/HoneyBoosterBadge";
 import { haptics } from "@/shared/utils/haptics";
 import { formatCompactNumber } from "@/shared/utils/format";
 
@@ -122,9 +123,12 @@ export default function PanelScreen() {
             </View>
           </Animated.View>
 
-          <Pressable onPress={handleLogout} style={styles.logoutBtn}>
-            <Ionicons name="power-outline" size={20} color={Colors.white} />
-          </Pressable>
+          <View style={styles.headerRight}>
+             <HoneyBoosterBadge />
+             <Pressable onPress={handleLogout} style={styles.logoutBtn}>
+               <Ionicons name="power-outline" size={20} color={Colors.white} />
+             </Pressable>
+          </View>
         </View>
 
         <View style={styles.pulseContainer}>
@@ -278,6 +282,7 @@ const styles = StyleSheet.create({
   avatarText: { fontSize: 24 },
   welcomeText: { fontSize: 13, fontFamily: "Poppins_400Regular", color: "rgba(255,255,255,0.7)" },
   companyText: { fontSize: 18, fontFamily: "Poppins_800ExtraBold", color: Colors.white },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   logoutBtn: { width: 44, height: 44, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.12)" },
 
   pulseContainer: { marginTop: 4 },
