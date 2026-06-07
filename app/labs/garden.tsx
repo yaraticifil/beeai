@@ -15,11 +15,11 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
+import { FLOWER_GROWTH_TIME_MS } from "@/constants/game";
 import { useUser, Flower } from "@/contexts/UserContext";
+import { HoneyBoosterBadge } from "@/components/HoneyBoosterBadge";
 
 const { width } = Dimensions.get("window");
-
-const GROW_TIME = 30000;
 
 function FlowerItem({
   flower,
@@ -46,9 +46,9 @@ function FlowerItem({
     return () => clearInterval(interval);
   }, [flower.plantedAt, scaleAnim]);
 
-  const isReady = elapsed >= GROW_TIME;
-  const progress = Math.min(elapsed / GROW_TIME, 1);
-  const timeLeft = Math.max(0, Math.ceil((GROW_TIME - elapsed) / 1000));
+  const isReady = elapsed >= FLOWER_GROWTH_TIME_MS;
+  const progress = Math.min(elapsed / FLOWER_GROWTH_TIME_MS, 1);
+  const timeLeft = Math.max(0, Math.ceil((FLOWER_GROWTH_TIME_MS - elapsed) / 1000));
   const mins = Math.floor(timeLeft / 60);
   const secs = timeLeft % 60;
 
@@ -163,7 +163,7 @@ export default function GardenScreen() {
   if (!user) return null;
 
   const readyCount = user.flowers.filter(
-    (f) => Date.now() - f.plantedAt >= GROW_TIME
+    (f) => Date.now() - f.plantedAt >= FLOWER_GROWTH_TIME_MS
   ).length;
 
   return (
@@ -173,7 +173,10 @@ export default function GardenScreen() {
         style={[styles.topGradient, { paddingTop: topInset }]}
       >
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Arı Bahçesi</Text>
+          <View>
+            <Text style={styles.headerTitle}>Arı Bahçesi</Text>
+            <HoneyBoosterBadge />
+          </View>
           <View style={styles.balanceChip}>
             <Text style={styles.balanceText}>{user.honeyPoints} 🍯</Text>
           </View>

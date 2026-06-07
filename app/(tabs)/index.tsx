@@ -9,6 +9,7 @@ import Colors from "@/constants/colors";
 import { useUser } from "@/contexts/UserContext";
 import { GlassCard } from "@/components/GlassCard";
 import { TrendChart } from "@/components/TrendChart";
+import { HoneyBoosterBadge } from "@/components/HoneyBoosterBadge";
 import { haptics } from "@/shared/utils/haptics";
 import { formatCompactNumber } from "@/shared/utils/format";
 
@@ -119,12 +120,21 @@ export default function PanelScreen() {
               <Text style={styles.companyText} numberOfLines={1}>
                 {user.companyName}
               </Text>
+              <View style={styles.levelProgressContainer}>
+                <View style={styles.levelProgressBar}>
+                  <View style={[styles.levelProgressFill, { width: `${user.honeyPoints % 100}%` }]} />
+                </View>
+                <Text style={styles.levelProgressText}>Sv {user.level}</Text>
+              </View>
             </View>
           </Animated.View>
 
-          <Pressable onPress={handleLogout} style={styles.logoutBtn}>
-            <Ionicons name="power-outline" size={20} color={Colors.white} />
-          </Pressable>
+          <View style={styles.headerRight}>
+            <HoneyBoosterBadge />
+            <Pressable onPress={handleLogout} style={styles.logoutBtn}>
+              <Ionicons name="power-outline" size={20} color={Colors.white} />
+            </Pressable>
+          </View>
         </View>
 
         <View style={styles.pulseContainer}>
@@ -278,6 +288,11 @@ const styles = StyleSheet.create({
   avatarText: { fontSize: 24 },
   welcomeText: { fontSize: 13, fontFamily: "Poppins_400Regular", color: "rgba(255,255,255,0.7)" },
   companyText: { fontSize: 18, fontFamily: "Poppins_800ExtraBold", color: Colors.white },
+  levelProgressContainer: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
+  levelProgressBar: { flex: 1, maxWidth: 80, height: 4, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 2, overflow: 'hidden' },
+  levelProgressFill: { height: '100%', backgroundColor: Colors.gold },
+  levelProgressText: { fontSize: 10, fontFamily: 'Poppins_700Bold', color: Colors.gold },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   logoutBtn: { width: 44, height: 44, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.12)" },
 
   pulseContainer: { marginTop: 4 },
