@@ -16,10 +16,10 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import { useUser, Flower } from "@/contexts/UserContext";
+import { FLOWER_GROWTH_TIME_MS } from "@/constants/game";
+import { HoneyBoosterBadge } from "@/components/HoneyBoosterBadge";
 
 const { width } = Dimensions.get("window");
-
-const GROW_TIME = 30000;
 
 function FlowerItem({
   flower,
@@ -46,9 +46,9 @@ function FlowerItem({
     return () => clearInterval(interval);
   }, [flower.plantedAt, scaleAnim]);
 
-  const isReady = elapsed >= GROW_TIME;
-  const progress = Math.min(elapsed / GROW_TIME, 1);
-  const timeLeft = Math.max(0, Math.ceil((GROW_TIME - elapsed) / 1000));
+  const isReady = elapsed >= FLOWER_GROWTH_TIME_MS;
+  const progress = Math.min(elapsed / FLOWER_GROWTH_TIME_MS, 1);
+  const timeLeft = Math.max(0, Math.ceil((FLOWER_GROWTH_TIME_MS - elapsed) / 1000));
   const mins = Math.floor(timeLeft / 60);
   const secs = timeLeft % 60;
 
@@ -118,9 +118,11 @@ export default function GardenScreen() {
   };
 
   const handlePlant = async () => {
-    if (!user || user.honeyPoints < 10) {
+    if (!user) return;
+    const hasSeed = (user.flowerSeeds || 0) > 0;
+    if (!hasSeed && user.honeyPoints < 10) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert("Yetersiz Bal", "Çiçek dikmek için 10 bal puanı gerekiyor.");
+      Alert.alert("Yetersiz Kaynak", "Çiçek dikmek için tohum veya 10 bal gerekiyor.");
       return;
     }
     const success = await plantFlower();
@@ -163,7 +165,7 @@ export default function GardenScreen() {
   if (!user) return null;
 
   const readyCount = user.flowers.filter(
-    (f) => Date.now() - f.plantedAt >= GROW_TIME
+    (f) => Date.now() - f.plantedAt >= FLOWER_GROWTH_TIME_MS
   ).length;
 
   return (
@@ -177,6 +179,10 @@ export default function GardenScreen() {
           <View style={styles.balanceChip}>
             <Text style={styles.balanceText}>{user.honeyPoints} 🍯</Text>
           </View>
+        </View>
+
+        <View style={{ marginBottom: 12 }}>
+          <HoneyBoosterBadge />
         </View>
 
         <View style={styles.gardenStats}>
@@ -268,14 +274,14 @@ export default function GardenScreen() {
           style={({ pressed }) => [
             styles.plantBtn,
             pressed && styles.plantBtnPressed,
-            user.honeyPoints < 10 && styles.plantBtnDisabled,
+            ((user.flowerSeeds || 0) === 0 && user.honeyPoints < 10) && styles.plantBtnDisabled,
           ]}
           onPress={handlePlant}
-          disabled={user.honeyPoints < 10}
+          disabled={(user.flowerSeeds || 0) === 0 && user.honeyPoints < 10}
         >
           <LinearGradient
             colors={
-              user.honeyPoints >= 10
+              ((user.flowerSeeds || 0) > 0 || user.honeyPoints >= 10)
                 ? [Colors.primary, Colors.primaryDark]
                 : ["#d1d5db", "#9ca3af"]
             }
@@ -284,7 +290,11 @@ export default function GardenScreen() {
             end={{ x: 1, y: 0 }}
           >
             <Text style={styles.plantBtnEmoji}>🌱</Text>
-            <Text style={styles.plantBtnText}>Çiçek Ek (10 bal)</Text>
+            <Text style={styles.plantBtnText}>
+              {(user.flowerSeeds || 0) > 0
+                ? `Çiçek Ek (${user.flowerSeeds} Tohum)`
+                : "Çiçek Ek (10 bal)"}
+            </Text>
           </LinearGradient>
         </Pressable>
 
@@ -292,8 +302,8 @@ export default function GardenScreen() {
           <Text style={styles.infoTitle}>Nasıl Çalışır?</Text>
           <View style={styles.infoSteps}>
             {[
-              { icon: "🌱", step: "10 bal ile çiçek ek" },
-              { icon: "⏱️", step: "30 saniye büyümesini bekle" },
+              { icon: "🌱", step: "Tohum veya 10 bal ile çiçek ek" },
+              { icon: "⏱️", step: `${FLOWER_GROWTH_TIME_MS / 1000} saniye büyümesini bekle` },
               { icon: "🌼", step: "Hazır olunca üzerine dokun" },
               { icon: "🍯", step: "15-30 bal kazan!" },
             ].map((s, i) => (
