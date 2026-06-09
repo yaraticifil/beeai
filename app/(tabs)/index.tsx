@@ -9,6 +9,7 @@ import Colors from "@/constants/colors";
 import { useUser } from "@/contexts/UserContext";
 import { GlassCard } from "@/components/GlassCard";
 import { TrendChart } from "@/components/TrendChart";
+import { HoneyBoosterBadge } from "@/components/HoneyBoosterBadge";
 import { haptics } from "@/shared/utils/haptics";
 import { formatCompactNumber } from "@/shared/utils/format";
 
@@ -119,6 +120,16 @@ export default function PanelScreen() {
               <Text style={styles.companyText} numberOfLines={1}>
                 {user.companyName}
               </Text>
+              <HoneyBoosterBadge />
+              <View style={styles.levelProgressContainer}>
+                <View style={styles.levelRow}>
+                  <Text style={styles.levelLabel}>Seviye {user.level}</Text>
+                  <Text style={styles.xpLabel}>{user.honeyPoints % 100}/100 XP</Text>
+                </View>
+                <View style={styles.levelBarBg}>
+                  <View style={[styles.levelBarFill, { width: `${user.honeyPoints % 100}%` }]} />
+                </View>
+              </View>
             </View>
           </Animated.View>
 
@@ -278,6 +289,12 @@ const styles = StyleSheet.create({
   avatarText: { fontSize: 24 },
   welcomeText: { fontSize: 13, fontFamily: "Poppins_400Regular", color: "rgba(255,255,255,0.7)" },
   companyText: { fontSize: 18, fontFamily: "Poppins_800ExtraBold", color: Colors.white },
+  levelProgressContainer: { marginTop: 8, width: '100%' },
+  levelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  levelLabel: { fontSize: 10, fontFamily: 'Poppins_700Bold', color: Colors.gold },
+  xpLabel: { fontSize: 9, fontFamily: 'Poppins_600SemiBold', color: 'rgba(255,255,255,0.5)' },
+  levelBarBg: { height: 4, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 2, overflow: 'hidden' },
+  levelBarFill: { height: '100%', backgroundColor: Colors.gold, borderRadius: 2 },
   logoutBtn: { width: 44, height: 44, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.12)" },
 
   pulseContainer: { marginTop: 4 },
