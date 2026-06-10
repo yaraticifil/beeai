@@ -246,17 +246,29 @@ export default function PanelScreen() {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.beesScroll}>
             {(user.bees || []).map((b, idx) => (
               <Animated.View key={b.id} entering={FadeInDown.delay(700 + idx * 100).springify()}>
-                <GlassCard style={styles.beeCard}>
-                  <Text style={styles.beeEmoji}>{b.emoji}</Text>
-                  <Text style={styles.beeName}>{b.name}</Text>
-                  <View style={styles.xpBarBackground}>
-                    <View style={[styles.xpBarFill, { width: `${b.xp}%` }]} />
-                  </View>
-                  <View style={styles.beeInfoRow}>
-                    <Text style={styles.beeLevel}>Sv {b.level}</Text>
-                    <Text style={styles.beeStatus}>• Aktif</Text>
-                  </View>
-                </GlassCard>
+                <Pressable
+                  onPress={() => {
+                    haptics.light();
+                    const desc =
+                      b.role === 'İzci' ? "Piyasayı tarar, tekliflerin gelme hızını %10 artırır (her seviye)." :
+                      b.role === 'Aracı' ? "Bankalarla pazarlık yapar, revize tekliflerin kalitesini artırır." :
+                      b.role === 'Kâtip' ? "Çekleri otonom okur ve veri girişini otonom hale getirir." :
+                      "Piyasa nabzını ölçer, size stratejik öngörüler sunar.";
+                    Alert.alert(b.name, `${b.role} rolündedir.\n\n${desc}`);
+                  }}
+                >
+                  <GlassCard style={styles.beeCard}>
+                    <Text style={styles.beeEmoji}>{b.emoji}</Text>
+                    <Text style={styles.beeName}>{b.name}</Text>
+                    <View style={styles.xpBarBackground}>
+                      <View style={[styles.xpBarFill, { width: `${b.xp}%` }]} />
+                    </View>
+                    <View style={styles.beeInfoRow}>
+                      <Text style={styles.beeLevel}>Sv {b.level}</Text>
+                      <Text style={styles.beeStatus}>• Aktif</Text>
+                    </View>
+                  </GlassCard>
+                </Pressable>
               </Animated.View>
             ))}
           </ScrollView>

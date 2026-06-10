@@ -830,8 +830,17 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const now = Date.now();
     const elapsed = now - req.startedAt;
 
-    // Pilot hızlandırılmış: teklifler 15s, 45s, 90s
-    const targetCount = elapsed >= 90000 ? 3 : elapsed >= 45000 ? 2 : elapsed >= 15000 ? 1 : 0;
+    // İzci Arı bonusu: Her seviye için %10 hızlanma (max %50)
+    const scout = (user.bees || []).find(b => b.role === "İzci");
+    const speedBonus = scout ? Math.min(0.5, scout.level * 0.1) : 0;
+    const multiplier = 1 - speedBonus;
+
+    // Pilot hızlandırılmış (Baz): teklifler 15s, 45s, 90s
+    const t1 = 15000 * multiplier;
+    const t2 = 45000 * multiplier;
+    const t3 = 90000 * multiplier;
+
+    const targetCount = elapsed >= t3 ? 3 : elapsed >= t2 ? 2 : elapsed >= t1 ? 1 : 0;
 
     const pulse = computeDailyPulseInternal(user.companyName);
     const newOffers = targetCount > req.offers.length ? computeOffers(check, pulse, req.offers.length) : [];
