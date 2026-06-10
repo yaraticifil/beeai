@@ -118,9 +118,11 @@ export default function GardenScreen() {
   };
 
   const handlePlant = async () => {
-    if (!user || user.honeyPoints < 10) {
+    if (!user) return;
+    const hasSeeds = (user.flowerSeeds || 0) > 0;
+    if (!hasSeeds && user.honeyPoints < 10) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert("Yetersiz Bal", "Çiçek dikmek için 10 bal puanı gerekiyor.");
+      Alert.alert("Yetersiz Bal", "Çiçek dikmek için 10 bal puanı veya tohum gerekiyor.");
       return;
     }
     const success = await plantFlower();
@@ -271,14 +273,16 @@ export default function GardenScreen() {
           style={({ pressed }) => [
             styles.plantBtn,
             pressed && styles.plantBtnPressed,
-            user.honeyPoints < 10 && styles.plantBtnDisabled,
+            (user.honeyPoints < 10 && (user.flowerSeeds || 0) <= 0) && styles.plantBtnDisabled,
           ]}
           onPress={handlePlant}
-          disabled={user.honeyPoints < 10}
+          disabled={user.honeyPoints < 10 && (user.flowerSeeds || 0) <= 0}
         >
           <LinearGradient
             colors={
-              user.honeyPoints >= 10
+              (user.flowerSeeds || 0) > 0
+                ? ["#8b5cf6", "#7c3aed"]
+                : user.honeyPoints >= 10
                 ? [Colors.primary, Colors.primaryDark]
                 : ["#d1d5db", "#9ca3af"]
             }
@@ -286,8 +290,10 @@ export default function GardenScreen() {
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
           >
-            <Text style={styles.plantBtnEmoji}>🌱</Text>
-            <Text style={styles.plantBtnText}>Çiçek Ek (10 bal)</Text>
+            <Text style={styles.plantBtnEmoji}>{(user.flowerSeeds || 0) > 0 ? "✨" : "🌱"}</Text>
+            <Text style={styles.plantBtnText}>
+              {(user.flowerSeeds || 0) > 0 ? `Tohumla Ek (${user.flowerSeeds})` : "Çiçek Ek (10 bal)"}
+            </Text>
           </LinearGradient>
         </Pressable>
 
@@ -295,7 +301,7 @@ export default function GardenScreen() {
           <Text style={styles.infoTitle}>Nasıl Çalışır?</Text>
           <View style={styles.infoSteps}>
             {[
-              { icon: "🌱", step: "10 bal ile çiçek ek" },
+              { icon: "🌱", step: "10 bal veya tohum ile çiçek ek" },
               { icon: "⏱️", step: "30 saniye büyümesini bekle" },
               { icon: "🌼", step: "Hazır olunca üzerine dokun" },
               { icon: "🍯", step: "15-30 bal kazan!" },

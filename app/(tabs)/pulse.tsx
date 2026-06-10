@@ -9,7 +9,6 @@ import { useUser } from "@/contexts/UserContext";
 import { GlassCard } from "@/components/GlassCard";
 import { TrendChart } from "@/components/TrendChart";
 import { DynamicItem } from "@/components/DynamicItem";
-import { XP_REWARDS } from "@/constants/game";
 
 export default function PulseScreen() {
   const insets = useSafeAreaInsets();
@@ -120,6 +119,28 @@ export default function PulseScreen() {
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(200).springify()} style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Arı Öngörüsü</Text>
+            <View style={styles.beeTag}>
+              <Text style={styles.beeTagText}>NABIZ ARISI</Text>
+            </View>
+          </View>
+          <GlassCard style={styles.insightCard}>
+            <View style={styles.insightHeader}>
+              <Text style={styles.insightEmoji}>📊</Text>
+              <Text style={styles.insightTitle}>Stratejik Tavsiye</Text>
+            </View>
+            <Text style={styles.insightText}>
+              {pulse.mood === "sert"
+                ? "Keşideci puanı 80 altındaki çekler için bugün beklemede kalınabilir. Yüksek puanlı çekleri hemen işleme alıp likiditeyi garanti edin."
+                : pulse.mood === "yumuşak"
+                ? "Tüm çekleriniz için revize turunu kullanmanızı öneririm. Bankalar bugün pazar payı kapmak için daha cömert olabilir."
+                : "Standart işleyişe devam edin. Öğleden sonra teklif iştahı artabilir, bekleyen çekleriniz varsa otonom kovanı boşaltmayın."}
+            </Text>
+          </GlassCard>
+        </Animated.View>
+
+        <Animated.View entering={FadeInDown.delay(250).springify()} style={styles.section}>
           <Text style={styles.sectionTitle}>Piyasa Dinamikleri</Text>
           <View style={styles.dynamicGrid}>
             <DynamicItem
@@ -204,7 +225,15 @@ const styles = StyleSheet.create({
   noteText: { fontSize: 12, fontFamily: "Poppins_400Regular", color: "rgba(255,255,255,0.7)", lineHeight: 20 },
 
   section: { marginTop: 4, marginBottom: 20 },
-  sectionTitle: { fontSize: 16, fontFamily: "Poppins_800ExtraBold", color: Colors.slate, marginBottom: 12 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+  sectionTitle: { fontSize: 16, fontFamily: "Poppins_800ExtraBold", color: Colors.slate },
+  beeTag: { backgroundColor: Colors.primary, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+  beeTagText: { fontSize: 9, fontFamily: 'Poppins_800ExtraBold', color: Colors.white },
+  insightCard: { padding: 18, borderRadius: 24, borderLeftWidth: 4, borderLeftColor: Colors.primary },
+  insightHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
+  insightEmoji: { fontSize: 20 },
+  insightTitle: { fontSize: 14, fontFamily: 'Poppins_700Bold', color: Colors.slate },
+  insightText: { fontSize: 12, fontFamily: 'Poppins_400Regular', color: Colors.textSecondary, lineHeight: 20 },
   dynamicGrid: { gap: 10 },
 
   infoRow: { marginTop: 10, flexDirection: "row", gap: 10, alignItems: "center", paddingHorizontal: 10 },
