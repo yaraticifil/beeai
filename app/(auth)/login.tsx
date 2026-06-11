@@ -64,7 +64,7 @@ export default function LoginScreen() {
       await login(companyName.trim(), phoneNumber.trim());
       if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.replace("/(tabs)");
-    } catch (e) {
+    } catch {
       setError("Bir hata oluştu. Tekrar deneyiniz.");
       setLoading(false);
     }

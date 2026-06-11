@@ -105,6 +105,14 @@ export interface OfferRequest {
   offers: Offer[];
 }
 
+export interface SpinPrize {
+  prize: string;
+  min: number;
+  max: number;
+  weight: number;
+  bonus?: "flower" | "coupon" | "double";
+}
+
 export type PulseMode = "weather" | "band";
 
 export interface UserSettings {
@@ -462,11 +470,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const spin = async (): Promise<{ pointsWon: number; prize: string } | null> => {
     if (!user || user.spinCount <= 0) return null;
 
-    const prizes = [
+    const prizes: SpinPrize[] = [
       { prize: "10-50 Bal", min: 10, max: 50, weight: 40 },
-      { prize: "Çiçek Tohumu", min: 0, max: 0, weight: 20, bonus: "flower" as const },
-      { prize: "Kupon %5", min: 0, max: 0, weight: 15, bonus: "coupon" as const },
-      { prize: "2x Bal", min: 0, max: 0, weight: 15, bonus: "double" as const },
+      { prize: "Çiçek Tohumu", min: 0, max: 0, weight: 20, bonus: "flower" },
+      { prize: "Kupon %5", min: 0, max: 0, weight: 15, bonus: "coupon" },
+      { prize: "2x Bal", min: 0, max: 0, weight: 15, bonus: "double" },
       { prize: "BÜYÜK İKRAMİYE", min: 200, max: 500, weight: 5 },
       { prize: "5-25 Bal", min: 5, max: 25, weight: 5 },
     ];
@@ -475,7 +483,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
     let rand = Math.random() * total;
     let selected = prizes[0];
     for (const p of prizes) {
-      if (rand < p.weight) { selected = p; break; }
+      if (rand < p.weight) {
+        selected = p;
+        break;
+      }
       rand -= p.weight;
     }
 
@@ -489,9 +500,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
     let updated: User = { ...user, spinCount: newSpinCount, lastSpinDate: today };
 
-    if ((selected as any).bonus === "flower") {
+    if (selected.bonus === "flower") {
       updated = { ...updated, flowerSeeds: (updated.flowerSeeds || 0) + 1 };
-    } else if ((selected as any).bonus === "coupon") {
+    } else if (selected.bonus === "coupon") {
       const c: Coupon = {
         id: `coupon_${Date.now()}`,
         title: "Pilot Kupon %5",
@@ -501,7 +512,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         used: false,
       };
       updated = { ...updated, coupons: [c, ...(updated.coupons || [])] };
-    } else if ((selected as any).bonus === "double") {
+    } else if (selected.bonus === "double") {
       updated = { ...updated, honeyBoosterUntil: Date.now() + 15 * 60 * 1000 };
     } else if (pointsWon > 0) {
       const isBoosted = updated.honeyBoosterUntil > Date.now();
@@ -828,10 +839,23 @@ export function UserProvider({ children }: { children: ReactNode }) {
     if (!check) return;
 
     const now = Date.now();
+    const scout = (user.bees || []).find(b => b.role === "İzci");
+    // İzci bonus: Her seviye %10 hız (max %50). Örn: Sv 2 = %10 hızlanma -> zaman çarpanı 0.9
+    const speedBonus = scout ? Math.min(0.5, (scout.level - 1) * 0.1) : 0;
+    const timeMultiplier = 1 - speedBonus;
+
     const elapsed = now - req.startedAt;
 
-    // Pilot hızlandırılmış: teklifler 15s, 45s, 90s
-    const targetCount = elapsed >= 90000 ? 3 : elapsed >= 45000 ? 2 : elapsed >= 15000 ? 1 : 0;
+    // Pilot hızlandırılmış (İzci bonusu dahil): teklifler normalde 15s, 45s, 90s
+    const t1 = 15000 * timeMultiplier;
+    const t2 = 45000 * timeMultiplier;
+    const t3 = 90000 * timeMultiplier;
+
+    const targetCount = elapsed >= t3 ? 3 : elapsed >= t2 ? 2 : elapsed >= t1 ? 1 : 0;
+
+    if (targetCount <= req.offers.length && now <= req.deadlineAt && req.status === "collecting") {
+      return; // No new offers and not expired yet
+    }
 
     const pulse = computeDailyPulseInternal(user.companyName);
     const newOffers = targetCount > req.offers.length ? computeOffers(check, pulse, req.offers.length) : [];
@@ -840,6 +864,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
     if (now > req.deadlineAt && req.offers.length < 3) status = "expired";
     if (req.offers.length + newOffers.length >= 3) status = "ready";
     if (status === "expired" && req.offers.length > 0) status = "ready";
+
+    if (newOffers.length === 0 && status === req.status) {
+      return; // Final safety check: nothing actually changed
+    }
 
     const updatedReq: OfferRequest = {
       ...req,
