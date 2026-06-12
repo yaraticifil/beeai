@@ -118,13 +118,17 @@ export default function GardenScreen() {
   };
 
   const handlePlant = async () => {
-    if (!user || user.honeyPoints < 10) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert("Yetersiz Bal", "Çiçek dikmek için 10 bal puanı gerekiyor.");
+    if (!user) return;
+    const hasSeeds = (user.flowerSeeds || 0) > 0;
+    if (!hasSeeds && user.honeyPoints < 10) {
+      if (Platform.OS !== 'web') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      }
+      Alert.alert("Yetersiz Kaynak", "Çiçek dikmek için 10 bal puanı veya tohum gerekiyor.");
       return;
     }
     const success = await plantFlower();
-    if (success) {
+    if (success && Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
   };
@@ -268,17 +272,22 @@ export default function GardenScreen() {
         </View>
 
         <Pressable
-          style={({ pressed }) => [
-            styles.plantBtn,
-            pressed && styles.plantBtnPressed,
-            user.honeyPoints < 10 && styles.plantBtnDisabled,
-          ]}
+          style={({ pressed }) => {
+            const hasSeeds = (user.flowerSeeds || 0) > 0;
+            const canAfford = hasSeeds || user.honeyPoints >= 10;
+            return [
+              styles.plantBtn,
+              pressed && canAfford && styles.plantBtnPressed,
+              !canAfford && styles.plantBtnDisabled,
+            ];
+          }}
           onPress={handlePlant}
-          disabled={user.honeyPoints < 10}
         >
           <LinearGradient
             colors={
-              user.honeyPoints >= 10
+              (user.flowerSeeds || 0) > 0
+                ? ["#8b5cf6", "#6d28d9"]
+                : user.honeyPoints >= 10
                 ? [Colors.primary, Colors.primaryDark]
                 : ["#d1d5db", "#9ca3af"]
             }
@@ -287,7 +296,9 @@ export default function GardenScreen() {
             end={{ x: 1, y: 0 }}
           >
             <Text style={styles.plantBtnEmoji}>🌱</Text>
-            <Text style={styles.plantBtnText}>Çiçek Ek (10 bal)</Text>
+            <Text style={styles.plantBtnText}>
+              {(user.flowerSeeds || 0) > 0 ? "Tohumla Ek" : "Çiçek Ek (10 bal)"}
+            </Text>
           </LinearGradient>
         </Pressable>
 

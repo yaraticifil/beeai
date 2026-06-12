@@ -9,7 +9,6 @@ import { useUser } from "@/contexts/UserContext";
 import { GlassCard } from "@/components/GlassCard";
 import { TrendChart } from "@/components/TrendChart";
 import { DynamicItem } from "@/components/DynamicItem";
-import { XP_REWARDS } from "@/constants/game";
 
 export default function PulseScreen() {
   const insets = useSafeAreaInsets();
