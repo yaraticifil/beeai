@@ -10,6 +10,7 @@ import { useUser } from "@/contexts/UserContext";
 import { GlassCard } from "@/components/GlassCard";
 import { TrendChart } from "@/components/TrendChart";
 import { HoneyBoosterBadge } from "@/components/HoneyBoosterBadge";
+import { MissionItem } from "@/components/MissionItem";
 import { haptics } from "@/shared/utils/haptics";
 import { formatCompactNumber } from "@/shared/utils/format";
 
@@ -63,11 +64,14 @@ function ActionItem({
 
 export default function PanelScreen() {
   const insets = useSafeAreaInsets();
-  const { user, logout, checkDailySpins, getDailyPulse } = useUser();
+  const { user, logout, checkDailySpins, checkDailyMissions, claimMissionReward, getDailyPulse } = useUser();
 
   useEffect(() => {
-    if (user) checkDailySpins();
-  }, [user, checkDailySpins]);
+    if (user) {
+      checkDailySpins();
+      checkDailyMissions();
+    }
+  }, [user, checkDailySpins, checkDailyMissions]);
 
   useEffect(() => {
     if (!user) router.replace("/");
@@ -179,6 +183,28 @@ export default function PanelScreen() {
              </Text>
           </GlassCard>
         </Animated.View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Günlük Görevler</Text>
+          {user.missions && user.missions.length > 0 ? (
+            user.missions.map((m, idx) => (
+              <Animated.View key={m.id} entering={FadeInDown.delay(350 + idx * 50).springify()}>
+                <MissionItem
+                  mission={m}
+                  onClaim={(id) => {
+                    haptics.success();
+                    claimMissionReward(id);
+                  }}
+                />
+              </Animated.View>
+            ))
+          ) : (
+            <GlassCard style={styles.emptyActivityCard}>
+              <Ionicons name="medal-outline" size={24} color={Colors.textMuted} />
+              <Text style={styles.emptyActivityText}>Bugünlük tüm görevler bitti!</Text>
+            </GlassCard>
+          )}
+        </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Canlı Durum</Text>
