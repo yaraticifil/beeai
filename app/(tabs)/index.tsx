@@ -10,6 +10,7 @@ import { useUser } from "@/contexts/UserContext";
 import { GlassCard } from "@/components/GlassCard";
 import { TrendChart } from "@/components/TrendChart";
 import { HoneyBoosterBadge } from "@/components/HoneyBoosterBadge";
+import { MissionItem } from "@/components/MissionItem";
 import { haptics } from "@/shared/utils/haptics";
 import { formatCompactNumber } from "@/shared/utils/format";
 
@@ -195,6 +196,13 @@ export default function PanelScreen() {
         </View>
 
         <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Günlük Görevler</Text>
+          {(user.missions || []).map((mission) => (
+            <MissionItem key={mission.id} mission={mission} />
+          ))}
+        </View>
+
+        <View style={styles.section}>
           <Text style={styles.sectionTitle}>Son Hareketler</Text>
           {user.activities && user.activities.length > 0 ? (
             <GlassCard style={styles.activityCard}>
@@ -222,21 +230,21 @@ export default function PanelScreen() {
             title="Çek Analizi"
             sub="Yapay zeka ile çek analizi yap"
             icon="scan-outline"
-            delay={400}
+            delay={100}
             onPress={() => router.push("/(tabs)/upload")}
           />
           <ActionItem
             title="Teklif Kasası"
             sub="Aktif ve geçmiş teklifleri yönet"
             icon="wallet-outline"
-            delay={500}
+            delay={200}
             onPress={() => router.push("/(tabs)/offers")}
           />
           <ActionItem
             title="BeeAI Labs"
             sub="Özel modüller ve pilot özellikler"
             icon="color-filter-outline"
-            delay={600}
+            delay={300}
             onPress={() => router.push("/labs")}
           />
         </View>

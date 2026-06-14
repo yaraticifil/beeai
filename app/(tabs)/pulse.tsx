@@ -110,8 +110,13 @@ export default function PulseScreen() {
 
             <View style={styles.noteBox}>
               <View style={styles.noteHeader}>
-                 <Ionicons name="bulb-outline" size={16} color={Colors.gold} />
-                 <Text style={styles.noteTitle}>Strateji Notu</Text>
+                 <View style={styles.beeAvatarMini}>
+                    <Text style={{ fontSize: 14 }}>📊</Text>
+                 </View>
+                 <View>
+                    <Text style={styles.noteTitle}>Arı Öngörüsü</Text>
+                    <Text style={styles.beeName}>Nabız Arısı</Text>
+                 </View>
               </View>
               <Text style={styles.noteText}>{pulse.note}</Text>
             </View>
@@ -198,9 +203,11 @@ const styles = StyleSheet.create({
   bandNote: { fontSize: 10, fontFamily: "Poppins_400Regular", color: Colors.textMuted, textAlign: 'center', lineHeight: 16 },
 
   noteBox: { backgroundColor: Colors.slate, borderRadius: 20, padding: 18 },
-  noteHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
-  noteTitle: { fontSize: 13, fontFamily: "Poppins_700Bold", color: Colors.gold },
-  noteText: { fontSize: 12, fontFamily: "Poppins_400Regular", color: "rgba(255,255,255,0.7)", lineHeight: 20 },
+  noteHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
+  beeAvatarMini: { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center' },
+  noteTitle: { fontSize: 12, fontFamily: "Poppins_700Bold", color: Colors.gold, lineHeight: 14 },
+  beeName: { fontSize: 10, fontFamily: "Poppins_400Regular", color: 'rgba(255,255,255,0.5)', marginTop: -2 },
+  noteText: { fontSize: 13, fontFamily: "Poppins_400Regular", color: "rgba(255,255,255,0.85)", lineHeight: 22, fontStyle: 'italic' },
 
   section: { marginTop: 4, marginBottom: 20 },
   sectionTitle: { fontSize: 16, fontFamily: "Poppins_800ExtraBold", color: Colors.slate, marginBottom: 12 },
