@@ -9,6 +9,7 @@ import Colors from "@/constants/colors";
 import { useUser } from "@/contexts/UserContext";
 import { GlassCard } from "@/components/GlassCard";
 import { TrendChart } from "@/components/TrendChart";
+import { MissionItem } from "@/components/MissionItem";
 import { HoneyBoosterBadge } from "@/components/HoneyBoosterBadge";
 import { haptics } from "@/shared/utils/haptics";
 import { formatCompactNumber } from "@/shared/utils/format";
@@ -63,11 +64,14 @@ function ActionItem({
 
 export default function PanelScreen() {
   const insets = useSafeAreaInsets();
-  const { user, logout, checkDailySpins, getDailyPulse } = useUser();
+  const { user, logout, checkDailySpins, checkDailyMissions, getDailyPulse } = useUser();
 
   useEffect(() => {
-    if (user) checkDailySpins();
-  }, [user, checkDailySpins]);
+    if (user) {
+      checkDailySpins();
+      checkDailyMissions();
+    }
+  }, [user, checkDailySpins, checkDailyMissions]);
 
   useEffect(() => {
     if (!user) router.replace("/");
@@ -192,6 +196,13 @@ export default function PanelScreen() {
                <StatCard label="Hazır" value={String(offersReady)} icon="flash" delay={250} />
             </View>
           </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Günlük Görevler</Text>
+          {(user.missions || []).map((m) => (
+            <MissionItem key={m.id} mission={m} />
+          ))}
         </View>
 
         <View style={styles.section}>

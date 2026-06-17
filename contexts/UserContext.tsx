@@ -1,5 +1,6 @@
 import React, {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -17,6 +18,18 @@ export interface Flower {
   id: string;
   plantedAt: number;
   ready: boolean;
+}
+
+export type MissionType = "analyze" | "harvest" | "spin" | "pulse";
+
+export interface Mission {
+  id: string;
+  type: MissionType;
+  title: string;
+  target: number;
+  current: number;
+  reward: number;
+  claimed: boolean;
 }
 
 export type BeeRole = "İzci" | "Aracı" | "Kâtip" | "Nabız";
@@ -144,6 +157,8 @@ export interface User {
   flowerSeeds: number;
   flowerBoosts: number;
   honeyBoosterUntil: number; // timestamp
+  missions: Mission[];
+  lastMissionsDate: string;
   settings: UserSettings;
 }
 
@@ -177,6 +192,8 @@ const DEFAULT_USER: Partial<User> = {
   flowerSeeds: 0,
   flowerBoosts: 0,
   honeyBoosterUntil: 0,
+  missions: [],
+  lastMissionsDate: "",
   settings: { pulseMode: "weather" },
 };
 
@@ -209,6 +226,48 @@ function hashStringToInt(s: string): number {
 
 function computeLevel(points: number): number {
   return Math.floor(points / 100) + 1;
+}
+
+function generateMissions(): Mission[] {
+  const now = Date.now();
+  return [
+    {
+      id: `m_analyze_${now}`,
+      type: "analyze",
+      title: "3 Çek Analiz Et",
+      target: 3,
+      current: 0,
+      reward: 50,
+      claimed: false,
+    },
+    {
+      id: `m_harvest_${now}`,
+      type: "harvest",
+      title: "5 Çiçek Hasat Et",
+      target: 5,
+      current: 0,
+      reward: 40,
+      claimed: false,
+    },
+    {
+      id: `m_spin_${now}`,
+      type: "spin",
+      title: "Çarkı 3 Kez Çevir",
+      target: 3,
+      current: 0,
+      reward: 30,
+      claimed: false,
+    },
+    {
+      id: `m_pulse_${now}`,
+      type: "pulse",
+      title: "Piyasa Nabzını Yokla",
+      target: 1,
+      current: 0,
+      reward: 20,
+      claimed: false,
+    },
+  ];
 }
 
 function makeBeeAgents(): BeeAgent[] {
@@ -334,6 +393,8 @@ interface UserContextValue {
   harvestAllFlowers: () => Promise<number>;
   boostFlower: (flowerId: string) => Promise<boolean>;
   checkDailySpins: () => Promise<void>;
+  checkDailyMissions: () => Promise<void>;
+  claimMissionReward: (missionId: string) => Promise<void>;
 
   // Pilot: checks & offers
   addCheck: (input: {
@@ -459,13 +520,68 @@ export function UserProvider({ children }: { children: ReactNode }) {
     return true;
   };
 
-  const checkDailySpins = async () => {
+  const checkDailySpins = useCallback(async () => {
     if (!user) return;
     const today = todayKey();
     if (user.lastSpinDate !== today) {
       await saveUser({ ...user, spinCount: user.spinCount + 3, lastSpinDate: today });
     }
+  }, [user]);
+
+  const checkDailyMissions = useCallback(async () => {
+    if (!user) return;
+    const today = todayKey();
+    if (user.lastMissionsDate !== today) {
+      await saveUser({
+        ...user,
+        missions: generateMissions(),
+        lastMissionsDate: today,
+      });
+    }
+  }, [user]);
+
+  const updateMissionProgress = (u: User, type: MissionType, amount: number = 1): User => {
+    const missions = (u.missions || []).map((m) => {
+      if (m.type === type && !m.claimed) {
+        return { ...m, current: Math.min(m.target, m.current + amount) };
+      }
+      return m;
+    });
+    return { ...u, missions };
   };
+
+  const claimMissionReward = useCallback(async (missionId: string) => {
+    if (!user || !user.missions) return;
+    const mIdx = user.missions.findIndex((m) => m.id === missionId);
+    if (mIdx < 0) return;
+
+    const mission = user.missions[mIdx];
+    if (mission.claimed || mission.current < mission.target) return;
+
+    const isBoosted = user.honeyBoosterUntil > Date.now();
+    const reward = isBoosted ? mission.reward * 2 : mission.reward;
+
+    const updatedMissions = [...user.missions];
+    updatedMissions[mIdx] = { ...mission, claimed: true };
+
+    const newPoints = user.honeyPoints + reward;
+    const updated: User = {
+      ...user,
+      honeyPoints: newPoints,
+      level: computeLevel(newPoints),
+      missions: updatedMissions,
+      activities: [
+        {
+          id: `act_${Date.now()}`,
+          type: "mission_claim",
+          message: `${mission.title} görevi tamamlandı! ${reward} bal kazanıldı.`,
+          time: Date.now(),
+        },
+        ...(user.activities || []),
+      ].slice(0, 10),
+    };
+    await saveUser(updated);
+  }, [user]);
 
   const spin = async (): Promise<{ pointsWon: number; prize: string } | null> => {
     if (!user || user.spinCount <= 0) return null;
@@ -499,6 +615,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const newSpinCount = user.spinCount - 1;
 
     let updated: User = { ...user, spinCount: newSpinCount, lastSpinDate: today };
+    updated = updateMissionProgress(updated, "spin");
 
     if (selected.bonus === "flower") {
       updated = { ...updated, flowerSeeds: (updated.flowerSeeds || 0) + 1 };
@@ -570,13 +687,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const newFlowers = (user.flowers || []).filter((f) => f.id !== flowerId);
     const newPoints = user.honeyPoints + honeyEarned;
 
-    await saveUser({
+    const updated: User = {
       ...user,
       flowers: newFlowers,
       honeyPoints: newPoints,
       level: computeLevel(newPoints),
       totalHarvested: (user.totalHarvested || 0) + 1,
-    });
+    };
+
+    await saveUser(updateMissionProgress(updated, "harvest"));
     return honeyEarned;
   };
 
@@ -602,13 +721,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const remainingFlowers = (user.flowers || []).filter((f) => !readyIds.includes(f.id));
     const newPoints = user.honeyPoints + totalEarned;
 
-    await saveUser({
+    const updated: User = {
       ...user,
       flowers: remainingFlowers,
       honeyPoints: newPoints,
       level: computeLevel(newPoints),
       totalHarvested: (user.totalHarvested || 0) + readyFlowers.length,
-    });
+    };
+
+    await saveUser(updateMissionProgress(updated, "harvest", readyFlowers.length));
 
     return totalEarned;
   };
@@ -691,7 +812,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         ...(user.activities || []),
       ].slice(0, 10),
     };
-    await saveUser(updated);
+    await saveUser(updateMissionProgress(updated, "analyze"));
     return id;
   };
 
@@ -1043,7 +1164,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       return b;
     });
 
-    await saveUser({ ...user, bees, lastPulseCheckDate: today });
+    await saveUser(updateMissionProgress({ ...user, bees, lastPulseCheckDate: today }, "pulse"));
     return true;
   };
 
@@ -1062,6 +1183,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
       harvestAllFlowers,
       boostFlower,
       checkDailySpins,
+      checkDailyMissions,
+      claimMissionReward,
       addCheck,
       linkInvoice,
       importSampleERP,
