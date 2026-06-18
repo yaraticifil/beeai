@@ -11,7 +11,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import * as Haptics from "expo-haptics";
+import { haptics } from "@/shared/utils/haptics";
 import Colors from "@/constants/colors";
 import { CONSUMABLE_ITEMS } from "@/constants/game";
 import { useUser } from "@/contexts/UserContext";
@@ -172,9 +172,7 @@ export default function ShopScreen() {
 
   const handleBuy = (item: ShopItem) => {
     if (!user || user.honeyPoints < item.cost) {
-      if (Platform.OS !== 'web') {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      }
+      haptics.error();
       return;
     }
 
@@ -207,9 +205,7 @@ export default function ShopScreen() {
               }
 
               await updateUser(updates);
-              if (Platform.OS !== 'web') {
-                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              }
+              haptics.success();
               Alert.alert("Tebrikler!", `${item.name} başarıyla satın alındı!`);
             }
           },
