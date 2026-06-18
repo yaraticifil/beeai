@@ -13,7 +13,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import { haptics } from "@/shared/utils/haptics";
+import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import { useUser, Flower } from "@/contexts/UserContext";
 import { HoneyBoosterBadge } from "@/components/HoneyBoosterBadge";
@@ -121,20 +121,24 @@ export default function GardenScreen() {
     if (!user) return;
     const hasSeeds = (user.flowerSeeds || 0) > 0;
     if (!hasSeeds && user.honeyPoints < 10) {
-      haptics.error();
+      if (Platform.OS !== 'web') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      }
       Alert.alert("Yetersiz Kaynak", "Çiçek dikmek için 10 bal puanı veya tohum gerekiyor.");
       return;
     }
     const success = await plantFlower();
-    if (success) {
-      haptics.light();
+    if (success && Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
   };
 
   const handleHarvest = async (id: string) => {
     const earned = await harvestFlower(id);
     if (earned > 0) {
-      haptics.success();
+      if (Platform.OS !== 'web') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
       showHarvestResult(earned);
     }
   };
@@ -142,7 +146,9 @@ export default function GardenScreen() {
   const handleHarvestAll = async () => {
     const earned = await harvestAllFlowers();
     if (earned > 0) {
-      haptics.success();
+      if (Platform.OS !== 'web') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
       showHarvestResult(earned);
     }
   };
@@ -153,8 +159,8 @@ export default function GardenScreen() {
       return;
     }
     const success = await boostFlower(id);
-    if (success) {
-      haptics.medium();
+    if (success && Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
   };
 
