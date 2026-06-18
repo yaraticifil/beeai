@@ -25,7 +25,7 @@ export default function PulseScreen() {
 
   const moodLabel = useMemo(() => {
     if (pulse.mood === "sert") return "Sert";
-    if (pulse.mood === "yumupeak") return "Yumuşak";
+    if (pulse.mood === "yumuşak") return "Yumuşak";
     return "Normal";
   }, [pulse.mood]);
 
@@ -58,7 +58,7 @@ export default function PulseScreen() {
                 <Text style={styles.title}>Günlük Endeks</Text>
                 <Text style={styles.date}>{pulse.date}</Text>
               </View>
-              <View style={[styles.moodPill, pulse.mood === "sert" ? styles.moodHard : pulse.mood === "yumupeak" ? styles.moodSoft : styles.moodNormal]}>
+              <View style={[styles.moodPill, pulse.mood === "sert" ? styles.moodHard : pulse.mood === "yumuşak" ? styles.moodSoft : styles.moodNormal]}>
                 <View style={styles.dot} />
                 <Text style={styles.moodText}>{moodLabel}</Text>
               </View>
@@ -88,7 +88,7 @@ export default function PulseScreen() {
                 <Text style={styles.weatherText}>
                   {pulse.mood === "sert"
                     ? "Bugün finansal piyasalarda likidite daralması gözleniyor. Teklifler daha seçici ve yüksek iskontolu gelebilir."
-                    : pulse.mood === "yumupeak"
+                    : pulse.mood === "yumuşak"
                     ? "Piyasada likidite bolluğu hakim. Arılar revize turlarında daha agresif ve rekabetçi teklifler yakalayabilir."
                     : "Piyasa koşulları standart dengesinde seyrediyor. Evrak kalitenize göre hızlı ve sağlıklı akış bekliyoruz."}
                 </Text>
@@ -131,14 +131,14 @@ export default function PulseScreen() {
             <DynamicItem
               icon="people"
               label="Partner İştahı"
-              value={pulse.mood === 'sert' ? 'Düşük' : pulse.mood === 'yumupeak' ? 'Yüksek' : 'Dengeli'}
+              value={pulse.mood === 'sert' ? 'Düşük' : pulse.mood === 'yumuşak' ? 'Yüksek' : 'Dengeli'}
               iconBgColor={Colors.goldLight}
               iconColor={Colors.gold}
             />
             <DynamicItem
               icon="flash"
               label="İşlem Hızı"
-              value={pulse.mood === 'yumupeak' ? 'Yüksek (12dk)' : 'Normal (15dk)'}
+              value={pulse.mood === 'yumuşak' ? 'Yüksek (12dk)' : 'Normal (15dk)'}
               iconBgColor="#e0e7ff"
               iconColor="#4f46e5"
             />

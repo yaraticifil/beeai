@@ -9,7 +9,6 @@ import Colors from "@/constants/colors";
 import { useUser } from "@/contexts/UserContext";
 import { GlassCard } from "@/components/GlassCard";
 import { TrendChart } from "@/components/TrendChart";
-import { MissionItem } from "@/components/MissionItem";
 import { HoneyBoosterBadge } from "@/components/HoneyBoosterBadge";
 import { haptics } from "@/shared/utils/haptics";
 import { formatCompactNumber } from "@/shared/utils/format";
@@ -64,14 +63,11 @@ function ActionItem({
 
 export default function PanelScreen() {
   const insets = useSafeAreaInsets();
-  const { user, logout, checkDailySpins, checkDailyMissions, getDailyPulse } = useUser();
+  const { user, logout, checkDailySpins, getDailyPulse } = useUser();
 
   useEffect(() => {
-    if (user) {
-      checkDailySpins();
-      checkDailyMissions();
-    }
-  }, [user, checkDailySpins, checkDailyMissions]);
+    if (user) checkDailySpins();
+  }, [user, checkDailySpins]);
 
   useEffect(() => {
     if (!user) router.replace("/");
@@ -107,13 +103,7 @@ export default function PanelScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={
-          pulse.mood === "sert"
-            ? ["#7f1d1d", "#450a0a", "#0f172a"]
-            : pulse.mood === "yumupeak"
-            ? ["#064e3b", "#022c22", "#0f172a"]
-            : [Colors.slate, "#1e293b", "#0f172a"]
-        }
+        colors={[Colors.slate, "#1e293b", "#0f172a"]}
         style={[styles.header, { paddingTop: topInset + 10 }]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -152,7 +142,7 @@ export default function PanelScreen() {
           <GlassCard style={styles.pulseCard} intensity={20}>
             <View style={styles.pulseHeader}>
               <View style={styles.pulseIndicator}>
-                <View style={[styles.pulseDot, { backgroundColor: pulse.mood === "sert" ? Colors.danger : pulse.mood === "yumupeak" ? Colors.primary : Colors.gold }]} />
+                <View style={[styles.pulseDot, { backgroundColor: pulse.mood === "sert" ? Colors.danger : pulse.mood === "yumuşak" ? Colors.primary : Colors.gold }]} />
                 <Text style={styles.pulseStatus}>{pulse.mood.toUpperCase()} PİYASA</Text>
               </View>
               <Text style={styles.pointsText}>{user.honeyPoints} 🍯</Text>
@@ -183,21 +173,12 @@ export default function PanelScreen() {
              <Text style={styles.tipText}>
                {pulse.mood === 'sert'
                  ? 'Piyasa sert, yüksek puanlı keşidecilere odaklanarak işlem hızınızı koruyun.'
-                 : pulse.mood === 'yumupeak'
+                 : pulse.mood === 'yumuşak'
                  ? 'Rekabetçi bir gün, arılarınızla revize turlarını mutlaka deneyin!'
                  : 'Dengeli bir gün. Çeklerinizi erkenden kovana bırakın, en iyi teklifi yakalayın.'}
              </Text>
           </GlassCard>
         </Animated.View>
-
-        <View style={styles.section}>
-           <Text style={styles.sectionTitle}>Günlük Görevler</Text>
-           {(user.missions || []).map((m, idx) => (
-             <Animated.View key={m.id} entering={FadeInDown.delay(350 + idx * 50).springify()}>
-               <MissionItem mission={m} />
-             </Animated.View>
-           ))}
-        </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Canlı Durum</Text>

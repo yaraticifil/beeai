@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import Svg, { Path, G, Text as SvgText } from "react-native-svg";
-import { haptics } from "@/shared/utils/haptics";
+import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import { useUser } from "@/contexts/UserContext";
 
@@ -49,13 +49,13 @@ export default function WheelScreen() {
     if (!user || isSpinning) return;
 
     if (user.spinCount <= 0) {
-      haptics.error();
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       return;
     }
 
     setIsSpinning(true);
     setShowResult(false);
-    haptics.medium();
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     const result = await spin();
 
@@ -72,16 +72,16 @@ export default function WheelScreen() {
       setIsSpinning(false);
       setLastResult(result);
       setShowResult(true);
-      haptics.success();
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     });
   };
 
   const handleBuyExtra = async () => {
     const success = await spendHoney(20);
     if (success) {
-      haptics.light();
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } else {
-      haptics.error();
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     }
   };
 

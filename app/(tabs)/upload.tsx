@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { Image } from "expo-image";
-import { haptics } from "@/shared/utils/haptics";
+import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import Colors from "@/constants/colors";
@@ -55,7 +55,9 @@ export default function UploadScreen() {
 
   const handleSubmit = async () => {
     if (loading) return;
-    haptics.success();
+    if (Platform.OS !== "web") {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
     setLoading(true);
 
     // Pilot: Simulate AI analysis
@@ -121,7 +123,7 @@ export default function UploadScreen() {
                 <Pressable
                   style={styles.removeImageBtn}
                   onPress={() => {
-                    haptics.light();
+                    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                     setImageUri(undefined);
                   }}
                 >
