@@ -191,7 +191,15 @@ export default function PanelScreen() {
         </Animated.View>
 
         <View style={styles.section}>
-           <Text style={styles.sectionTitle}>Günlük Görevler</Text>
+           <View style={styles.sectionHeaderRow}>
+             <Text style={styles.sectionTitle}>Günlük Görevler</Text>
+             {user.missions?.some(m => !m.claimed && m.current >= m.target) && (
+               <View style={styles.claimBadge}>
+                 <View style={styles.claimDot} />
+                 <Text style={styles.claimBadgeText}>ÖDÜL HAZIR</Text>
+               </View>
+             )}
+           </View>
            {(user.missions || []).map((m, idx) => (
              <Animated.View key={m.id} entering={FadeInDown.delay(350 + idx * 50).springify()}>
                <MissionItem mission={m} />
@@ -343,6 +351,10 @@ const styles = StyleSheet.create({
   scroll: { flex: 1, paddingHorizontal: 20, marginTop: 14 },
   section: { marginBottom: 24 },
   sectionTitle: { fontSize: 16, fontFamily: "Poppins_800ExtraBold", color: Colors.slate, marginBottom: 14 },
+  sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
+  claimBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: Colors.primaryLight, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, marginTop: -14 },
+  claimDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.primary },
+  claimBadgeText: { fontSize: 10, fontFamily: 'Poppins_700Bold', color: Colors.primary, letterSpacing: 0.5 },
 
   statGrid: { gap: 12 },
   statRow: { flexDirection: 'row', gap: 12 },
