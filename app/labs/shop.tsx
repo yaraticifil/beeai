@@ -85,7 +85,7 @@ const SHOP_ITEMS: ShopItem[] = [
     description: "Jackpot olasılığı 3x artırılmış özel çeviri",
     cost: 150,
     category: "ozel",
-    color: "#ea580c",
+    color: Colors.orange,
   },
 ];
 
@@ -202,7 +202,19 @@ export default function ShopScreen() {
                 updates.flowerBoosts = (user.flowerBoosts || 0) + 1;
               } else if (item.id === "double_honey") {
                 updates.honeyBoosterUntil = Date.now() + 30 * 60 * 1000;
+              } else if (item.id === "free_spin") {
+                updates.goldenSpinCount = (user.goldenSpinCount || 0) + 1;
               }
+
+              updates.activities = [
+                {
+                  id: `act_${Date.now()}_${Math.random().toString(36).slice(2, 5)}`,
+                  type: "shop_buy",
+                  message: `${item.name} satın alındı.`,
+                  time: Date.now(),
+                },
+                ...(user.activities || []),
+              ].slice(0, 10);
 
               await updateUser(updates);
               haptics.success();
