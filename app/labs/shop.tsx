@@ -118,9 +118,9 @@ function ShopCard({
     >
       <View style={[styles.shopCardIconBg, { backgroundColor: item.color + "18" }]}>
         <Text style={styles.shopCardEmoji}>{item.emoji}</Text>
-        {item.tag && (
-          <View style={[styles.tagBadge, { backgroundColor: item.color }]}>
-            <Text style={styles.tagText}>{item.tag}</Text>
+        {(item.tag || item.id === "free_spin") && (
+          <View style={[styles.tagBadge, { backgroundColor: item.id === "free_spin" ? Colors.orange : item.color }]}>
+            <Text style={styles.tagText}>{item.id === "free_spin" ? "ÖNE ÇIKAN" : item.tag}</Text>
           </View>
         )}
       </View>
@@ -198,6 +198,8 @@ export default function ShopScreen() {
                 updates.spinCount = (user.spinCount || 0) + 1;
               } else if (item.id === "triple_spin") {
                 updates.spinCount = (user.spinCount || 0) + 3;
+              } else if (item.id === "free_spin") {
+                updates.goldenSpinCount = (user.goldenSpinCount || 0) + 1;
               } else if (item.id === "flower_boost") {
                 updates.flowerBoosts = (user.flowerBoosts || 0) + 1;
               } else if (item.id === "double_honey") {

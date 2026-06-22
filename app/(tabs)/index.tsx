@@ -64,14 +64,15 @@ function ActionItem({
 
 export default function PanelScreen() {
   const insets = useSafeAreaInsets();
-  const { user, logout, checkDailySpins, checkDailyMissions, getDailyPulse } = useUser();
+  const { user, logout, checkDailySpins, checkDailyMissions, checkDailyLogin, getDailyPulse } = useUser();
 
   useEffect(() => {
     if (user) {
       checkDailySpins();
       checkDailyMissions();
+      checkDailyLogin();
     }
-  }, [user, checkDailySpins, checkDailyMissions]);
+  }, [user, checkDailySpins, checkDailyMissions, checkDailyLogin]);
 
   useEffect(() => {
     if (!user) router.replace("/");
@@ -285,7 +286,12 @@ export default function PanelScreen() {
                     </View>
                     <View style={styles.beeInfoRow}>
                       <Text style={styles.beeLevel}>Sv {b.level}</Text>
-                      <Text style={styles.beeStatus}>• Aktif</Text>
+                      <Text style={styles.beeBonus}>
+                        {b.role === "İzci" ? `+${(b.level - 1) * 10}% Hız` :
+                         b.role === "Aracı" ? `+${(b.level - 1) * 10}% Kazanç` :
+                         b.role === "Kâtip" ? "Otonom" :
+                         b.role === "Nabız" ? "Analist" : "Aktif"}
+                      </Text>
                     </View>
                   </GlassCard>
                 </Pressable>
@@ -399,5 +405,5 @@ const styles = StyleSheet.create({
   xpBarFill: { height: 4, backgroundColor: Colors.primary, borderRadius: 2 },
   beeInfoRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   beeLevel: { fontSize: 10, fontFamily: 'Poppins_600SemiBold', color: Colors.textMuted },
-  beeStatus: { fontSize: 10, fontFamily: 'Poppins_600SemiBold', color: Colors.primary },
+  beeBonus: { fontSize: 10, fontFamily: 'Poppins_700Bold', color: Colors.primary },
 });
