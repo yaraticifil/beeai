@@ -48,7 +48,8 @@ export default function WheelScreen() {
   const handleSpin = async () => {
     if (!user || isSpinning) return;
 
-    if (user.spinCount <= 0) {
+    const hasGolden = (user.goldenSpinCount || 0) > 0;
+    if (!hasGolden && user.spinCount <= 0) {
       haptics.error();
       return;
     }
@@ -96,13 +97,20 @@ export default function WheelScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={["#fef3c7", "#fffbeb", Colors.background]}
+        colors={user.goldenSpinCount > 0 ? ["#ffedd5", "#fff7ed", Colors.background] : ["#fef3c7", "#fffbeb", Colors.background]}
         style={[styles.topGradient, { paddingTop: topInset }]}
       >
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Şans Çarkı</Text>
-          <View style={styles.spinCountBadge}>
-            <Text style={styles.spinCountText}>{user.spinCount} hak</Text>
+          <View style={styles.badgeRow}>
+            {user.goldenSpinCount > 0 && (
+              <View style={[styles.spinCountBadge, { backgroundColor: Colors.orange }]}>
+                <Text style={styles.spinCountText}>{user.goldenSpinCount} Altın</Text>
+              </View>
+            )}
+            <View style={styles.spinCountBadge}>
+              <Text style={styles.spinCountText}>{user.spinCount} Hak</Text>
+            </View>
           </View>
         </View>
       </LinearGradient>
@@ -202,14 +210,22 @@ export default function WheelScreen() {
           style={({ pressed }) => [
             styles.spinBtn,
             pressed && styles.spinBtnPressed,
-            (isSpinning || user.spinCount <= 0) && styles.spinBtnDisabled,
+            (isSpinning || (user.spinCount <= 0 && user.goldenSpinCount <= 0)) && styles.spinBtnDisabled,
           ]}
           onPress={handleSpin}
-          disabled={isSpinning || user.spinCount <= 0}
+          disabled={isSpinning || (user.spinCount <= 0 && user.goldenSpinCount <= 0)}
         >
+          {user.goldenSpinCount > 0 && (
+            <View style={styles.goldenSpinLabel}>
+               <Ionicons name="sparkles" size={12} color={Colors.white} />
+               <Text style={styles.goldenSpinLabelText}>ALTIN ÇEVİRİ!</Text>
+            </View>
+          )}
           <LinearGradient
             colors={
-              user.spinCount > 0
+              user.goldenSpinCount > 0
+                ? [Colors.orange, Colors.orangeDark]
+                : user.spinCount > 0
                 ? [Colors.gold, Colors.goldDark]
                 : ["#d1d5db", "#9ca3af"]
             }
@@ -292,6 +308,10 @@ const styles = StyleSheet.create({
     fontFamily: "Poppins_700Bold",
     color: Colors.text,
   },
+  badgeRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
   spinCountBadge: {
     backgroundColor: Colors.gold,
     borderRadius: 12,
@@ -299,9 +319,10 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   spinCountText: {
-    fontSize: 13,
+    fontSize: 11,
     fontFamily: "Poppins_700Bold",
     color: Colors.white,
+    textTransform: 'uppercase',
   },
   scrollContent: {
     paddingHorizontal: 20,
@@ -435,6 +456,26 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 12,
     elevation: 6,
+    position: 'relative',
+  },
+  goldenSpinLabel: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    paddingVertical: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    zIndex: 5,
+  },
+  goldenSpinLabelText: {
+    fontSize: 9,
+    fontFamily: 'Poppins_800ExtraBold',
+    color: Colors.white,
+    letterSpacing: 1,
   },
   spinBtnPressed: {
     opacity: 0.9,
