@@ -48,7 +48,8 @@ export default function WheelScreen() {
   const handleSpin = async () => {
     if (!user || isSpinning) return;
 
-    if (user.spinCount <= 0) {
+    const hasGolden = (user.goldenSpinCount || 0) > 0;
+    if (!hasGolden && user.spinCount <= 0) {
       haptics.error();
       return;
     }
@@ -101,8 +102,15 @@ export default function WheelScreen() {
       >
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Şans Çarkı</Text>
-          <View style={styles.spinCountBadge}>
-            <Text style={styles.spinCountText}>{user.spinCount} hak</Text>
+          <View style={styles.spinBadges}>
+            {user.goldenSpinCount > 0 && (
+              <View style={[styles.spinCountBadge, { backgroundColor: Colors.orange }]}>
+                <Text style={styles.spinCountText}>{user.goldenSpinCount} Altın</Text>
+              </View>
+            )}
+            <View style={styles.spinCountBadge}>
+              <Text style={styles.spinCountText}>{user.spinCount} Normal</Text>
+            </View>
           </View>
         </View>
       </LinearGradient>
@@ -202,14 +210,16 @@ export default function WheelScreen() {
           style={({ pressed }) => [
             styles.spinBtn,
             pressed && styles.spinBtnPressed,
-            (isSpinning || user.spinCount <= 0) && styles.spinBtnDisabled,
+            (isSpinning || (user.spinCount <= 0 && user.goldenSpinCount <= 0)) && styles.spinBtnDisabled,
           ]}
           onPress={handleSpin}
-          disabled={isSpinning || user.spinCount <= 0}
+          disabled={isSpinning || (user.spinCount <= 0 && user.goldenSpinCount <= 0)}
         >
           <LinearGradient
             colors={
-              user.spinCount > 0
+              user.goldenSpinCount > 0
+                ? [Colors.orange, Colors.orangeDark]
+                : user.spinCount > 0
                 ? [Colors.gold, Colors.goldDark]
                 : ["#d1d5db", "#9ca3af"]
             }
@@ -223,7 +233,7 @@ export default function WheelScreen() {
               color="#fff"
             />
             <Text style={styles.spinBtnText}>
-              {isSpinning ? "Çevriliyor..." : "Çevir!"}
+              {isSpinning ? "Çevriliyor..." : user.goldenSpinCount > 0 ? "Altın Çeviri!" : "Çevir!"}
             </Text>
           </LinearGradient>
         </Pressable>
@@ -292,6 +302,10 @@ const styles = StyleSheet.create({
     fontFamily: "Poppins_700Bold",
     color: Colors.text,
   },
+  spinBadges: {
+    flexDirection: "row",
+    gap: 8,
+  },
   spinCountBadge: {
     backgroundColor: Colors.gold,
     borderRadius: 12,
@@ -299,7 +313,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   spinCountText: {
-    fontSize: 13,
+    fontSize: 11,
     fontFamily: "Poppins_700Bold",
     color: Colors.white,
   },
