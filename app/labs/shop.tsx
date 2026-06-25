@@ -194,14 +194,16 @@ export default function ShopScreen() {
                 updates.purchasedItems = [...user.purchasedItems, item.id];
               }
 
-              if (item.id === "extra_spin") {
+              if (item.id === CONSUMABLE_ITEMS.extra_spin) {
                 updates.spinCount = (user.spinCount || 0) + 1;
-              } else if (item.id === "triple_spin") {
+              } else if (item.id === CONSUMABLE_ITEMS.triple_spin) {
                 updates.spinCount = (user.spinCount || 0) + 3;
-              } else if (item.id === "flower_boost") {
+              } else if (item.id === CONSUMABLE_ITEMS.flower_boost) {
                 updates.flowerBoosts = (user.flowerBoosts || 0) + 1;
               } else if (item.id === "double_honey") {
                 updates.honeyBoosterUntil = Date.now() + 30 * 60 * 1000;
+              } else if (item.id === CONSUMABLE_ITEMS.free_spin) {
+                updates.goldenSpinCount = (user.goldenSpinCount || 0) + 1;
               }
 
               await updateUser(updates);
