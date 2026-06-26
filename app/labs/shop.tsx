@@ -198,6 +198,8 @@ export default function ShopScreen() {
                 updates.spinCount = (user.spinCount || 0) + 1;
               } else if (item.id === "triple_spin") {
                 updates.spinCount = (user.spinCount || 0) + 3;
+              } else if (item.id === "free_spin") {
+                updates.goldenSpinCount = (user.goldenSpinCount || 0) + 1;
               } else if (item.id === "flower_boost") {
                 updates.flowerBoosts = (user.flowerBoosts || 0) + 1;
               } else if (item.id === "double_honey") {
