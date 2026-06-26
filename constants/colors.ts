@@ -18,6 +18,8 @@ export default {
   textSecondary: "#475569",
   textMuted: "#94a3b8",
   danger: "#ef4444",
+  orange: "#ea580c",
+  orangeDark: "#c2410c",
   white: "#ffffff",
   glass: "rgba(255, 255, 255, 0.7)",
   glassBorder: "rgba(255, 255, 255, 0.4)",
