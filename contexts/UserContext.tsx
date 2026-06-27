@@ -140,6 +140,7 @@ export interface User {
   level: number;
 
   spinCount: number;
+  goldenSpinCount: number;
   lastSpinDate: string;
   lastPulseCheckDate?: string;
 
@@ -180,6 +181,7 @@ const DEFAULT_USER: Partial<User> = {
   honeyPoints: 150,
   level: 1,
   spinCount: 3,
+  goldenSpinCount: 0,
   lastSpinDate: "",
   lastPulseCheckDate: "",
   flowers: [],
@@ -227,6 +229,40 @@ function hashStringToInt(s: string): number {
 
 function computeLevel(points: number): number {
   return Math.floor(points / 100) + 1;
+}
+
+function applyPointsGainInternal(user: User, amount: number): { updatedUser: User; pointsGained: number } {
+  const isBoosted = user.honeyBoosterUntil > Date.now();
+  const gain = isBoosted ? amount * 2 : amount;
+  let newPoints = user.honeyPoints + gain;
+  let currentLevel = user.level;
+  const newLevel = computeLevel(newPoints);
+
+  let updatedUser = { ...user, honeyPoints: newPoints, level: newLevel };
+
+  // Level up rewards
+  if (newLevel > currentLevel) {
+    let levelsGained = newLevel - currentLevel;
+    updatedUser.goldenSpinCount = (updatedUser.goldenSpinCount || 0) + levelsGained;
+
+    // Add 50 honey for each level up
+    const levelUpBonus = levelsGained * 50;
+    updatedUser.honeyPoints += levelUpBonus;
+    updatedUser.level = computeLevel(updatedUser.honeyPoints);
+
+    // Activity log for level up
+    updatedUser.activities = [
+      {
+        id: `act_lvl_${Date.now()}`,
+        type: "level_up",
+        message: `Tebrikler! Seviye ${newLevel}'e ulaştınız. +${levelUpBonus} Bal ve +${levelsGained} Altın Çevirme kazandınız!`,
+        time: Date.now(),
+      },
+      ...(updatedUser.activities || []),
+    ].slice(0, 10);
+  }
+
+  return { updatedUser, pointsGained: gain };
 }
 
 function makeBeeAgents(): BeeAgent[] {
@@ -408,6 +444,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
           coupons: parsed.coupons || [],
           flowerSeeds: parsed.flowerSeeds || 0,
           flowerBoosts: parsed.flowerBoosts || 0,
+          goldenSpinCount: parsed.goldenSpinCount || 0,
           honeyBoosterUntil: parsed.honeyBoosterUntil || ((parsed as any).doubleNextHoney ? Date.now() + 600000 : 0),
           missions: parsed.missions || [],
           lastMissionsDate: parsed.lastMissionsDate || "",
@@ -440,6 +477,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       coupons: [],
       flowerSeeds: 1,
       flowerBoosts: 0,
+      goldenSpinCount: 0,
       honeyBoosterUntil: 0,
       settings: { pulseMode: "weather" },
       missions: [],
@@ -463,17 +501,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   const addHoney = async (amount: number) => {
     if (!user) return;
-
-    const isBoosted = user.honeyBoosterUntil > Date.now();
-    const gain = isBoosted ? amount * 2 : amount;
-    const newPoints = user.honeyPoints + gain;
-
-    const updated: User = {
-      ...user,
-      honeyPoints: newPoints,
-      level: computeLevel(newPoints),
-    };
-    await saveUser(updated);
+    const { updatedUser } = applyPointsGainInternal(user, amount);
+    await saveUser(updatedUser);
   };
 
   const spendHoney = async (amount: number): Promise<boolean> => {
@@ -553,27 +582,21 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const updatedMissions = [...user.missions];
     updatedMissions[mIdx] = { ...mission, claimed: true };
 
-    const isBoosted = user.honeyBoosterUntil > Date.now();
-    const gain = isBoosted ? mission.reward * 2 : mission.reward;
-    const newPoints = user.honeyPoints + gain;
-
-    await saveUser({
-      ...user,
-      missions: updatedMissions,
-      honeyPoints: newPoints,
-      level: computeLevel(newPoints),
-    });
+    const { updatedUser } = applyPointsGainInternal({ ...user, missions: updatedMissions }, mission.reward);
+    await saveUser(updatedUser);
   };
 
   const spin = async (): Promise<{ pointsWon: number; prize: string } | null> => {
-    if (!user || user.spinCount <= 0) return null;
+    if (!user || (user.spinCount <= 0 && user.goldenSpinCount <= 0)) return null;
+
+    const useGolden = (user.goldenSpinCount || 0) > 0;
 
     const prizes: SpinPrize[] = [
       { prize: "10-50 Bal", min: 10, max: 50, weight: 40 },
       { prize: "Çiçek Tohumu", min: 0, max: 0, weight: 20, bonus: "flower" },
       { prize: "Kupon %5", min: 0, max: 0, weight: 15, bonus: "coupon" },
       { prize: "2x Bal", min: 0, max: 0, weight: 15, bonus: "double" },
-      { prize: "BÜYÜK İKRAMİYE", min: 200, max: 500, weight: 5 },
+      { prize: "BÜYÜK İKRAMİYE", min: 200, max: 500, weight: useGolden ? 15 : 5 },
       { prize: "5-25 Bal", min: 5, max: 25, weight: 5 },
     ];
 
@@ -594,9 +617,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
 
     const today = todayKey();
-    const newSpinCount = user.spinCount - 1;
 
-    let updated: User = { ...user, spinCount: newSpinCount, lastSpinDate: today };
+    let updated: User = { ...user, lastSpinDate: today };
+    if (useGolden) {
+      updated.goldenSpinCount = Math.max(0, (user.goldenSpinCount || 0) - 1);
+    } else {
+      updated.spinCount = Math.max(0, user.spinCount - 1);
+    }
 
     const updatedMissions = (updated.missions || []).map(m => {
       if (m.type === "spin") return { ...m, current: Math.min(m.target, m.current + 1) };
@@ -619,10 +646,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
     } else if (selected.bonus === "double") {
       updated = { ...updated, honeyBoosterUntil: Date.now() + 15 * 60 * 1000 };
     } else if (pointsWon > 0) {
-      const isBoosted = updated.honeyBoosterUntil > Date.now();
-      const gain = isBoosted ? pointsWon * 2 : pointsWon;
-      const newPoints = updated.honeyPoints + gain;
-      updated = { ...updated, honeyPoints: newPoints, level: computeLevel(newPoints) };
+      const { updatedUser: afterPoints } = applyPointsGainInternal(updated, pointsWon);
+      updated = afterPoints;
     }
 
     await saveUser(updated);
@@ -665,29 +690,23 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const isReady = elapsed >= FLOWER_GROWTH_TIME_MS;
     if (!isReady) return 0;
 
-    const isBoosted = user.honeyBoosterUntil > Date.now();
-    let honeyEarned = Math.floor(Math.random() * 16) + 15;
-    if (isBoosted) {
-      honeyEarned *= 2;
-    }
+    const honeyEarned = Math.floor(Math.random() * 16) + 15;
 
     const newFlowers = (user.flowers || []).filter((f) => f.id !== flowerId);
-    const newPoints = user.honeyPoints + honeyEarned;
-
     const updatedMissions = (user.missions || []).map(m => {
       if (m.type === "harvest") return { ...m, current: Math.min(m.target, m.current + 1) };
       return m;
     });
 
-    await saveUser({
+    const { updatedUser, pointsGained } = applyPointsGainInternal({
       ...user,
       flowers: newFlowers,
-      honeyPoints: newPoints,
-      level: computeLevel(newPoints),
       totalHarvested: (user.totalHarvested || 0) + 1,
       missions: updatedMissions,
-    });
-    return honeyEarned;
+    }, honeyEarned);
+
+    await saveUser(updatedUser);
+    return pointsGained;
   };
 
   const harvestAllFlowers = async (): Promise<number> => {
@@ -698,35 +717,28 @@ export function UserProvider({ children }: { children: ReactNode }) {
     );
     if (readyFlowers.length === 0) return 0;
 
-    const isBoosted = user.honeyBoosterUntil > Date.now();
-    let totalEarned = 0;
-    readyFlowers.forEach((f) => {
-      let earned = Math.floor(Math.random() * 16) + 15;
-      if (isBoosted) {
-        earned *= 2;
-      }
-      totalEarned += earned;
+    let rawTotal = 0;
+    readyFlowers.forEach(() => {
+      rawTotal += Math.floor(Math.random() * 16) + 15;
     });
 
     const readyIds = readyFlowers.map((f) => f.id);
     const remainingFlowers = (user.flowers || []).filter((f) => !readyIds.includes(f.id));
-    const newPoints = user.honeyPoints + totalEarned;
 
     const updatedMissions = (user.missions || []).map(m => {
       if (m.type === "harvest") return { ...m, current: Math.min(m.target, m.current + readyFlowers.length) };
       return m;
     });
 
-    await saveUser({
+    const { updatedUser, pointsGained } = applyPointsGainInternal({
       ...user,
       flowers: remainingFlowers,
-      honeyPoints: newPoints,
-      level: computeLevel(newPoints),
       totalHarvested: (user.totalHarvested || 0) + readyFlowers.length,
       missions: updatedMissions,
-    });
+    }, rawTotal);
 
-    return totalEarned;
+    await saveUser(updatedUser);
+    return pointsGained;
   };
 
   const boostFlower = async (flowerId: string): Promise<boolean> => {
