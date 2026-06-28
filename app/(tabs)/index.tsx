@@ -84,6 +84,8 @@ export default function PanelScreen() {
   const activeReqs = (user.offerRequests || []).filter((r) => r.status === "collecting").length;
   const offersReady = (user.offerRequests || []).filter((r) => r.status === "ready").length;
 
+  const hasClaimableMission = (user.missions || []).some((m) => !m.claimed && m.current >= m.target);
+
   const totalAmount = (user.checks || []).reduce((sum, c) => sum + (c.amount || 0), 0);
 
   const topInset = Platform.OS === "web" ? 60 : insets.top;
@@ -120,6 +122,11 @@ export default function PanelScreen() {
       >
         <View style={styles.headerRow}>
           <Animated.View entering={FadeInUp.springify()} style={styles.headerLeft}>
+            {hasClaimableMission && (
+              <View style={styles.rewardBadge}>
+                <Text style={styles.rewardBadgeText}>ÖDÜL HAZIR</Text>
+              </View>
+            )}
             <View style={styles.avatarGlow}>
               <View style={styles.avatarCircle}>
                 <Text style={styles.avatarText}>🐝</Text>
@@ -307,6 +314,24 @@ const styles = StyleSheet.create({
     padding: 3,
     borderRadius: 25,
     backgroundColor: 'rgba(251, 191, 36, 0.3)',
+    position: 'relative',
+  },
+  rewardBadge: {
+    position: "absolute",
+    top: -12,
+    left: 4,
+    backgroundColor: Colors.danger,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    zIndex: 10,
+    borderWidth: 1.5,
+    borderColor: Colors.white,
+  },
+  rewardBadgeText: {
+    color: Colors.white,
+    fontSize: 7,
+    fontFamily: "Poppins_800ExtraBold",
   },
   avatarCircle: {
     width: 46,
