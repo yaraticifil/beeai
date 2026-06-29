@@ -159,7 +159,7 @@ function ShopCard({
 
 export default function ShopScreen() {
   const insets = useSafeAreaInsets();
-  const { user, spendHoney, updateUser } = useUser();
+  const { user, spendHoney, updateUser, addActivity } = useUser();
   const [activeCategory, setActiveCategory] = useState("all");
 
   const topInset = Platform.OS === "web" ? 67 : insets.top;
@@ -202,9 +202,12 @@ export default function ShopScreen() {
                 updates.flowerBoosts = (user.flowerBoosts || 0) + 1;
               } else if (item.id === "double_honey") {
                 updates.honeyBoosterUntil = Date.now() + 30 * 60 * 1000;
+              } else if (item.id === "free_spin") {
+                updates.goldenSpinCount = (user.goldenSpinCount || 0) + 1;
               }
 
               await updateUser(updates);
+              await addActivity("shop_buy", `${item.name} satın alındı.`);
               haptics.success();
               Alert.alert("Tebrikler!", `${item.name} başarıyla satın alındı!`);
             }
