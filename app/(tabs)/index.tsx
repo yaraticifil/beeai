@@ -224,15 +224,30 @@ export default function PanelScreen() {
           <Text style={styles.sectionTitle}>Son Hareketler</Text>
           {user.activities && user.activities.length > 0 ? (
             <GlassCard style={styles.activityCard}>
-              {user.activities.slice(0, 3).map((act, idx) => (
-                <View key={act.id} style={[styles.activityItem, idx === 0 && { borderTopWidth: 0 }]}>
-                   <View style={styles.activityDot} />
-                   <View style={{ flex: 1 }}>
-                     <Text style={styles.activityMsg}>{act.message}</Text>
-                     <Text style={styles.activityTime}>{new Date(act.time).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</Text>
-                   </View>
-                </View>
-              ))}
+              {user.activities.slice(0, 3).map((act, idx) => {
+                const iconMap: Record<string, keyof typeof Ionicons.glyphMap> = {
+                  level_up: "trending-up",
+                  check_add: "document-text",
+                  offer_start: "hourglass",
+                  revision: "repeat",
+                  pick_offer: "checkmark-circle",
+                  shop_buy: "cart",
+                  harvest: "leaf",
+                };
+                const iconName = iconMap[act.type] || "notifications";
+
+                return (
+                  <View key={act.id} style={[styles.activityItem, idx === 0 && { borderTopWidth: 0 }]}>
+                    <View style={styles.activityIconWrap}>
+                      <Ionicons name={iconName} size={14} color={Colors.gold} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.activityMsg}>{act.message}</Text>
+                      <Text style={styles.activityTime}>{new Date(act.time).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</Text>
+                    </View>
+                  </View>
+                );
+              })}
             </GlassCard>
           ) : (
             <GlassCard style={styles.emptyActivityCard}>
@@ -378,7 +393,7 @@ const styles = StyleSheet.create({
 
   activityCard: { padding: 0, overflow: 'hidden' },
   activityItem: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 16, borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.05)' },
-  activityDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.gold },
+  activityIconWrap: { width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(251, 191, 36, 0.1)', alignItems: 'center', justifyContent: 'center' },
   activityMsg: { fontSize: 12, fontFamily: "Poppins_600SemiBold", color: Colors.slate },
   activityTime: { fontSize: 10, fontFamily: "Poppins_400Regular", color: Colors.textMuted, marginTop: 2 },
 

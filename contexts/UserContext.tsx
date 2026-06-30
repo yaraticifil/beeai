@@ -19,7 +19,7 @@ export interface Flower {
   ready: boolean;
 }
 
-export type MissionType = "analyze" | "harvest" | "spin" | "pulse";
+export type MissionType = "analyze" | "harvest" | "spin" | "pulse" | "offer" | "revision" | "plant";
 
 export interface Mission {
   id: string;
@@ -552,7 +552,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const today = todayKey();
     if (user.lastMissionsDate === today && user.missions.length > 0) return;
 
-    const newMissions: Mission[] = [
+    const pool: Mission[] = [
       {
         id: "m_analyze",
         type: "analyze",
@@ -593,7 +593,41 @@ export function UserProvider({ children }: { children: ReactNode }) {
         reward: 10,
         claimed: false,
       },
+      {
+        id: "m_offer",
+        type: "offer",
+        title: "Teklif Avcısı",
+        description: "En az 1 teklif kabul et.",
+        target: 1,
+        current: 0,
+        reward: 40,
+        claimed: false,
+      },
+      {
+        id: "m_revision",
+        type: "revision",
+        title: "Müzakereci",
+        description: "Teklifler için revize iste.",
+        target: 1,
+        current: 0,
+        reward: 20,
+        claimed: false,
+      },
+      {
+        id: "m_plant",
+        type: "plant",
+        title: "Doğa Dostu",
+        description: "Bahçeye 2 çiçek dik.",
+        target: 2,
+        current: 0,
+        reward: 15,
+        claimed: false,
+      },
     ];
+
+    // Shuffle and pick 4
+    const shuffled = [...pool].sort(() => 0.5 - Math.random());
+    const newMissions = shuffled.slice(0, 4);
 
     await saveUser({ ...user, missions: newMissions, lastMissionsDate: today });
   };
@@ -703,6 +737,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
       updated = { ...updated, honeyPoints: newPoints, level: computeLevel(newPoints) };
     }
 
+    const updatedMissions = (updated.missions || []).map(m => {
+      if (m.type === "plant") return { ...m, current: Math.min(m.target, m.current + 1) };
+      return m;
+    });
+    updated = { ...updated, missions: updatedMissions };
+
     await saveUser(updated);
     return true;
   };
@@ -732,7 +772,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
       missions: updatedMissions,
     }, honeyEarnedRaw);
 
-    await saveUser(updatedUser);
+    const updatedWithActivity = addActivityInternal(updatedUser, "harvest", `${pointsGained} Bal toplandı.`);
+
+    await saveUser(updatedWithActivity);
     return pointsGained;
   };
 
@@ -764,7 +806,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
       missions: updatedMissions,
     }, totalEarnedRaw);
 
-    await saveUser(updatedUser);
+    const updatedWithActivity = addActivityInternal(updatedUser, "harvest", `${readyFlowers.length} çiçekten ${pointsGained} Bal toplandı.`);
+
+    await saveUser(updatedWithActivity);
     return pointsGained;
   };
 
@@ -1064,10 +1108,16 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const updatedRequests = [...user.offerRequests];
     updatedRequests[idx] = updatedReq;
 
+    const updatedMissions = (user.missions || []).map(m => {
+      if (m.type === "revision") return { ...m, current: Math.min(m.target, m.current + 1) };
+      return m;
+    });
+
     const updatedWithActivity = addActivityInternal({
       ...user,
       bees: updatedBees,
       offerRequests: updatedRequests,
+      missions: updatedMissions,
     }, "revision", "Teklifler için revize talebi iletildi.");
 
     await saveUser(updatedWithActivity);
@@ -1121,12 +1171,18 @@ export function UserProvider({ children }: { children: ReactNode }) {
       return b;
     });
 
+    const updatedMissions = (user.missions || []).map(m => {
+      if (m.type === "offer") return { ...m, current: Math.min(m.target, m.current + 1) };
+      return m;
+    });
+
     const updatedWithActivity = addActivityInternal({
       ...user,
       bees: updatedBees,
       checks: updatedChecks,
       offerRequests: updatedRequests,
       coupons: updatedCoupons,
+      missions: updatedMissions,
       completedTransactions: [completed, ...(user.completedTransactions || [])],
     }, "pick_offer", `${offer.partnerCode} teklifi seçildi, işlem tamamlanıyor.`);
 
