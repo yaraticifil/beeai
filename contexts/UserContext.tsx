@@ -17,9 +17,10 @@ export interface Flower {
   id: string;
   plantedAt: number;
   ready: boolean;
+  isGolden?: boolean;
 }
 
-export type MissionType = "analyze" | "harvest" | "spin" | "pulse";
+export type MissionType = "analyze" | "harvest" | "spin" | "pulse" | "offer" | "revision";
 
 export interface Mission {
   id: string;
@@ -201,6 +202,18 @@ const DEFAULT_USER: Partial<User> = {
 };
 
 const STORAGE_KEY = "@beeai_user";
+
+const MISSION_POOL: Omit<Mission, "current" | "claimed">[] = [
+  { id: "m_analyze_1", type: "analyze", title: "Evrak Uzmanı", description: "3 çek analizini tamamla.", target: 3, reward: 30 },
+  { id: "m_analyze_2", type: "analyze", title: "Hızlı Kayıt", description: "1 çek analizini tamamla.", target: 1, reward: 10 },
+  { id: "m_harvest_1", type: "harvest", title: "Hasat Zamanı", description: "Bahçeden 5 çiçek topla.", target: 5, reward: 25 },
+  { id: "m_harvest_2", type: "harvest", title: "Bahçıvan Arı", description: "Bahçeden 10 çiçek topla.", target: 10, reward: 50 },
+  { id: "m_spin_1", type: "spin", title: "Şanslı Gün", description: "Çarkı 2 kez çevir.", target: 2, reward: 15 },
+  { id: "m_spin_2", type: "spin", title: "Çark Tutkusu", description: "Çarkı 5 kez çevir.", target: 5, reward: 40 },
+  { id: "m_pulse_1", type: "pulse", title: "Piyasa Takibi", description: "Piyasa nabzını kontrol et.", target: 1, reward: 10 },
+  { id: "m_offer_1", type: "offer", title: "Teklif Avcısı", description: "2 teklifi kabul et.", target: 2, reward: 40 },
+  { id: "m_revision_1", type: "revision", title: "Sıkı Pazarlık", description: "1 revize talebinde bulun.", target: 1, reward: 20 },
+];
 
 /* =========================
    Helpers
@@ -552,50 +565,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const today = todayKey();
     if (user.lastMissionsDate === today && user.missions.length > 0) return;
 
-    const newMissions: Mission[] = [
-      {
-        id: "m_analyze",
-        type: "analyze",
-        title: "Evrak Uzmanı",
-        description: "3 çek analizini tamamla.",
-        target: 3,
-        current: 0,
-        reward: 30,
-        claimed: false,
-      },
-      {
-        id: "m_harvest",
-        type: "harvest",
-        title: "Hasat Zamanı",
-        description: "Bahçeden 5 çiçek topla.",
-        target: 5,
-        current: 0,
-        reward: 25,
-        claimed: false,
-      },
-      {
-        id: "m_spin",
-        type: "spin",
-        title: "Şanslı Gün",
-        description: "Çarkı 2 kez çevir.",
-        target: 2,
-        current: 0,
-        reward: 15,
-        claimed: false,
-      },
-      {
-        id: "m_pulse",
-        type: "pulse",
-        title: "Piyasa Takibi",
-        description: "Piyasa nabzını kontrol et.",
-        target: 1,
-        current: 0,
-        reward: 10,
-        claimed: false,
-      },
-    ];
+    // Pick 4 random missions from pool
+    const shuffled = [...MISSION_POOL].sort(() => 0.5 - Math.random());
+    const selected = shuffled.slice(0, 4).map((m) => ({
+      ...m,
+      current: 0,
+      claimed: false,
+    })) as Mission[];
 
-    await saveUser({ ...user, missions: newMissions, lastMissionsDate: today });
+    await saveUser({ ...user, missions: selected, lastMissionsDate: today });
   };
 
   const claimMissionReward = async (missionId: string) => {
@@ -687,10 +665,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const useSeed = (user.flowerSeeds || 0) > 0;
     if (!useSeed && user.honeyPoints < 10) return false;
 
+    const isGolden = Math.random() < 0.15;
     const newFlower: Flower = {
       id: `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
       plantedAt: Date.now(),
       ready: false,
+      isGolden,
     };
 
     const newFlowers = [...(user.flowers || []), newFlower];
@@ -717,7 +697,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const isReady = elapsed >= FLOWER_GROWTH_TIME_MS;
     if (!isReady) return 0;
 
-    const honeyEarnedRaw = Math.floor(Math.random() * 16) + 15;
+    let honeyEarnedRaw = Math.floor(Math.random() * 16) + 15;
+    if (flower.isGolden) honeyEarnedRaw *= 2;
 
     const newFlowers = (user.flowers || []).filter((f) => f.id !== flowerId);
     const updatedMissions = (user.missions || []).map(m => {
@@ -746,7 +727,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
     let totalEarnedRaw = 0;
     readyFlowers.forEach((f) => {
-      totalEarnedRaw += Math.floor(Math.random() * 16) + 15;
+      let earned = Math.floor(Math.random() * 16) + 15;
+      if (f.isGolden) earned *= 2;
+      totalEarnedRaw += earned;
     });
 
     const readyIds = readyFlowers.map((f) => f.id);
@@ -837,14 +820,22 @@ export function UserProvider({ children }: { children: ReactNode }) {
       return m;
     });
 
-    const updatedWithActivity = addActivityInternal({
+    const clerk = bees.find(b => b.role === "Kâtip");
+    const bonusHoney = clerk ? 5 + (clerk.level - 1) * 2 : 0;
+
+    const { updatedUser: updatedWithPoints } = applyPointsGainInternal({
       ...user,
       bees,
       checks: [check, ...(user.checks || [])],
       missions: updatedMissions,
-    }, "check_add", `${check.issuerName} firmasına ait çek eklendi.`);
+    }, bonusHoney);
 
-    const updated: User = updatedWithActivity;
+    const updated: User = addActivityInternal(
+      updatedWithPoints,
+      "check_add",
+      `${check.issuerName} firmasına ait çek eklendi.${bonusHoney > 0 ? ` (Kâtip Bonusu: ${bonusHoney} 🍯)` : ""}`
+    );
+
     await saveUser(updated);
     return id;
   };
@@ -1064,10 +1055,16 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const updatedRequests = [...user.offerRequests];
     updatedRequests[idx] = updatedReq;
 
+    const updatedMissions = (user.missions || []).map(m => {
+      if (m.type === "revision") return { ...m, current: Math.min(m.target, m.current + 1) };
+      return m;
+    });
+
     const updatedWithActivity = addActivityInternal({
       ...user,
       bees: updatedBees,
       offerRequests: updatedRequests,
+      missions: updatedMissions,
     }, "revision", "Teklifler için revize talebi iletildi.");
 
     await saveUser(updatedWithActivity);
@@ -1111,6 +1108,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const updatedRequests = (user.offerRequests || []).filter((r) => r.checkId !== checkId);
     const updatedChecks = (user.checks || []).filter((c) => c.id !== checkId);
 
+    const updatedMissions = (user.missions || []).map(m => {
+      if (m.type === "offer") return { ...m, current: Math.min(m.target, m.current + 1) };
+      return m;
+    });
+
     const updatedBees = (user.bees || []).map(b => {
       if (b.role === "Aracı" || b.role === "İzci") {
         let newXp = b.xp + XP_REWARDS.OFFER_PICKED;
@@ -1127,6 +1129,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       checks: updatedChecks,
       offerRequests: updatedRequests,
       coupons: updatedCoupons,
+      missions: updatedMissions,
       completedTransactions: [completed, ...(user.completedTransactions || [])],
     }, "pick_offer", `${offer.partnerCode} teklifi seçildi, işlem tamamlanıyor.`);
 
@@ -1182,7 +1185,23 @@ export function UserProvider({ children }: { children: ReactNode }) {
       return m;
     });
 
-    await saveUser({ ...user, bees, lastPulseCheckDate: today, missions: updatedMissions });
+    const pulseBee = bees.find(b => b.role === "Nabız");
+    const bonusHoney = pulseBee ? 10 + (pulseBee.level - 1) * 5 : 0;
+
+    const { updatedUser: updatedWithPoints } = applyPointsGainInternal({
+      ...user,
+      bees,
+      lastPulseCheckDate: today,
+      missions: updatedMissions,
+    }, bonusHoney);
+
+    const finalUser = addActivityInternal(
+      updatedWithPoints,
+      "pulse_check",
+      `Piyasa nabzı kontrol edildi.${bonusHoney > 0 ? ` (Nabız Bonusu: ${bonusHoney} 🍯)` : ""}`
+    );
+
+    await saveUser(finalUser);
     return true;
   };
 
