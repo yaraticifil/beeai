@@ -58,13 +58,14 @@ function FlowerItem({
         style={({ pressed }) => [
           styles.flowerPressable,
           isReady && styles.flowerPressableReady,
+          flower.isGolden && styles.flowerPressableGolden,
           pressed && isReady && { opacity: 0.85, transform: [{ scale: 0.96 }] },
         ]}
         onPress={() => isReady && onHarvest(flower.id)}
         disabled={!isReady}
       >
         <Text style={[styles.flowerEmoji, !isReady && styles.flowerEmojiGrowing]}>
-          {isReady ? "🌼" : "🌱"}
+          {isReady ? (flower.isGolden ? "🌟" : "🌼") : (flower.isGolden ? "✨" : "🌱")}
         </Text>
         <View style={styles.flowerProgressBg}>
           <View
@@ -471,6 +472,16 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 6,
     elevation: 3,
+  },
+  flowerPressableGolden: {
+    borderColor: Colors.gold,
+    backgroundColor: "rgba(251, 191, 36, 0.2)",
+    borderWidth: 2,
+    shadowColor: Colors.gold,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+    elevation: 5,
   },
   flowerEmoji: {
     fontSize: 28,
