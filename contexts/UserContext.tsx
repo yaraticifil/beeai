@@ -17,9 +17,10 @@ export interface Flower {
   id: string;
   plantedAt: number;
   ready: boolean;
+  isGolden?: boolean;
 }
 
-export type MissionType = "analyze" | "harvest" | "spin" | "pulse";
+export type MissionType = "analyze" | "harvest" | "spin" | "pulse" | "offer" | "revision" | "plant";
 
 export interface Mission {
   id: string;
@@ -201,6 +202,18 @@ const DEFAULT_USER: Partial<User> = {
 };
 
 const STORAGE_KEY = "@beeai_user";
+
+const MISSION_POOL: Mission[] = [
+  { id: "m_analyze", type: "analyze", title: "Evrak Uzmanı", description: "3 çek analizini tamamla.", target: 3, current: 0, reward: 30, claimed: false },
+  { id: "m_harvest", type: "harvest", title: "Hasat Zamanı", description: "Bahçeden 5 çiçek topla.", target: 5, current: 0, reward: 25, claimed: false },
+  { id: "m_spin", type: "spin", title: "Şanslı Gün", description: "Çarkı 2 kez çevir.", target: 2, current: 0, reward: 15, claimed: false },
+  { id: "m_pulse", type: "pulse", title: "Piyasa Takibi", description: "Piyasa nabzını kontrol et.", target: 1, current: 0, reward: 10, claimed: false },
+  { id: "m_offer", type: "offer", title: "Teklif Avcısı", description: "2 teklif kabul et.", target: 2, current: 0, reward: 40, claimed: false },
+  { id: "m_revision", type: "revision", title: "Pazarlık Gücü", description: "1 kez revize talebi yap.", target: 1, current: 0, reward: 20, claimed: false },
+  { id: "m_plant", type: "plant", title: "Yeşil Parmak", description: "4 yeni çiçek dik.", target: 4, current: 0, reward: 15, claimed: false },
+  { id: "m_analyze_pro", type: "analyze", title: "Analiz Üstadı", description: "5 çek analizini tamamla.", target: 5, current: 0, reward: 50, claimed: false },
+  { id: "m_harvest_pro", type: "harvest", title: "Büyük Hasat", description: "Bahçeden 10 çiçek topla.", target: 10, current: 0, reward: 45, claimed: false },
+];
 
 /* =========================
    Helpers
@@ -550,52 +563,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const checkDailyMissions = async () => {
     if (!user) return;
     const today = todayKey();
-    if (user.lastMissionsDate === today && user.missions.length > 0) return;
+    if (user.lastMissionsDate === today && (user.missions || []).length > 0) return;
 
-    const newMissions: Mission[] = [
-      {
-        id: "m_analyze",
-        type: "analyze",
-        title: "Evrak Uzmanı",
-        description: "3 çek analizini tamamla.",
-        target: 3,
-        current: 0,
-        reward: 30,
-        claimed: false,
-      },
-      {
-        id: "m_harvest",
-        type: "harvest",
-        title: "Hasat Zamanı",
-        description: "Bahçeden 5 çiçek topla.",
-        target: 5,
-        current: 0,
-        reward: 25,
-        claimed: false,
-      },
-      {
-        id: "m_spin",
-        type: "spin",
-        title: "Şanslı Gün",
-        description: "Çarkı 2 kez çevir.",
-        target: 2,
-        current: 0,
-        reward: 15,
-        claimed: false,
-      },
-      {
-        id: "m_pulse",
-        type: "pulse",
-        title: "Piyasa Takibi",
-        description: "Piyasa nabzını kontrol et.",
-        target: 1,
-        current: 0,
-        reward: 10,
-        claimed: false,
-      },
-    ];
+    // Shuffle and pick 4 missions
+    const shuffled = [...MISSION_POOL].sort(() => 0.5 - Math.random());
+    const selected = shuffled.slice(0, 4).map(m => ({ ...m, current: 0, claimed: false }));
 
-    await saveUser({ ...user, missions: newMissions, lastMissionsDate: today });
+    await saveUser({ ...user, missions: selected, lastMissionsDate: today });
   };
 
   const claimMissionReward = async (missionId: string) => {
@@ -610,7 +584,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
     updatedMissions[mIdx] = { ...mission, claimed: true };
 
     const { updatedUser } = applyPointsGainInternal({ ...user, missions: updatedMissions }, mission.reward);
-    await saveUser(updatedUser);
+    const updatedWithActivity = addActivityInternal(updatedUser, "level_up", `${mission.title} görevi tamamlandı, ${mission.reward} bal kazanıldı.`);
+    await saveUser(updatedWithActivity);
   };
 
   const spin = async (): Promise<{ pointsWon: number; prize: string } | null> => {
@@ -687,20 +662,31 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const useSeed = (user.flowerSeeds || 0) > 0;
     if (!useSeed && user.honeyPoints < 10) return false;
 
+    const isGolden = Math.random() < 0.15;
     const newFlower: Flower = {
       id: `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
       plantedAt: Date.now(),
       ready: false,
+      isGolden,
     };
 
     const newFlowers = [...(user.flowers || []), newFlower];
 
-    let updated: User = { ...user, flowers: newFlowers };
+    const updatedMissions = (user.missions || []).map(m => {
+      if (m.type === "plant") return { ...m, current: Math.min(m.target, m.current + 1) };
+      return m;
+    });
+
+    let updated: User = { ...user, flowers: newFlowers, missions: updatedMissions };
     if (useSeed) {
       updated = { ...updated, flowerSeeds: Math.max(0, (updated.flowerSeeds || 0) - 1) };
     } else {
       const newPoints = updated.honeyPoints - 10;
       updated = { ...updated, honeyPoints: newPoints, level: computeLevel(newPoints) };
+    }
+
+    if (isGolden) {
+      updated = addActivityInternal(updated, "harvest", "Nadir bir Altın Çiçek dikildi! 🌟");
     }
 
     await saveUser(updated);
@@ -717,7 +703,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const isReady = elapsed >= FLOWER_GROWTH_TIME_MS;
     if (!isReady) return 0;
 
-    const honeyEarnedRaw = Math.floor(Math.random() * 16) + 15;
+    let honeyEarnedRaw = Math.floor(Math.random() * 16) + 15;
+    if (flower.isGolden) honeyEarnedRaw *= 2;
 
     const newFlowers = (user.flowers || []).filter((f) => f.id !== flowerId);
     const updatedMissions = (user.missions || []).map(m => {
@@ -746,7 +733,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
     let totalEarnedRaw = 0;
     readyFlowers.forEach((f) => {
-      totalEarnedRaw += Math.floor(Math.random() * 16) + 15;
+      let earned = Math.floor(Math.random() * 16) + 15;
+      if (f.isGolden) earned *= 2;
+      totalEarnedRaw += earned;
     });
 
     const readyIds = readyFlowers.map((f) => f.id);
@@ -1060,6 +1049,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
       return b;
     });
 
+    const updatedMissions = (user.missions || []).map(m => {
+      if (m.type === "revision") return { ...m, current: Math.min(m.target, m.current + 1) };
+      return m;
+    });
+
     const updatedReq: OfferRequest = { ...req, revisionUsed: true, offers: revised, status: "ready" };
     const updatedRequests = [...user.offerRequests];
     updatedRequests[idx] = updatedReq;
@@ -1068,6 +1062,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       ...user,
       bees: updatedBees,
       offerRequests: updatedRequests,
+      missions: updatedMissions,
     }, "revision", "Teklifler için revize talebi iletildi.");
 
     await saveUser(updatedWithActivity);
@@ -1121,12 +1116,18 @@ export function UserProvider({ children }: { children: ReactNode }) {
       return b;
     });
 
+    const updatedMissions = (user.missions || []).map(m => {
+      if (m.type === "offer") return { ...m, current: Math.min(m.target, m.current + 1) };
+      return m;
+    });
+
     const updatedWithActivity = addActivityInternal({
       ...user,
       bees: updatedBees,
       checks: updatedChecks,
       offerRequests: updatedRequests,
       coupons: updatedCoupons,
+      missions: updatedMissions,
       completedTransactions: [completed, ...(user.completedTransactions || [])],
     }, "pick_offer", `${offer.partnerCode} teklifi seçildi, işlem tamamlanıyor.`);
 
