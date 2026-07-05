@@ -58,13 +58,14 @@ function FlowerItem({
         style={({ pressed }) => [
           styles.flowerPressable,
           isReady && styles.flowerPressableReady,
+          flower.isGolden && styles.flowerPressableGolden,
           pressed && isReady && { opacity: 0.85, transform: [{ scale: 0.96 }] },
         ]}
         onPress={() => isReady && onHarvest(flower.id)}
         disabled={!isReady}
       >
         <Text style={[styles.flowerEmoji, !isReady && styles.flowerEmojiGrowing]}>
-          {isReady ? "🌼" : "🌱"}
+          {isReady ? (flower.isGolden ? "🌟" : "🌼") : "🌱"}
         </Text>
         <View style={styles.flowerProgressBg}>
           <View
@@ -72,7 +73,7 @@ function FlowerItem({
               styles.flowerProgressFill,
               {
                 width: `${progress * 100}%`,
-                backgroundColor: isReady ? Colors.gold : Colors.primary,
+                backgroundColor: isReady ? (flower.isGolden ? "#f59e0b" : Colors.gold) : Colors.primary,
               },
             ]}
           />
@@ -225,7 +226,7 @@ export default function GardenScreen() {
             >
               <Text style={styles.harvestToastEmoji}>🍯</Text>
               <Text style={styles.harvestToastText}>
-                +{harvestResult} bal kazandınız!
+                +{harvestResult} bal kazandınız! {harvestResult > 30 ? "✨" : ""}
               </Text>
             </LinearGradient>
           </Animated.View>
@@ -471,6 +472,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 6,
     elevation: 3,
+  },
+  flowerPressableGolden: {
+    backgroundColor: "rgba(251, 191, 36, 0.25)",
+    borderColor: "#ea580c",
+    borderWidth: 2,
+    shadowColor: "#ea580c",
   },
   flowerEmoji: {
     fontSize: 28,
