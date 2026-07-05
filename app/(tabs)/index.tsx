@@ -273,6 +273,7 @@ export default function PanelScreen() {
             {(user.bees || []).map((b, idx) => (
               <Animated.View key={b.id} entering={FadeInDown.delay(700 + idx * 100).springify()}>
                 <Pressable
+                  style={({ pressed }) => [pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }]}
                   onPress={() => {
                     haptics.light();
                     const insights: Record<string, string> = {

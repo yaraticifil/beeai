@@ -94,20 +94,22 @@ export default function WheelScreen() {
 
   if (!user) return null;
 
+  const hasGolden = (user.goldenSpinCount || 0) > 0;
+
   return (
     <View style={styles.container}>
       <LinearGradient
         colors={
-          (user.goldenSpinCount || 0) > 0
+          hasGolden
             ? ["#ffedd5", "#fff7ed", Colors.background]
             : ["#fef3c7", "#fffbeb", Colors.background]
         }
         style={[styles.topGradient, { paddingTop: topInset }]}
       >
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Şans Çarkı</Text>
+          <Text style={[styles.headerTitle, hasGolden && { color: "#ea580c" }]}>Şans Çarkı</Text>
           <View style={styles.spinBadges}>
-            {(user.goldenSpinCount || 0) > 0 && (
+            {hasGolden && (
               <View style={[styles.spinCountBadge, { backgroundColor: "#ea580c" }]}>
                 <Text style={styles.spinCountText}>{user.goldenSpinCount} Altın Hak</Text>
               </View>
@@ -212,7 +214,6 @@ export default function WheelScreen() {
 
         <Pressable
           style={({ pressed }) => {
-            const hasGolden = (user.goldenSpinCount || 0) > 0;
             const canSpin = user.spinCount > 0 || hasGolden;
             return [
               styles.spinBtn,
@@ -221,11 +222,11 @@ export default function WheelScreen() {
             ];
           }}
           onPress={handleSpin}
-          disabled={isSpinning || (user.spinCount <= 0 && (user.goldenSpinCount || 0) <= 0)}
+          disabled={isSpinning || (user.spinCount <= 0 && !hasGolden)}
         >
           <LinearGradient
             colors={
-              (user.goldenSpinCount || 0) > 0
+              hasGolden
                 ? ["#ea580c", "#c2410c"]
                 : user.spinCount > 0
                 ? [Colors.gold, Colors.goldDark]
@@ -241,7 +242,7 @@ export default function WheelScreen() {
               color="#fff"
             />
             <Text style={styles.spinBtnText}>
-              {isSpinning ? "Çevriliyor..." : (user.goldenSpinCount || 0) > 0 ? "Altın Çeviri!" : "Çevir!"}
+              {isSpinning ? "Çevriliyor..." : hasGolden ? "Altın Çeviri!" : "Çevir!"}
             </Text>
           </LinearGradient>
         </Pressable>
