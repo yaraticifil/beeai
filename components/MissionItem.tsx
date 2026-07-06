@@ -28,6 +28,9 @@ export function MissionItem({ mission }: MissionItemProps) {
       case "harvest": return "leaf";
       case "spin": return "dice";
       case "pulse": return "analytics";
+      case "offer": return "checkmark-circle";
+      case "revision": return "repeat";
+      case "plant": return "flower";
       default: return "star";
     }
   };
