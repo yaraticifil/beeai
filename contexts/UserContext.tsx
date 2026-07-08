@@ -42,6 +42,7 @@ export interface BeeAgent {
   level: number;
   xp: number; // 0-100
   emoji: string;
+  specialty?: string;
 }
 
 export type CheckSource = "manual" | "erp" | "whatsapp";
@@ -163,13 +164,15 @@ export interface User {
 
   missions: Mission[];
   lastMissionsDate: string;
+  streakCount: number;
+  lastLoginDate: string;
 }
 
 export type ERPType = "tiger" | "mikro" | "netsis";
 
 export interface DailyPulse {
   date: string; // YYYY-MM-DD
-  mood: "sert" | "normal" | "yumupeak";
+  mood: "sert" | "normal" | "yumupeak" | "bayram";
   band90: { min: number; max: number }; // %
   note: string;
 }
@@ -199,6 +202,8 @@ const DEFAULT_USER: Partial<User> = {
   settings: { pulseMode: "weather" },
   missions: [],
   lastMissionsDate: "",
+  streakCount: 0,
+  lastLoginDate: "",
 };
 
 const STORAGE_KEY = "@beeai_user";
@@ -297,10 +302,10 @@ function addActivityInternal(user: User, type: string, message: string): User {
 function makeBeeAgents(): BeeAgent[] {
   const now = Date.now();
   return [
-    { id: `bee_${now}_1`, role: "İzci", name: "İzci Arı", level: 1, xp: 15, emoji: "🕵️‍♂️" },
-    { id: `bee_${now}_2`, role: "Aracı", name: "Müzakereci Arı", level: 1, xp: 20, emoji: "⚡" },
-    { id: `bee_${now}_3`, role: "Kâtip", name: "Kâtip Arı", level: 1, xp: 10, emoji: "🧾" },
-    { id: `bee_${now}_4`, role: "Nabız", name: "Nabız Arı", level: 1, xp: 18, emoji: "📊" },
+    { id: `bee_${now}_1`, role: "İzci", name: "İzci Arı", level: 1, xp: 15, emoji: "🕵️‍♂️", specialty: "Hızlı Analiz" },
+    { id: `bee_${now}_2`, role: "Aracı", name: "Müzakereci Arı", level: 1, xp: 20, emoji: "⚡", specialty: "Bonus Pazarlık" },
+    { id: `bee_${now}_3`, role: "Kâtip", name: "Kâtip Arı", level: 1, xp: 10, emoji: "🧾", specialty: "Otonom Kayıt" },
+    { id: `bee_${now}_4`, role: "Nabız", name: "Nabız Arı", level: 1, xp: 18, emoji: "📊", specialty: "Piyasa Öngörüsü" },
   ];
 }
 
@@ -327,13 +332,18 @@ function computeDailyPulseInternal(companyName?: string): DailyPulse {
 
   let mood: DailyPulse["mood"] = "normal";
   if (base > 3.9) mood = "sert";
-  if (base < 2.4) mood = "yumupeak";
+  else if (base < 2.4) mood = "yumupeak";
+
+  // 10% chance for Bayram (Harvest Festival)
+  if ((h >>> 7) % 10 === 0) mood = "bayram";
 
   const note =
     mood === "sert"
       ? "Rekabet dar, teklif süreleri uzuyor. Keşideci skoru yüksek olanlar daha hızlı döner."
       : mood === "yumupeak"
       ? "Rekabet canlı, revize turu bugün iyi çalışır."
+      : mood === "bayram"
+      ? "HASAT BAYRAMI! Bugün bahçeden toplanan tüm çiçekler 2 kat fazla bal veriyor!"
       : "Dengeli gün. Evrak eksiksizse 15 dakika hedefi rahat tutulur.";
 
   return {
@@ -478,6 +488,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
           honeyBoosterUntil: parsed.honeyBoosterUntil || ((parsed as any).doubleNextHoney ? Date.now() + 600000 : 0),
           missions: parsed.missions || [],
           lastMissionsDate: parsed.lastMissionsDate || "",
+          streakCount: parsed.streakCount || 0,
+          lastLoginDate: parsed.lastLoginDate || "",
         };
         hydrated.level = computeLevel(hydrated.honeyPoints);
         setUser(hydrated);
@@ -511,6 +523,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
       settings: { pulseMode: "weather" },
       missions: [],
       lastMissionsDate: "",
+      streakCount: 0,
+      lastLoginDate: "",
     };
     newUser.level = computeLevel(newUser.honeyPoints);
     await saveUser(newUser);
@@ -555,8 +569,37 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const checkDailySpins = async () => {
     if (!user) return;
     const today = todayKey();
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayKey = yesterday.toDateString();
+
+    let updated = { ...user };
+    let changed = false;
+
+    // Reset daily spins
     if (user.lastSpinDate !== today) {
-      await saveUser({ ...user, spinCount: user.spinCount + 3, lastSpinDate: today });
+      updated.spinCount = (updated.spinCount || 0) + 3;
+      updated.lastSpinDate = today;
+      changed = true;
+    }
+
+    // Streak logic
+    if (user.lastLoginDate !== today) {
+      if (user.lastLoginDate === yesterdayKey) {
+        updated.streakCount = (updated.streakCount || 0) + 1;
+      } else {
+        updated.streakCount = 1;
+      }
+      updated.lastLoginDate = today;
+
+      const streakBonus = Math.min(updated.streakCount * 10, 50);
+      const { updatedUser } = applyPointsGainInternal(updated, streakBonus);
+      updated = addActivityInternal(updatedUser, "streak", `${updated.streakCount} günlük giriş serisi! ${streakBonus} Bal kazanıldı.`);
+      changed = true;
+    }
+
+    if (changed) {
+      await saveUser(updated);
     }
   };
 
@@ -708,6 +751,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
       honeyEarnedRaw *= 2;
     }
 
+    const pulse = computeDailyPulseInternal(user.companyName);
+    if (pulse.mood === "bayram") {
+      honeyEarnedRaw *= 2;
+    }
+
     const newFlowers = (user.flowers || []).filter((f) => f.id !== flowerId);
     const updatedMissions = (user.missions || []).map(m => {
       if (m.type === "harvest") return { ...m, current: Math.min(m.target, m.current + 1) };
@@ -737,11 +785,16 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
     let totalEarnedRaw = 0;
     let hasGolden = false;
+    const pulse = computeDailyPulseInternal(user.companyName);
+
     readyFlowers.forEach((f) => {
       let earned = Math.floor(Math.random() * 16) + 15;
       if (f.isGolden) {
         earned *= 2;
         hasGolden = true;
+      }
+      if (pulse.mood === "bayram") {
+        earned *= 2;
       }
       totalEarnedRaw += earned;
     });
@@ -990,8 +1043,16 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
     const now = Date.now();
     const scout = (user.bees || []).find(b => b.role === "İzci");
+    const negotiator = (user.bees || []).find(b => b.role === "Aracı");
+
     // İzci bonus: Her seviye %10 hız (max %50). Örn: Sv 2 = %10 hızlanma -> zaman çarpanı 0.9
-    const speedBonus = scout ? Math.min(0.5, (scout.level - 1) * 0.1) : 0;
+    let speedBonus = scout ? Math.min(0.5, (scout.level - 1) * 0.1) : 0;
+
+    // Synergy bonus: If both Scout and Negotiator are level 3+, add extra 5% speed
+    if (scout && scout.level >= 3 && negotiator && negotiator.level >= 3) {
+      speedBonus += 0.05;
+    }
+
     const timeMultiplier = 1 - speedBonus;
 
     const elapsed = now - req.startedAt;
