@@ -17,6 +17,20 @@ export interface Flower {
   id: string;
   plantedAt: number;
   ready: boolean;
+  isGolden?: boolean;
+}
+
+export type MissionType = "analyze" | "harvest" | "spin" | "pulse" | "offer" | "revision" | "plant";
+
+export interface Mission {
+  id: string;
+  type: MissionType;
+  title: string;
+  description: string;
+  target: number;
+  current: number;
+  reward: number;
+  claimed: boolean;
 }
 
 export type BeeRole = "İzci" | "Aracı" | "Kâtip" | "Nabız";
@@ -127,6 +141,7 @@ export interface User {
   level: number;
 
   spinCount: number;
+  goldenSpinCount: number;
   lastSpinDate: string;
   lastPulseCheckDate?: string;
 
@@ -145,13 +160,16 @@ export interface User {
   flowerBoosts: number;
   honeyBoosterUntil: number; // timestamp
   settings: UserSettings;
+
+  missions: Mission[];
+  lastMissionsDate: string;
 }
 
 export type ERPType = "tiger" | "mikro" | "netsis";
 
 export interface DailyPulse {
   date: string; // YYYY-MM-DD
-  mood: "sert" | "normal" | "yumuşak";
+  mood: "sert" | "normal" | "yumupeak";
   band90: { min: number; max: number }; // %
   note: string;
 }
@@ -164,6 +182,7 @@ const DEFAULT_USER: Partial<User> = {
   honeyPoints: 150,
   level: 1,
   spinCount: 3,
+  goldenSpinCount: 0,
   lastSpinDate: "",
   lastPulseCheckDate: "",
   flowers: [],
@@ -178,9 +197,23 @@ const DEFAULT_USER: Partial<User> = {
   flowerBoosts: 0,
   honeyBoosterUntil: 0,
   settings: { pulseMode: "weather" },
+  missions: [],
+  lastMissionsDate: "",
 };
 
 const STORAGE_KEY = "@beeai_user";
+
+const MISSION_POOL: Omit<Mission, "current" | "claimed">[] = [
+  { id: "m_analyze", type: "analyze", title: "Evrak Uzmanı", description: "3 çek analizini tamamla.", target: 3, reward: 30 },
+  { id: "m_harvest", type: "harvest", title: "Hasat Zamanı", description: "Bahçeden 5 çiçek topla.", target: 5, reward: 25 },
+  { id: "m_spin", type: "spin", title: "Şanslı Gün", description: "Çarkı 2 kez çevir.", target: 2, reward: 15 },
+  { id: "m_pulse", type: "pulse", title: "Piyasa Takibi", description: "Piyasa nabzını kontrol et.", target: 1, reward: 10 },
+  { id: "m_offer", type: "offer", title: "Teklif Avcısı", description: "Bir teklif seç ve işlemi tamamla.", target: 1, reward: 40 },
+  { id: "m_revision", type: "revision", title: "Sıkı Pazarlık", description: "Teklifler için revize iste.", target: 1, reward: 20 },
+  { id: "m_plant", type: "plant", title: "Yeni Tohumlar", description: "Bahçeye 3 çiçek ek.", target: 3, reward: 15 },
+  { id: "m_harvest_big", type: "harvest", title: "Büyük Hasat", description: "Bahçeden 10 çiçek topla.", target: 10, reward: 50 },
+  { id: "m_analyze_pro", type: "analyze", title: "Analiz Üstadı", description: "5 çek analizini tamamla.", target: 5, reward: 60 },
+];
 
 /* =========================
    Helpers
@@ -209,6 +242,56 @@ function hashStringToInt(s: string): number {
 
 function computeLevel(points: number): number {
   return Math.floor(points / 100) + 1;
+}
+
+function applyPointsGainInternal(user: User, amount: number): { updatedUser: User; pointsGained: number } {
+  const isBoosted = user.honeyBoosterUntil > Date.now();
+  const gain = isBoosted ? amount * 2 : amount;
+  let currentPoints = user.honeyPoints + gain;
+  let currentLevel = user.level;
+  let currentGoldenSpins = user.goldenSpinCount || 0;
+  let currentActivities = [...(user.activities || [])];
+
+  // Level up logic
+  while (currentPoints >= currentLevel * 100) {
+    currentLevel += 1;
+    // Level up reward: 50 Honey + 1 Golden Spin
+    currentPoints += 50;
+    currentGoldenSpins += 1;
+    currentActivities = [
+      {
+        id: `act_lvl_${Date.now()}_${currentLevel}`,
+        type: "level_up",
+        message: `Tebrikler! Seviye ${currentLevel} oldunuz. 50 Bal ve 1 Altın Çeviri kazandınız!`,
+        time: Date.now(),
+      },
+      ...currentActivities,
+    ].slice(0, 10);
+  }
+
+  return {
+    updatedUser: {
+      ...user,
+      honeyPoints: currentPoints,
+      level: currentLevel,
+      goldenSpinCount: currentGoldenSpins,
+      activities: currentActivities,
+    },
+    pointsGained: gain,
+  };
+}
+
+function addActivityInternal(user: User, type: string, message: string): User {
+  const newActivity = {
+    id: `act_${Date.now()}_${Math.random().toString(36).slice(2, 5)}`,
+    type,
+    message,
+    time: Date.now(),
+  };
+  return {
+    ...user,
+    activities: [newActivity, ...(user.activities || [])].slice(0, 10),
+  };
 }
 
 function makeBeeAgents(): BeeAgent[] {
@@ -244,12 +327,12 @@ function computeDailyPulseInternal(companyName?: string): DailyPulse {
 
   let mood: DailyPulse["mood"] = "normal";
   if (base > 3.9) mood = "sert";
-  if (base < 2.4) mood = "yumuşak";
+  if (base < 2.4) mood = "yumupeak";
 
   const note =
     mood === "sert"
       ? "Rekabet dar, teklif süreleri uzuyor. Keşideci skoru yüksek olanlar daha hızlı döner."
-      : mood === "yumuşak"
+      : mood === "yumupeak"
       ? "Rekabet canlı, revize turu bugün iyi çalışır."
       : "Dengeli gün. Evrak eksiksizse 15 dakika hedefi rahat tutulur.";
 
@@ -334,6 +417,8 @@ interface UserContextValue {
   harvestAllFlowers: () => Promise<number>;
   boostFlower: (flowerId: string) => Promise<boolean>;
   checkDailySpins: () => Promise<void>;
+  checkDailyMissions: () => Promise<void>;
+  claimMissionReward: (missionId: string) => Promise<void>;
 
   // Pilot: checks & offers
   addCheck: (input: {
@@ -359,6 +444,8 @@ interface UserContextValue {
   setPulseMode: (mode: PulseMode) => Promise<void>;
   awardBeeXP: (role: BeeRole, xp: number) => Promise<void>;
   checkPulseXP: () => Promise<boolean>;
+  applyPointsGain: (amount: number) => Promise<number>;
+  addActivity: (type: string, message: string) => Promise<void>;
 }
 
 const UserContext = createContext<UserContextValue | null>(null);
@@ -389,6 +476,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
           flowerSeeds: parsed.flowerSeeds || 0,
           flowerBoosts: parsed.flowerBoosts || 0,
           honeyBoosterUntil: parsed.honeyBoosterUntil || ((parsed as any).doubleNextHoney ? Date.now() + 600000 : 0),
+          missions: parsed.missions || [],
+          lastMissionsDate: parsed.lastMissionsDate || "",
         };
         hydrated.level = computeLevel(hydrated.honeyPoints);
         setUser(hydrated);
@@ -420,6 +509,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
       flowerBoosts: 0,
       honeyBoosterUntil: 0,
       settings: { pulseMode: "weather" },
+      missions: [],
+      lastMissionsDate: "",
     };
     newUser.level = computeLevel(newUser.honeyPoints);
     await saveUser(newUser);
@@ -437,19 +528,21 @@ export function UserProvider({ children }: { children: ReactNode }) {
     await saveUser(updated);
   };
 
-  const addHoney = async (amount: number) => {
+  const applyPointsGain = async (amount: number): Promise<number> => {
+    if (!user) return 0;
+    const { updatedUser, pointsGained } = applyPointsGainInternal(user, amount);
+    await saveUser(updatedUser);
+    return pointsGained;
+  };
+
+  const addActivity = async (type: string, message: string) => {
     if (!user) return;
-
-    const isBoosted = user.honeyBoosterUntil > Date.now();
-    const gain = isBoosted ? amount * 2 : amount;
-    const newPoints = user.honeyPoints + gain;
-
-    const updated: User = {
-      ...user,
-      honeyPoints: newPoints,
-      level: computeLevel(newPoints),
-    };
+    const updated = addActivityInternal(user, type, message);
     await saveUser(updated);
+  };
+
+  const addHoney = async (amount: number) => {
+    await applyPointsGain(amount);
   };
 
   const spendHoney = async (amount: number): Promise<boolean> => {
@@ -467,15 +560,49 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const checkDailyMissions = async () => {
+    if (!user) return;
+    const today = todayKey();
+    if (user.lastMissionsDate === today && user.missions && user.missions.length > 0) return;
+
+    const shuffled = [...MISSION_POOL].sort(() => 0.5 - Math.random());
+    const selected = shuffled.slice(0, 4);
+
+    const newMissions: Mission[] = selected.map(m => ({
+      ...m,
+      current: 0,
+      claimed: false,
+    }));
+
+    await saveUser({ ...user, missions: newMissions, lastMissionsDate: today });
+  };
+
+  const claimMissionReward = async (missionId: string) => {
+    if (!user || !user.missions) return;
+    const mIdx = user.missions.findIndex((m) => m.id === missionId);
+    if (mIdx < 0) return;
+
+    const mission = user.missions[mIdx];
+    if (mission.claimed || mission.current < mission.target) return;
+
+    const updatedMissions = [...user.missions];
+    updatedMissions[mIdx] = { ...mission, claimed: true };
+
+    const { updatedUser } = applyPointsGainInternal({ ...user, missions: updatedMissions }, mission.reward);
+    await saveUser(updatedUser);
+  };
+
   const spin = async (): Promise<{ pointsWon: number; prize: string } | null> => {
-    if (!user || user.spinCount <= 0) return null;
+    if (!user) return null;
+    const hasGolden = (user.goldenSpinCount || 0) > 0;
+    if (user.spinCount <= 0 && !hasGolden) return null;
 
     const prizes: SpinPrize[] = [
       { prize: "10-50 Bal", min: 10, max: 50, weight: 40 },
       { prize: "Çiçek Tohumu", min: 0, max: 0, weight: 20, bonus: "flower" },
       { prize: "Kupon %5", min: 0, max: 0, weight: 15, bonus: "coupon" },
       { prize: "2x Bal", min: 0, max: 0, weight: 15, bonus: "double" },
-      { prize: "BÜYÜK İKRAMİYE", min: 200, max: 500, weight: 5 },
+      { prize: "BÜYÜK İKRAMİYE", min: 200, max: 500, weight: hasGolden ? 15 : 5 },
       { prize: "5-25 Bal", min: 5, max: 25, weight: 5 },
     ];
 
@@ -496,9 +623,19 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
 
     const today = todayKey();
-    const newSpinCount = user.spinCount - 1;
+    let updated: User = { ...user, lastSpinDate: today };
 
-    let updated: User = { ...user, spinCount: newSpinCount, lastSpinDate: today };
+    if (hasGolden) {
+      updated.goldenSpinCount = Math.max(0, (updated.goldenSpinCount || 0) - 1);
+    } else {
+      updated.spinCount = Math.max(0, updated.spinCount - 1);
+    }
+
+    const updatedMissions = (updated.missions || []).map(m => {
+      if (m.type === "spin") return { ...m, current: Math.min(m.target, m.current + 1) };
+      return m;
+    });
+    updated = { ...updated, missions: updatedMissions };
 
     if (selected.bonus === "flower") {
       updated = { ...updated, flowerSeeds: (updated.flowerSeeds || 0) + 1 };
@@ -515,10 +652,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
     } else if (selected.bonus === "double") {
       updated = { ...updated, honeyBoosterUntil: Date.now() + 15 * 60 * 1000 };
     } else if (pointsWon > 0) {
-      const isBoosted = updated.honeyBoosterUntil > Date.now();
-      const gain = isBoosted ? pointsWon * 2 : pointsWon;
-      const newPoints = updated.honeyPoints + gain;
-      updated = { ...updated, honeyPoints: newPoints, level: computeLevel(newPoints) };
+      const { updatedUser } = applyPointsGainInternal(updated, pointsWon);
+      updated = updatedUser;
     }
 
     await saveUser(updated);
@@ -531,15 +666,22 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const useSeed = (user.flowerSeeds || 0) > 0;
     if (!useSeed && user.honeyPoints < 10) return false;
 
+    const isGolden = Math.random() < 0.15;
     const newFlower: Flower = {
       id: `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
       plantedAt: Date.now(),
       ready: false,
+      isGolden,
     };
 
     const newFlowers = [...(user.flowers || []), newFlower];
 
-    let updated: User = { ...user, flowers: newFlowers };
+    const updatedMissions = (user.missions || []).map(m => {
+      if (m.type === "plant") return { ...m, current: Math.min(m.target, m.current + 1) };
+      return m;
+    });
+
+    let updated: User = { ...user, flowers: newFlowers, missions: updatedMissions };
     if (useSeed) {
       updated = { ...updated, flowerSeeds: Math.max(0, (updated.flowerSeeds || 0) - 1) };
     } else {
@@ -561,23 +703,28 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const isReady = elapsed >= FLOWER_GROWTH_TIME_MS;
     if (!isReady) return 0;
 
-    const isBoosted = user.honeyBoosterUntil > Date.now();
-    let honeyEarned = Math.floor(Math.random() * 16) + 15;
-    if (isBoosted) {
-      honeyEarned *= 2;
+    let honeyEarnedRaw = Math.floor(Math.random() * 16) + 15;
+    if (flower.isGolden) {
+      honeyEarnedRaw *= 2;
     }
 
     const newFlowers = (user.flowers || []).filter((f) => f.id !== flowerId);
-    const newPoints = user.honeyPoints + honeyEarned;
+    const updatedMissions = (user.missions || []).map(m => {
+      if (m.type === "harvest") return { ...m, current: Math.min(m.target, m.current + 1) };
+      return m;
+    });
 
-    await saveUser({
+    let updatedWithActivity = addActivityInternal({
       ...user,
       flowers: newFlowers,
-      honeyPoints: newPoints,
-      level: computeLevel(newPoints),
       totalHarvested: (user.totalHarvested || 0) + 1,
-    });
-    return honeyEarned;
+      missions: updatedMissions,
+    }, "harvest", flower.isGolden ? "Altın Çiçek hasat edildi! 2x Bal kazanıldı." : "Çiçek hasat edildi.");
+
+    const { updatedUser, pointsGained } = applyPointsGainInternal(updatedWithActivity, honeyEarnedRaw);
+
+    await saveUser(updatedUser);
+    return pointsGained;
   };
 
   const harvestAllFlowers = async (): Promise<number> => {
@@ -588,29 +735,36 @@ export function UserProvider({ children }: { children: ReactNode }) {
     );
     if (readyFlowers.length === 0) return 0;
 
-    const isBoosted = user.honeyBoosterUntil > Date.now();
-    let totalEarned = 0;
+    let totalEarnedRaw = 0;
+    let hasGolden = false;
     readyFlowers.forEach((f) => {
       let earned = Math.floor(Math.random() * 16) + 15;
-      if (isBoosted) {
+      if (f.isGolden) {
         earned *= 2;
+        hasGolden = true;
       }
-      totalEarned += earned;
+      totalEarnedRaw += earned;
     });
 
     const readyIds = readyFlowers.map((f) => f.id);
     const remainingFlowers = (user.flowers || []).filter((f) => !readyIds.includes(f.id));
-    const newPoints = user.honeyPoints + totalEarned;
 
-    await saveUser({
-      ...user,
-      flowers: remainingFlowers,
-      honeyPoints: newPoints,
-      level: computeLevel(newPoints),
-      totalHarvested: (user.totalHarvested || 0) + readyFlowers.length,
+    const updatedMissions = (user.missions || []).map(m => {
+      if (m.type === "harvest") return { ...m, current: Math.min(m.target, m.current + readyFlowers.length) };
+      return m;
     });
 
-    return totalEarned;
+    let updatedWithActivity = addActivityInternal({
+      ...user,
+      flowers: remainingFlowers,
+      totalHarvested: (user.totalHarvested || 0) + readyFlowers.length,
+      missions: updatedMissions,
+    }, "harvest", hasGolden ? "Çiçekler hasat edildi (Altın çiçekler dahil)!" : "Tüm çiçekler hasat edildi.");
+
+    const { updatedUser, pointsGained } = applyPointsGainInternal(updatedWithActivity, totalEarnedRaw);
+
+    await saveUser(updatedUser);
+    return pointsGained;
   };
 
   const boostFlower = async (flowerId: string): Promise<boolean> => {
@@ -667,6 +821,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
       lane,
     };
 
+    const katip = (user.bees || []).find(b => b.role === "Kâtip");
+    const bonusHoney = katip ? 5 + (katip.level - 1) * 2 : 0;
+
     const bees = (user.bees || []).map(b => {
       if (b.role === "Kâtip") {
         let newXp = b.xp + XP_REWARDS.CHECK_ADDED;
@@ -677,20 +834,20 @@ export function UserProvider({ children }: { children: ReactNode }) {
       return b;
     });
 
-    const updated: User = {
+    const updatedMissions = (user.missions || []).map(m => {
+      if (m.type === "analyze") return { ...m, current: Math.min(m.target, m.current + 1) };
+      return m;
+    });
+
+    const updatedWithActivity = addActivityInternal({
       ...user,
       bees,
       checks: [check, ...(user.checks || [])],
-      activities: [
-        {
-          id: `act_${Date.now()}`,
-          type: "check_add",
-          message: `${check.issuerName} firmasına ait çek eklendi.`,
-          time: Date.now(),
-        },
-        ...(user.activities || []),
-      ].slice(0, 10),
-    };
+      missions: updatedMissions,
+    }, "check_add", `${check.issuerName} firmasına ait çek eklendi.${bonusHoney > 0 ? ` Kâtip bonusu: ${bonusHoney} Bal.` : ""}`);
+
+    const { updatedUser } = applyPointsGainInternal(updatedWithActivity, bonusHoney);
+    const updated: User = updatedUser;
     await saveUser(updated);
     return id;
   };
@@ -813,19 +970,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
       offers: [],
     };
 
-    await saveUser({
+    const updatedWithActivity = addActivityInternal({
       ...user,
       offerRequests: [req, ...(user.offerRequests || [])],
-      activities: [
-        {
-          id: `act_${Date.now()}`,
-          type: "offer_start",
-          message: "15 dakikalık teklif toplama süreci başlatıldı.",
-          time: Date.now(),
-        },
-        ...(user.activities || []),
-      ].slice(0, 10),
-    });
+    }, "offer_start", "15 dakikalık teklif toplama süreci başlatıldı.");
+
+    await saveUser(updatedWithActivity);
   };
 
   const ensureOfferProgress: UserContextValue["ensureOfferProgress"] = async (checkId) => {
@@ -913,23 +1063,23 @@ export function UserProvider({ children }: { children: ReactNode }) {
       return b;
     });
 
+    const updatedMissions = (user.missions || []).map(m => {
+      if (m.type === "revision") return { ...m, current: Math.min(m.target, m.current + 1) };
+      return m;
+    });
+
     const updatedReq: OfferRequest = { ...req, revisionUsed: true, offers: revised, status: "ready" };
     const updatedRequests = [...user.offerRequests];
     updatedRequests[idx] = updatedReq;
-    await saveUser({
+
+    const updatedWithActivity = addActivityInternal({
       ...user,
       bees: updatedBees,
       offerRequests: updatedRequests,
-      activities: [
-        {
-          id: `act_${Date.now()}`,
-          type: "revision",
-          message: "Teklifler için revize talebi iletildi.",
-          time: Date.now(),
-        },
-        ...(user.activities || []),
-      ].slice(0, 10),
-    });
+      missions: updatedMissions,
+    }, "revision", "Teklifler için revize talebi iletildi.");
+
+    await saveUser(updatedWithActivity);
     return true;
   };
 
@@ -980,23 +1130,22 @@ export function UserProvider({ children }: { children: ReactNode }) {
       return b;
     });
 
-    await saveUser({
+    const updatedMissions = (user.missions || []).map(m => {
+      if (m.type === "offer") return { ...m, current: Math.min(m.target, m.current + 1) };
+      return m;
+    });
+
+    const updatedWithActivity = addActivityInternal({
       ...user,
       bees: updatedBees,
       checks: updatedChecks,
       offerRequests: updatedRequests,
       coupons: updatedCoupons,
+      missions: updatedMissions,
       completedTransactions: [completed, ...(user.completedTransactions || [])],
-      activities: [
-        {
-          id: `act_${Date.now()}`,
-          type: "pick_offer",
-          message: `${offer.partnerCode} teklifi seçildi, işlem tamamlanıyor.`,
-          time: Date.now(),
-        },
-        ...(user.activities || []),
-      ].slice(0, 10),
-    });
+    }, "pick_offer", `${offer.partnerCode} teklifi seçildi, işlem tamamlanıyor.`);
+
+    await saveUser(updatedWithActivity);
   };
 
   const getDailyPulse = (): DailyPulse => {
@@ -1030,6 +1179,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const today = todayKey();
     if (user.lastPulseCheckDate === today) return false;
 
+    const nabiz = (user.bees || []).find(b => b.role === "Nabız");
+    const bonusHoney = nabiz ? 5 * nabiz.level : 5;
+
     const bees = (user.bees || []).map((b) => {
       if (b.role === "Nabız") {
         let newXp = b.xp + XP_REWARDS.PULSE_CHECKED;
@@ -1043,7 +1195,20 @@ export function UserProvider({ children }: { children: ReactNode }) {
       return b;
     });
 
-    await saveUser({ ...user, bees, lastPulseCheckDate: today });
+    const updatedMissions = (user.missions || []).map(m => {
+      if (m.type === "pulse") return { ...m, current: Math.min(m.target, m.current + 1) };
+      return m;
+    });
+
+    let updated = addActivityInternal({
+      ...user,
+      bees,
+      lastPulseCheckDate: today,
+      missions: updatedMissions,
+    }, "pulse", `Piyasa nabzı kontrol edildi. Nabız Arısı bonusu: ${bonusHoney} Bal.`);
+
+    const { updatedUser } = applyPointsGainInternal(updated, bonusHoney);
+    await saveUser(updatedUser);
     return true;
   };
 
@@ -1062,6 +1227,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
       harvestAllFlowers,
       boostFlower,
       checkDailySpins,
+      checkDailyMissions,
+      claimMissionReward,
       addCheck,
       linkInvoice,
       importSampleERP,

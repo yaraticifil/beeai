@@ -11,7 +11,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import * as Haptics from "expo-haptics";
+import { haptics } from "@/shared/utils/haptics";
 import Colors from "@/constants/colors";
 import { CONSUMABLE_ITEMS } from "@/constants/game";
 import { useUser } from "@/contexts/UserContext";
@@ -159,7 +159,7 @@ function ShopCard({
 
 export default function ShopScreen() {
   const insets = useSafeAreaInsets();
-  const { user, spendHoney, updateUser } = useUser();
+  const { user, spendHoney, updateUser, addActivity } = useUser();
   const [activeCategory, setActiveCategory] = useState("all");
 
   const topInset = Platform.OS === "web" ? 67 : insets.top;
@@ -172,9 +172,7 @@ export default function ShopScreen() {
 
   const handleBuy = (item: ShopItem) => {
     if (!user || user.honeyPoints < item.cost) {
-      if (Platform.OS !== 'web') {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      }
+      haptics.error();
       return;
     }
 
@@ -204,12 +202,13 @@ export default function ShopScreen() {
                 updates.flowerBoosts = (user.flowerBoosts || 0) + 1;
               } else if (item.id === "double_honey") {
                 updates.honeyBoosterUntil = Date.now() + 30 * 60 * 1000;
+              } else if (item.id === "free_spin") {
+                updates.goldenSpinCount = (user.goldenSpinCount || 0) + 1;
               }
 
               await updateUser(updates);
-              if (Platform.OS !== 'web') {
-                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              }
+              await addActivity("shop_buy", `${item.name} satın alındı.`);
+              haptics.success();
               Alert.alert("Tebrikler!", `${item.name} başarıyla satın alındı!`);
             }
           },

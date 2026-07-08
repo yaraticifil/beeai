@@ -9,6 +9,7 @@ import Colors from "@/constants/colors";
 import { useUser } from "@/contexts/UserContext";
 import { GlassCard } from "@/components/GlassCard";
 import { TrendChart } from "@/components/TrendChart";
+import { MissionItem } from "@/components/MissionItem";
 import { HoneyBoosterBadge } from "@/components/HoneyBoosterBadge";
 import { haptics } from "@/shared/utils/haptics";
 import { formatCompactNumber } from "@/shared/utils/format";
@@ -63,11 +64,14 @@ function ActionItem({
 
 export default function PanelScreen() {
   const insets = useSafeAreaInsets();
-  const { user, logout, checkDailySpins, getDailyPulse } = useUser();
+  const { user, logout, checkDailySpins, checkDailyMissions, getDailyPulse } = useUser();
 
   useEffect(() => {
-    if (user) checkDailySpins();
-  }, [user, checkDailySpins]);
+    if (user) {
+      checkDailySpins();
+      checkDailyMissions();
+    }
+  }, [user, checkDailySpins, checkDailyMissions]);
 
   useEffect(() => {
     if (!user) router.replace("/");
@@ -79,6 +83,8 @@ export default function PanelScreen() {
   const checksCount = user.checks?.length || 0;
   const activeReqs = (user.offerRequests || []).filter((r) => r.status === "collecting").length;
   const offersReady = (user.offerRequests || []).filter((r) => r.status === "ready").length;
+
+  const hasClaimableMission = (user.missions || []).some((m) => !m.claimed && m.current >= m.target);
 
   const totalAmount = (user.checks || []).reduce((sum, c) => sum + (c.amount || 0), 0);
 
@@ -103,13 +109,24 @@ export default function PanelScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={[Colors.slate, "#1e293b", "#0f172a"]}
+        colors={
+          pulse.mood === "sert"
+            ? ["#7f1d1d", "#450a0a", "#0f172a"]
+            : pulse.mood === "yumupeak"
+            ? ["#064e3b", "#022c22", "#0f172a"]
+            : [Colors.slate, "#1e293b", "#0f172a"]
+        }
         style={[styles.header, { paddingTop: topInset + 10 }]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       >
         <View style={styles.headerRow}>
           <Animated.View entering={FadeInUp.springify()} style={styles.headerLeft}>
+            {hasClaimableMission && (
+              <View style={styles.rewardBadge}>
+                <Text style={styles.rewardBadgeText}>ÖDÜL HAZIR</Text>
+              </View>
+            )}
             <View style={styles.avatarGlow}>
               <View style={styles.avatarCircle}>
                 <Text style={styles.avatarText}>🐝</Text>
@@ -142,7 +159,7 @@ export default function PanelScreen() {
           <GlassCard style={styles.pulseCard} intensity={20}>
             <View style={styles.pulseHeader}>
               <View style={styles.pulseIndicator}>
-                <View style={[styles.pulseDot, { backgroundColor: pulse.mood === "sert" ? Colors.danger : pulse.mood === "yumuşak" ? Colors.primary : Colors.gold }]} />
+                <View style={[styles.pulseDot, { backgroundColor: pulse.mood === "sert" ? Colors.danger : pulse.mood === "yumupeak" ? Colors.primary : Colors.gold }]} />
                 <Text style={styles.pulseStatus}>{pulse.mood.toUpperCase()} PİYASA</Text>
               </View>
               <Text style={styles.pointsText}>{user.honeyPoints} 🍯</Text>
@@ -173,12 +190,21 @@ export default function PanelScreen() {
              <Text style={styles.tipText}>
                {pulse.mood === 'sert'
                  ? 'Piyasa sert, yüksek puanlı keşidecilere odaklanarak işlem hızınızı koruyun.'
-                 : pulse.mood === 'yumuşak'
+                 : pulse.mood === 'yumupeak'
                  ? 'Rekabetçi bir gün, arılarınızla revize turlarını mutlaka deneyin!'
                  : 'Dengeli bir gün. Çeklerinizi erkenden kovana bırakın, en iyi teklifi yakalayın.'}
              </Text>
           </GlassCard>
         </Animated.View>
+
+        <View style={styles.section}>
+           <Text style={styles.sectionTitle}>Günlük Görevler</Text>
+           {(user.missions || []).map((m, idx) => (
+             <Animated.View key={m.id} entering={FadeInDown.delay(350 + idx * 50).springify()}>
+               <MissionItem mission={m} />
+             </Animated.View>
+           ))}
+        </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Canlı Durum</Text>
@@ -288,6 +314,24 @@ const styles = StyleSheet.create({
     padding: 3,
     borderRadius: 25,
     backgroundColor: 'rgba(251, 191, 36, 0.3)',
+    position: 'relative',
+  },
+  rewardBadge: {
+    position: "absolute",
+    top: -12,
+    left: 4,
+    backgroundColor: Colors.danger,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    zIndex: 10,
+    borderWidth: 1.5,
+    borderColor: Colors.white,
+  },
+  rewardBadgeText: {
+    color: Colors.white,
+    fontSize: 7,
+    fontFamily: "Poppins_800ExtraBold",
   },
   avatarCircle: {
     width: 46,
