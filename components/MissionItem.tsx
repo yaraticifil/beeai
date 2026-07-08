@@ -24,11 +24,14 @@ export function MissionItem({ mission }: MissionItemProps) {
 
   const getIcon = () => {
     switch (mission.type) {
-      case "analyze": return "document-text";
-      case "harvest": return "leaf";
-      case "spin": return "dice";
-      case "pulse": return "analytics";
-      default: return "star";
+      case "analyze": return "analytics-outline";
+      case "harvest": return "basket-outline";
+      case "spin": return "sync-outline";
+      case "pulse": return "pulse-outline";
+      case "offer": return "pricetag-outline";
+      case "revision": return "repeat-outline";
+      case "plant": return "leaf-outline";
+      default: return "star-outline";
     }
   };
 
