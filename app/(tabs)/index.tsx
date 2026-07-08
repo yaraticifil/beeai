@@ -137,7 +137,27 @@ export default function PanelScreen() {
               <Text style={styles.companyText} numberOfLines={1}>
                 {user.companyName}
               </Text>
-              <HoneyBoosterBadge />
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                <HoneyBoosterBadge />
+                {user.streakCount > 0 && (
+                  <View style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundColor: Colors.orange,
+                    paddingHorizontal: 8,
+                    paddingVertical: 2,
+                    borderRadius: 8,
+                    gap: 4,
+                  }}>
+                    <Ionicons name="flame" size={12} color={Colors.white} />
+                    <Text style={{
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontFamily: "Poppins_700Bold",
+                    }}>{user.streakCount} Gün</Text>
+                  </View>
+                )}
+              </View>
               <View style={styles.levelProgressContainer}>
                 <View style={styles.levelRow}>
                   <Text style={styles.levelLabel}>Seviye {user.level}</Text>
@@ -287,6 +307,7 @@ export default function PanelScreen() {
                   <GlassCard style={styles.beeCard}>
                     <Text style={styles.beeEmoji}>{b.emoji}</Text>
                     <Text style={styles.beeName}>{b.name}</Text>
+                    {b.specialty && <Text style={{ fontSize: 9, fontFamily: 'Poppins_600SemiBold', color: Colors.goldDark, marginBottom: 6 }}>{b.specialty}</Text>}
                     <View style={styles.xpBarBackground}>
                       <View style={[styles.xpBarFill, { width: `${b.xp}%` }]} />
                     </View>
@@ -419,7 +440,7 @@ const styles = StyleSheet.create({
   beesScroll: { marginHorizontal: -20, paddingHorizontal: 20 },
   beeCard: { width: 140, marginRight: 12, padding: 14, alignItems: 'center' },
   beeEmoji: { fontSize: 32, marginBottom: 8 },
-  beeName: { fontSize: 13, fontFamily: 'Poppins_700Bold', color: Colors.slate, marginBottom: 8 },
+  beeName: { fontSize: 13, fontFamily: 'Poppins_700Bold', color: Colors.slate, marginBottom: 2 },
   xpBarBackground: { width: '100%', height: 4, backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: 2, marginBottom: 4 },
   xpBarFill: { height: 4, backgroundColor: Colors.primary, borderRadius: 2 },
   beeInfoRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },

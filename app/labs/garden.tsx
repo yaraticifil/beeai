@@ -48,6 +48,7 @@ function FlowerItem({
 
   const isReady = elapsed >= FLOWER_GROWTH_TIME_MS;
   const progress = Math.min(elapsed / FLOWER_GROWTH_TIME_MS, 1);
+  const stage = progress < 0.33 ? "Filiz" : progress < 0.66 ? "Tomurcuk" : progress < 1 ? "Büyüyor" : "Hazır";
   const timeLeft = Math.max(0, Math.ceil((FLOWER_GROWTH_TIME_MS - elapsed) / 1000));
   const mins = Math.floor(timeLeft / 60);
   const secs = timeLeft % 60;
@@ -79,10 +80,11 @@ function FlowerItem({
           />
         </View>
         {isReady ? (
-          <Text style={styles.harvestText}>Topla</Text>
+          <Text style={styles.harvestText}>Hasat Et</Text>
         ) : (
           <View style={{ alignItems: 'center' }}>
-            <Text style={styles.growText}>
+            <Text style={styles.growText}>{stage}</Text>
+            <Text style={styles.growTimeText}>
               {mins > 0 ? `${mins}d ${secs}s` : `${secs}s`}
             </Text>
             <Pressable
@@ -103,7 +105,7 @@ function FlowerItem({
 
 export default function GardenScreen() {
   const insets = useSafeAreaInsets();
-  const { user, plantFlower, harvestFlower, harvestAllFlowers, boostFlower } = useUser();
+  const { user, plantFlower, harvestFlower, harvestAllFlowers, boostFlower, getDailyPulse } = useUser();
   const [harvestResult, setHarvestResult] = useState<number | null>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -161,6 +163,9 @@ export default function GardenScreen() {
 
   if (!user) return null;
 
+  const pulse = getDailyPulse();
+  const isBayram = pulse.mood === "bayram";
+
   const readyCount = user.flowers.filter(
     (f) => Date.now() - f.plantedAt >= FLOWER_GROWTH_TIME_MS
   ).length;
@@ -216,6 +221,25 @@ export default function GardenScreen() {
         showsVerticalScrollIndicator={false}
         contentInsetAdjustmentBehavior="automatic"
       >
+        {isBayram && (
+           <View style={{
+             backgroundColor: Colors.violet,
+             borderRadius: 14,
+             padding: 12,
+             flexDirection: 'row',
+             alignItems: 'center',
+             gap: 10,
+             borderWidth: 2,
+             borderColor: 'rgba(255,255,255,0.3)',
+           }}>
+             <Text style={{ fontSize: 24 }}>🥳</Text>
+             <View>
+               <Text style={{ color: Colors.white, fontFamily: 'Poppins_700Bold', fontSize: 14 }}>HASAT BAYRAMI!</Text>
+               <Text style={{ color: 'rgba(255,255,255,0.8)', fontFamily: 'Poppins_400Regular', fontSize: 11 }}>Tüm çiçekler 2x bal veriyor.</Text>
+             </View>
+           </View>
+        )}
+
         {harvestResult !== null && (
           <Animated.View style={[styles.harvestToast, { opacity: fadeAnim }]}>
             <LinearGradient
@@ -533,7 +557,12 @@ const styles = StyleSheet.create({
   },
   growText: {
     fontSize: 8,
-    fontFamily: "Poppins_600SemiBold",
+    fontFamily: "Poppins_700Bold",
+    color: Colors.primary,
+  },
+  growTimeText: {
+    fontSize: 7,
+    fontFamily: "Poppins_400Regular",
     color: Colors.textMuted,
   },
   plantBtn: {

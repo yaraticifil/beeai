@@ -26,6 +26,7 @@ export default function PulseScreen() {
   const moodLabel = useMemo(() => {
     if (pulse.mood === "sert") return "Sert";
     if (pulse.mood === "yumupeak") return "Yumuşak";
+    if (pulse.mood === "bayram") return "BAYRAM";
     return "Normal";
   }, [pulse.mood]);
 
@@ -58,7 +59,7 @@ export default function PulseScreen() {
                 <Text style={styles.title}>Günlük Endeks</Text>
                 <Text style={styles.date}>{pulse.date}</Text>
               </View>
-              <View style={[styles.moodPill, pulse.mood === "sert" ? styles.moodHard : pulse.mood === "yumupeak" ? styles.moodSoft : styles.moodNormal]}>
+              <View style={[styles.moodPill, pulse.mood === "sert" ? styles.moodHard : pulse.mood === "yumupeak" ? styles.moodSoft : pulse.mood === "bayram" ? styles.moodBayram : styles.moodNormal]}>
                 <View style={styles.dot} />
                 <Text style={styles.moodText}>{moodLabel}</Text>
               </View>
@@ -90,6 +91,8 @@ export default function PulseScreen() {
                     ? "Bugün finansal piyasalarda likidite daralması gözleniyor. Teklifler daha seçici ve yüksek iskontolu gelebilir."
                     : pulse.mood === "yumupeak"
                     ? "Piyasada likidite bolluğu hakim. Arılar revize turlarında daha agresif ve rekabetçi teklifler yakalayabilir."
+                    : pulse.mood === "bayram"
+                    ? "Kovanımızda bayram havası var! Arılarımız bugün çok neşeli, bahçeden 2 kat daha fazla bal topluyoruz."
                     : "Piyasa koşulları standart dengesinde seyrediyor. Evrak kalitenize göre hızlı ve sağlıklı akış bekliyoruz."}
                 </Text>
               </Animated.View>
@@ -178,6 +181,7 @@ const styles = StyleSheet.create({
   moodHard: { backgroundColor: "rgba(239,68,68,0.06)", borderColor: "rgba(239,68,68,0.15)", color: Colors.danger },
   moodSoft: { backgroundColor: "rgba(34,197,94,0.06)", borderColor: "rgba(34,197,94,0.15)", color: Colors.primary },
   moodNormal: { backgroundColor: "rgba(251,191,36,0.06)", borderColor: "rgba(251,191,36,0.15)", color: Colors.gold },
+  moodBayram: { backgroundColor: "rgba(139,92,246,0.06)", borderColor: "rgba(139,92,246,0.15)", color: Colors.violet },
   moodText: { fontSize: 12, fontFamily: "Poppins_700Bold", color: Colors.slate },
 
   modeRow: { flexDirection: "row", gap: 12, marginBottom: 20 },
