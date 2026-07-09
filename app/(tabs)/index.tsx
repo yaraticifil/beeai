@@ -64,14 +64,14 @@ function ActionItem({
 
 export default function PanelScreen() {
   const insets = useSafeAreaInsets();
-  const { user, logout, checkDailySpins, checkDailyMissions, getDailyPulse } = useUser();
+  const { user, logout, checkDailyLogins, checkDailyMissions, getDailyPulse } = useUser();
 
   useEffect(() => {
     if (user) {
-      checkDailySpins();
+      checkDailyLogins();
       checkDailyMissions();
     }
-  }, [user, checkDailySpins, checkDailyMissions]);
+  }, [user, checkDailyLogins, checkDailyMissions]);
 
   useEffect(() => {
     if (!user) router.replace("/");
@@ -133,10 +133,20 @@ export default function PanelScreen() {
               </View>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.welcomeText}>Hoş Geldin,</Text>
-              <Text style={styles.companyText} numberOfLines={1}>
-                {user.companyName}
-              </Text>
+              <View style={styles.welcomeRow}>
+                <View>
+                  <Text style={styles.welcomeText}>Hoş Geldin,</Text>
+                  <Text style={styles.companyText} numberOfLines={1}>
+                    {user.companyName}
+                  </Text>
+                </View>
+                {user.streakCount > 0 && (
+                  <View style={styles.streakBadge}>
+                    <Ionicons name="flame" size={12} color={Colors.white} />
+                    <Text style={styles.streakText}>{user.streakCount} GÜN SERİ</Text>
+                  </View>
+                )}
+              </View>
               <HoneyBoosterBadge />
               <View style={styles.levelProgressContainer}>
                 <View style={styles.levelRow}>
@@ -287,6 +297,7 @@ export default function PanelScreen() {
                   <GlassCard style={styles.beeCard}>
                     <Text style={styles.beeEmoji}>{b.emoji}</Text>
                     <Text style={styles.beeName}>{b.name}</Text>
+                    <Text style={styles.beeSpecialty}>{b.specialty}</Text>
                     <View style={styles.xpBarBackground}>
                       <View style={[styles.xpBarFill, { width: `${b.xp}%` }]} />
                     </View>
@@ -346,6 +357,23 @@ const styles = StyleSheet.create({
   avatarText: { fontSize: 24 },
   welcomeText: { fontSize: 13, fontFamily: "Poppins_400Regular", color: "rgba(255,255,255,0.7)" },
   companyText: { fontSize: 18, fontFamily: "Poppins_800ExtraBold", color: Colors.white },
+  welcomeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  streakBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#ea580c',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  streakText: {
+    color: Colors.white,
+    fontSize: 9,
+    fontFamily: 'Poppins_700Bold',
+  },
   levelProgressContainer: { marginTop: 8, width: '100%' },
   levelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
   levelLabel: { fontSize: 10, fontFamily: 'Poppins_700Bold', color: Colors.gold },
@@ -419,7 +447,8 @@ const styles = StyleSheet.create({
   beesScroll: { marginHorizontal: -20, paddingHorizontal: 20 },
   beeCard: { width: 140, marginRight: 12, padding: 14, alignItems: 'center' },
   beeEmoji: { fontSize: 32, marginBottom: 8 },
-  beeName: { fontSize: 13, fontFamily: 'Poppins_700Bold', color: Colors.slate, marginBottom: 8 },
+  beeName: { fontSize: 13, fontFamily: 'Poppins_700Bold', color: Colors.slate, marginBottom: 2 },
+  beeSpecialty: { fontSize: 9, fontFamily: 'Poppins_600SemiBold', color: Colors.textMuted, marginBottom: 8 },
   xpBarBackground: { width: '100%', height: 4, backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: 2, marginBottom: 4 },
   xpBarFill: { height: 4, backgroundColor: Colors.primary, borderRadius: 2 },
   beeInfoRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
