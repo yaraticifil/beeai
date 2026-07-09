@@ -103,7 +103,7 @@ function FlowerItem({
 
 export default function GardenScreen() {
   const insets = useSafeAreaInsets();
-  const { user, plantFlower, harvestFlower, harvestAllFlowers, boostFlower } = useUser();
+  const { user, plantFlower, harvestFlower, harvestAllFlowers, boostFlower, getDailyPulse } = useUser();
   const [harvestResult, setHarvestResult] = useState<number | null>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -161,6 +161,9 @@ export default function GardenScreen() {
 
   if (!user) return null;
 
+  const pulse = getDailyPulse();
+  const isFestival = pulse.isHarvestFestival;
+
   const readyCount = user.flowers.filter(
     (f) => Date.now() - f.plantedAt >= FLOWER_GROWTH_TIME_MS
   ).length;
@@ -168,12 +171,22 @@ export default function GardenScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={["#dcfce7", "#f0fdf4", Colors.background]}
+        colors={
+          isFestival
+            ? ["#f5f3ff", "#ede9fe", Colors.background]
+            : ["#dcfce7", "#f0fdf4", Colors.background]
+        }
         style={[styles.topGradient, { paddingTop: topInset }]}
       >
         <View style={styles.header}>
           <View>
             <Text style={styles.headerTitle}>Arı Bahçesi</Text>
+            {isFestival && (
+              <View style={styles.festivalBadge}>
+                <Ionicons name="sparkles" size={10} color={Colors.white} />
+                <Text style={styles.festivalText}>HASAT BAYRAMI</Text>
+              </View>
+            )}
             <HoneyBoosterBadge />
           </View>
           <View style={styles.balanceChip}>
@@ -338,6 +351,22 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontFamily: "Poppins_700Bold",
     color: Colors.text,
+  },
+  festivalBadge: {
+    backgroundColor: "#8b5cf6",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    alignSelf: "flex-start",
+    marginBottom: 4,
+  },
+  festivalText: {
+    color: Colors.white,
+    fontSize: 8,
+    fontFamily: "Poppins_800ExtraBold",
   },
   balanceChip: {
     backgroundColor: Colors.primary,
