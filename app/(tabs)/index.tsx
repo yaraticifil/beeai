@@ -64,14 +64,14 @@ function ActionItem({
 
 export default function PanelScreen() {
   const insets = useSafeAreaInsets();
-  const { user, logout, checkDailySpins, checkDailyMissions, getDailyPulse } = useUser();
+  const { user, logout, checkDailyLogins, checkDailyMissions, getDailyPulse } = useUser();
 
   useEffect(() => {
     if (user) {
-      checkDailySpins();
+      checkDailyLogins();
       checkDailyMissions();
     }
-  }, [user, checkDailySpins, checkDailyMissions]);
+  }, [user, checkDailyLogins, checkDailyMissions]);
 
   useEffect(() => {
     if (!user) router.replace("/");
@@ -133,7 +133,15 @@ export default function PanelScreen() {
               </View>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.welcomeText}>Hoş Geldin,</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={styles.welcomeText}>Hoş Geldin,</Text>
+                {user.streakCount > 0 && (
+                  <View style={styles.streakBadge}>
+                    <Ionicons name="flame" size={10} color={Colors.white} />
+                    <Text style={styles.streakBadgeText}>{user.streakCount}</Text>
+                  </View>
+                )}
+              </View>
               <Text style={styles.companyText} numberOfLines={1}>
                 {user.companyName}
               </Text>
@@ -156,11 +164,17 @@ export default function PanelScreen() {
         </View>
 
         <View style={styles.pulseContainer}>
-          <GlassCard style={styles.pulseCard} intensity={20}>
+          <GlassCard style={[styles.pulseCard, pulse.isHarvestFestival && { borderColor: '#8b5cf6', borderWidth: 2 }]} intensity={20}>
             <View style={styles.pulseHeader}>
               <View style={styles.pulseIndicator}>
                 <View style={[styles.pulseDot, { backgroundColor: pulse.mood === "sert" ? Colors.danger : pulse.mood === "yumupeak" ? Colors.primary : Colors.gold }]} />
                 <Text style={styles.pulseStatus}>{pulse.mood.toUpperCase()} PİYASA</Text>
+                {pulse.isHarvestFestival && (
+                  <>
+                    <View style={styles.pulseDotDivider} />
+                    <Text style={[styles.pulseStatus, { color: '#c4b5fd' }]}>HASAT BAYRAMI</Text>
+                  </>
+                )}
               </View>
               <Text style={styles.pointsText}>{user.honeyPoints} 🍯</Text>
             </View>
@@ -345,6 +359,8 @@ const styles = StyleSheet.create({
   },
   avatarText: { fontSize: 24 },
   welcomeText: { fontSize: 13, fontFamily: "Poppins_400Regular", color: "rgba(255,255,255,0.7)" },
+  streakBadge: { backgroundColor: Colors.orange, flexDirection: 'row', alignItems: 'center', gap: 2, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 10 },
+  streakBadgeText: { color: Colors.white, fontSize: 10, fontFamily: 'Poppins_700Bold' },
   companyText: { fontSize: 18, fontFamily: "Poppins_800ExtraBold", color: Colors.white },
   levelProgressContainer: { marginTop: 8, width: '100%' },
   levelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
@@ -359,6 +375,7 @@ const styles = StyleSheet.create({
   pulseHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
   pulseIndicator: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: 'rgba(0,0,0,0.3)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
   pulseDot: { width: 6, height: 6, borderRadius: 3 },
+  pulseDotDivider: { width: 1, height: 10, backgroundColor: 'rgba(255,255,255,0.2)' },
   pulseStatus: { color: Colors.white, fontSize: 10, fontFamily: "Poppins_700Bold", letterSpacing: 0.5 },
   pointsText: { color: Colors.gold, fontSize: 16, fontFamily: "Poppins_800ExtraBold" },
   pulseContent: { flexDirection: 'row', alignItems: 'center', gap: 12 },

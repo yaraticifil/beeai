@@ -52,6 +52,8 @@ function FlowerItem({
   const mins = Math.floor(timeLeft / 60);
   const secs = timeLeft % 60;
 
+  const stageLabel = isReady ? "Hazır" : progress < 0.33 ? "Filiz" : progress < 0.66 ? "Tomurcuk" : "Büyüyor";
+
   return (
     <Animated.View style={[styles.flowerItem, { transform: [{ scale: scaleAnim }] }]}>
       <Pressable
@@ -79,9 +81,10 @@ function FlowerItem({
           />
         </View>
         {isReady ? (
-          <Text style={styles.harvestText}>Topla</Text>
+          <Text style={styles.harvestText}>Hazır (Topla)</Text>
         ) : (
           <View style={{ alignItems: 'center' }}>
+            <Text style={styles.stageLabel}>{stageLabel}</Text>
             <Text style={styles.growText}>
               {mins > 0 ? `${mins}d ${secs}s` : `${secs}s`}
             </Text>
@@ -103,8 +106,11 @@ function FlowerItem({
 
 export default function GardenScreen() {
   const insets = useSafeAreaInsets();
-  const { user, plantFlower, harvestFlower, harvestAllFlowers, boostFlower } = useUser();
+  const { user, plantFlower, harvestFlower, harvestAllFlowers, boostFlower, getDailyPulse } = useUser();
   const [harvestResult, setHarvestResult] = useState<number | null>(null);
+
+  const pulse = getDailyPulse();
+  const isFestival = pulse.isHarvestFestival;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   const topInset = Platform.OS === "web" ? 67 : insets.top;
@@ -166,14 +172,21 @@ export default function GardenScreen() {
   ).length;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, isFestival && { backgroundColor: '#f5f3ff' }]}>
       <LinearGradient
-        colors={["#dcfce7", "#f0fdf4", Colors.background]}
+        colors={isFestival ? ["#ede9fe", "#f5f3ff", "#f5f3ff"] : ["#dcfce7", "#f0fdf4", Colors.background]}
         style={[styles.topGradient, { paddingTop: topInset }]}
       >
         <View style={styles.header}>
           <View>
-            <Text style={styles.headerTitle}>Arı Bahçesi</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text style={styles.headerTitle}>Arı Bahçesi</Text>
+              {isFestival && (
+                <View style={styles.festivalBadge}>
+                  <Text style={styles.festivalBadgeText}>BAYRAM</Text>
+                </View>
+              )}
+            </View>
             <HoneyBoosterBadge />
           </View>
           <View style={styles.balanceChip}>
@@ -527,14 +540,32 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   harvestText: {
-    fontSize: 9,
+    fontSize: 8,
     fontFamily: "Poppins_700Bold",
     color: Colors.gold,
+    textAlign: 'center',
+  },
+  stageLabel: {
+    fontSize: 7,
+    fontFamily: "Poppins_700Bold",
+    color: Colors.primary,
+    textTransform: 'uppercase',
   },
   growText: {
     fontSize: 8,
     fontFamily: "Poppins_600SemiBold",
     color: Colors.textMuted,
+  },
+  festivalBadge: {
+    backgroundColor: '#8b5cf6',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  festivalBadgeText: {
+    color: Colors.white,
+    fontSize: 8,
+    fontFamily: 'Poppins_800ExtraBold',
   },
   plantBtn: {
     borderRadius: 16,

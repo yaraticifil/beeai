@@ -144,6 +144,8 @@ export interface User {
   goldenSpinCount: number;
   lastSpinDate: string;
   lastPulseCheckDate?: string;
+  streakCount: number;
+  lastLoginDate: string;
 
   flowers: Flower[];
   totalHarvested: number;
@@ -172,6 +174,7 @@ export interface DailyPulse {
   mood: "sert" | "normal" | "yumupeak";
   band90: { min: number; max: number }; // %
   note: string;
+  isHarvestFestival?: boolean;
 }
 
 /* =========================
@@ -185,6 +188,8 @@ const DEFAULT_USER: Partial<User> = {
   goldenSpinCount: 0,
   lastSpinDate: "",
   lastPulseCheckDate: "",
+  streakCount: 0,
+  lastLoginDate: "",
   flowers: [],
   totalHarvested: 0,
   purchasedItems: [],
@@ -319,6 +324,8 @@ function computeDailyPulseInternal(companyName?: string): DailyPulse {
   const seedBase = `${dateISO}|${companyName || ""}`;
   const h = hashStringToInt(seedBase);
 
+  const isHarvestFestival = (h % 100) < 10;
+
   // 90 gün bandı: 1.8 - 4.8 (pilot)
   const base = 1.8 + (h % 300) / 100; // 1.8-4.8
   const spread = 0.35 + ((h >>> 3) % 55) / 100; // 0.35-0.90
@@ -341,6 +348,7 @@ function computeDailyPulseInternal(companyName?: string): DailyPulse {
     mood,
     band90: { min: Number(min.toFixed(2)), max: Number(max.toFixed(2)) },
     note,
+    isHarvestFestival,
   };
 }
 
@@ -416,7 +424,7 @@ interface UserContextValue {
   harvestFlower: (flowerId: string) => Promise<number>;
   harvestAllFlowers: () => Promise<number>;
   boostFlower: (flowerId: string) => Promise<boolean>;
-  checkDailySpins: () => Promise<void>;
+  checkDailyLogins: () => Promise<void>;
   checkDailyMissions: () => Promise<void>;
   claimMissionReward: (missionId: string) => Promise<void>;
 
@@ -552,12 +560,35 @@ export function UserProvider({ children }: { children: ReactNode }) {
     return true;
   };
 
-  const checkDailySpins = async () => {
+  const checkDailyLogins = async () => {
     if (!user) return;
     const today = todayKey();
-    if (user.lastSpinDate !== today) {
-      await saveUser({ ...user, spinCount: user.spinCount + 3, lastSpinDate: today });
+    if (user.lastLoginDate === today) return;
+
+    let newStreak = 1;
+    const lastDate = user.lastLoginDate;
+    if (lastDate) {
+      const last = new Date(lastDate);
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      if (last.toDateString() === yesterday.toDateString()) {
+        newStreak = (user.streakCount || 0) + 1;
+      }
     }
+
+    const bonusHoney = Math.min(newStreak * 10, 50);
+    const updated: User = {
+      ...user,
+      streakCount: newStreak,
+      lastLoginDate: today,
+      spinCount: user.spinCount + 3,
+      lastSpinDate: today,
+    };
+
+    const { updatedUser } = applyPointsGainInternal(updated, bonusHoney);
+    const finalUser = addActivityInternal(updatedUser, "login_streak", `Günlük giriş! ${newStreak} günlük seri. ${bonusHoney} Bal bonus kazanıldı.`);
+
+    await saveUser(finalUser);
   };
 
   const checkDailyMissions = async () => {
@@ -703,8 +734,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const isReady = elapsed >= FLOWER_GROWTH_TIME_MS;
     if (!isReady) return 0;
 
+    const pulse = computeDailyPulseInternal(user.companyName);
     let honeyEarnedRaw = Math.floor(Math.random() * 16) + 15;
     if (flower.isGolden) {
+      honeyEarnedRaw *= 2;
+    }
+    if (pulse.isHarvestFestival) {
       honeyEarnedRaw *= 2;
     }
 
@@ -714,12 +749,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
       return m;
     });
 
+    const pulseMsg = pulse.isHarvestFestival ? " (Hasat Bayramı 2x!)" : "";
     let updatedWithActivity = addActivityInternal({
       ...user,
       flowers: newFlowers,
       totalHarvested: (user.totalHarvested || 0) + 1,
       missions: updatedMissions,
-    }, "harvest", flower.isGolden ? "Altın Çiçek hasat edildi! 2x Bal kazanıldı." : "Çiçek hasat edildi.");
+    }, "harvest", (flower.isGolden ? "Altın Çiçek hasat edildi! 2x Bal kazanıldı." : "Çiçek hasat edildi.") + pulseMsg);
 
     const { updatedUser, pointsGained } = applyPointsGainInternal(updatedWithActivity, honeyEarnedRaw);
 
@@ -735,6 +771,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     );
     if (readyFlowers.length === 0) return 0;
 
+    const pulse = computeDailyPulseInternal(user.companyName);
     let totalEarnedRaw = 0;
     let hasGolden = false;
     readyFlowers.forEach((f) => {
@@ -742,6 +779,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
       if (f.isGolden) {
         earned *= 2;
         hasGolden = true;
+      }
+      if (pulse.isHarvestFestival) {
+        earned *= 2;
       }
       totalEarnedRaw += earned;
     });
@@ -754,12 +794,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
       return m;
     });
 
+    const pulseMsg = pulse.isHarvestFestival ? " (Hasat Bayramı 2x!)" : "";
     let updatedWithActivity = addActivityInternal({
       ...user,
       flowers: remainingFlowers,
       totalHarvested: (user.totalHarvested || 0) + readyFlowers.length,
       missions: updatedMissions,
-    }, "harvest", hasGolden ? "Çiçekler hasat edildi (Altın çiçekler dahil)!" : "Tüm çiçekler hasat edildi.");
+    }, "harvest", (hasGolden ? "Çiçekler hasat edildi (Altın çiçekler dahil)!" : "Tüm çiçekler hasat edildi.") + pulseMsg);
 
     const { updatedUser, pointsGained } = applyPointsGainInternal(updatedWithActivity, totalEarnedRaw);
 
@@ -990,8 +1031,16 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
     const now = Date.now();
     const scout = (user.bees || []).find(b => b.role === "İzci");
-    // İzci bonus: Her seviye %10 hız (max %50). Örn: Sv 2 = %10 hızlanma -> zaman çarpanı 0.9
-    const speedBonus = scout ? Math.min(0.5, (scout.level - 1) * 0.1) : 0;
+    const negotiator = (user.bees || []).find(b => b.role === "Aracı");
+
+    // İzci bonus: Her seviye %10 hız (max %50).
+    let speedBonus = scout ? Math.min(0.5, (scout.level - 1) * 0.1) : 0;
+
+    // Synergy bonus: İzci & Aracı level 3+ ise +%5 hız
+    if (scout && scout.level >= 3 && negotiator && negotiator.level >= 3) {
+      speedBonus += 0.05;
+    }
+
     const timeMultiplier = 1 - speedBonus;
 
     const elapsed = now - req.startedAt;
@@ -1226,7 +1275,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       harvestFlower,
       harvestAllFlowers,
       boostFlower,
-      checkDailySpins,
+      checkDailyLogins,
       checkDailyMissions,
       claimMissionReward,
       addCheck,

@@ -29,6 +29,8 @@ export default function PulseScreen() {
     return "Normal";
   }, [pulse.mood]);
 
+  const isFestival = pulse.isHarvestFestival;
+
   const topInset = Platform.OS === "web" ? 60 : insets.top;
 
   return (
@@ -62,6 +64,12 @@ export default function PulseScreen() {
                 <View style={styles.dot} />
                 <Text style={styles.moodText}>{moodLabel}</Text>
               </View>
+              {isFestival && (
+                <View style={styles.festivalPill}>
+                   <Ionicons name="leaf" size={14} color="#8b5cf6" />
+                   <Text style={styles.festivalText}>Bayram</Text>
+                </View>
+              )}
             </View>
 
             <View style={styles.modeRow}>
@@ -179,6 +187,9 @@ const styles = StyleSheet.create({
   moodSoft: { backgroundColor: "rgba(34,197,94,0.06)", borderColor: "rgba(34,197,94,0.15)", color: Colors.primary },
   moodNormal: { backgroundColor: "rgba(251,191,36,0.06)", borderColor: "rgba(251,191,36,0.15)", color: Colors.gold },
   moodText: { fontSize: 12, fontFamily: "Poppins_700Bold", color: Colors.slate },
+
+  festivalPill: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, backgroundColor: '#f5f3ff', borderWidth: 1, borderColor: '#ddd6fe' },
+  festivalText: { fontSize: 11, fontFamily: 'Poppins_700Bold', color: '#8b5cf6' },
 
   modeRow: { flexDirection: "row", gap: 12, marginBottom: 20 },
   modeBtn: { flex: 1, flexDirection: "row", gap: 8, alignItems: "center", justifyContent: "center", borderRadius: 16, paddingVertical: 14, borderWidth: 1, borderColor: Colors.cardBorder, backgroundColor: Colors.white },
