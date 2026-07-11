@@ -26,6 +26,7 @@ export default function PulseScreen() {
   const moodLabel = useMemo(() => {
     if (pulse.mood === "sert") return "Sert";
     if (pulse.mood === "yumupeak") return "Yumuşak";
+    if (pulse.mood === "festival") return "Hasat Bayramı";
     return "Normal";
   }, [pulse.mood]);
 
@@ -58,7 +59,7 @@ export default function PulseScreen() {
                 <Text style={styles.title}>Günlük Endeks</Text>
                 <Text style={styles.date}>{pulse.date}</Text>
               </View>
-              <View style={[styles.moodPill, pulse.mood === "sert" ? styles.moodHard : pulse.mood === "yumupeak" ? styles.moodSoft : styles.moodNormal]}>
+              <View style={[styles.moodPill, pulse.mood === "sert" ? styles.moodHard : pulse.mood === "yumupeak" ? styles.moodSoft : pulse.mood === "festival" ? styles.moodFestival : styles.moodNormal]}>
                 <View style={styles.dot} />
                 <Text style={styles.moodText}>{moodLabel}</Text>
               </View>
@@ -90,6 +91,8 @@ export default function PulseScreen() {
                     ? "Bugün finansal piyasalarda likidite daralması gözleniyor. Teklifler daha seçici ve yüksek iskontolu gelebilir."
                     : pulse.mood === "yumupeak"
                     ? "Piyasada likidite bolluğu hakim. Arılar revize turlarında daha agresif ve rekabetçi teklifler yakalayabilir."
+                    : pulse.mood === "festival"
+                    ? "Kovan'da bayram havası var! Tüm çiçek hasatları bugün 2 kat bal kazandırıyor. Bahçenizi kontrol etmeyi unutmayın!"
                     : "Piyasa koşulları standart dengesinde seyrediyor. Evrak kalitenize göre hızlı ve sağlıklı akış bekliyoruz."}
                 </Text>
               </Animated.View>
@@ -177,6 +180,7 @@ const styles = StyleSheet.create({
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'currentColor' },
   moodHard: { backgroundColor: "rgba(239,68,68,0.06)", borderColor: "rgba(239,68,68,0.15)", color: Colors.danger },
   moodSoft: { backgroundColor: "rgba(34,197,94,0.06)", borderColor: "rgba(34,197,94,0.15)", color: Colors.primary },
+  moodFestival: { backgroundColor: "rgba(139,92,246,0.06)", borderColor: "rgba(139,92,246,0.15)", color: Colors.violet },
   moodNormal: { backgroundColor: "rgba(251,191,36,0.06)", borderColor: "rgba(251,191,36,0.15)", color: Colors.gold },
   moodText: { fontSize: 12, fontFamily: "Poppins_700Bold", color: Colors.slate },
 

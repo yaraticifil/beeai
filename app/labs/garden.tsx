@@ -103,9 +103,12 @@ function FlowerItem({
 
 export default function GardenScreen() {
   const insets = useSafeAreaInsets();
-  const { user, plantFlower, harvestFlower, harvestAllFlowers, boostFlower } = useUser();
+  const { user, plantFlower, harvestFlower, harvestAllFlowers, boostFlower, getDailyPulse } = useUser();
   const [harvestResult, setHarvestResult] = useState<number | null>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  const pulse = getDailyPulse();
+  const isFestival = pulse.mood === "festival";
 
   const topInset = Platform.OS === "web" ? 67 : insets.top;
 
@@ -168,7 +171,7 @@ export default function GardenScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={["#dcfce7", "#f0fdf4", Colors.background]}
+        colors={isFestival ? ["#f5f3ff", "#ede9fe", Colors.background] : ["#dcfce7", "#f0fdf4", Colors.background]}
         style={[styles.topGradient, { paddingTop: topInset }]}
       >
         <View style={styles.header}>
@@ -234,7 +237,7 @@ export default function GardenScreen() {
 
         <View style={styles.gardenArea}>
           <LinearGradient
-            colors={["#87ceeb", "#98d8c8", "#90ee90"]}
+            colors={isFestival ? ["#8b5cf6", "#a78bfa", "#c4b5fd"] : ["#87ceeb", "#98d8c8", "#90ee90"]}
             style={styles.gardenGround}
           >
             <View style={styles.groundOverlay} />
@@ -255,7 +258,7 @@ export default function GardenScreen() {
                 {readyCount > 1 && (
                   <Pressable
                     onPress={handleHarvestAll}
-                    style={styles.harvestAllBtn}
+                    style={[styles.harvestAllBtn, isFestival && { backgroundColor: Colors.violet }]}
                   >
                     <Text style={styles.harvestAllText}>Hepsini Topla</Text>
                     <Ionicons name="basket" size={16} color={Colors.white} />

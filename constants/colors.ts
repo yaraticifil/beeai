@@ -9,6 +9,8 @@ export default {
   gold,
   goldLight: "rgba(251,191,36,0.15)",
   goldDark: "#b45309",
+  orange: "#ea580c",
+  violet: "#8b5cf6",
   slate,
   slateLight: "#1e293b",
   background: "#f8fafc",
