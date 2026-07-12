@@ -103,7 +103,7 @@ function FlowerItem({
 
 export default function GardenScreen() {
   const insets = useSafeAreaInsets();
-  const { user, plantFlower, harvestFlower, harvestAllFlowers, boostFlower } = useUser();
+  const { user, plantFlower, harvestFlower, harvestAllFlowers, boostFlower, getDailyPulse } = useUser();
   const [harvestResult, setHarvestResult] = useState<number | null>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -161,6 +161,9 @@ export default function GardenScreen() {
 
   if (!user) return null;
 
+  const pulse = getDailyPulse();
+  const isFestival = pulse.mood === "festival";
+
   const readyCount = user.flowers.filter(
     (f) => Date.now() - f.plantedAt >= FLOWER_GROWTH_TIME_MS
   ).length;
@@ -168,12 +171,19 @@ export default function GardenScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={["#dcfce7", "#f0fdf4", Colors.background]}
+        colors={isFestival ? ["#f5f3ff", "#ede9fe", Colors.background] : ["#dcfce7", "#f0fdf4", Colors.background]}
         style={[styles.topGradient, { paddingTop: topInset }]}
       >
         <View style={styles.header}>
           <View>
-            <Text style={styles.headerTitle}>Arı Bahçesi</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text style={styles.headerTitle}>Arı Bahçesi</Text>
+              {isFestival && (
+                <View style={{ backgroundColor: Colors.violet, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
+                  <Text style={{ color: Colors.white, fontSize: 8, fontFamily: 'Poppins_700Bold' }}>BAYRAM</Text>
+                </View>
+              )}
+            </View>
             <HoneyBoosterBadge />
           </View>
           <View style={styles.balanceChip}>

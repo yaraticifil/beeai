@@ -64,14 +64,14 @@ function ActionItem({
 
 export default function PanelScreen() {
   const insets = useSafeAreaInsets();
-  const { user, logout, checkDailySpins, checkDailyMissions, getDailyPulse } = useUser();
+  const { user, logout, checkDailyLogins, checkDailyMissions, getDailyPulse } = useUser();
 
   useEffect(() => {
     if (user) {
-      checkDailySpins();
+      checkDailyLogins();
       checkDailyMissions();
     }
-  }, [user, checkDailySpins, checkDailyMissions]);
+  }, [user, checkDailyLogins, checkDailyMissions]);
 
   useEffect(() => {
     if (!user) router.replace("/");
@@ -114,6 +114,8 @@ export default function PanelScreen() {
             ? ["#7f1d1d", "#450a0a", "#0f172a"]
             : pulse.mood === "yumupeak"
             ? ["#064e3b", "#022c22", "#0f172a"]
+            : pulse.mood === "festival"
+            ? ["#4c1d95", "#2e1065", "#0f172a"]
             : [Colors.slate, "#1e293b", "#0f172a"]
         }
         style={[styles.header, { paddingTop: topInset + 10 }]}
@@ -159,10 +161,18 @@ export default function PanelScreen() {
           <GlassCard style={styles.pulseCard} intensity={20}>
             <View style={styles.pulseHeader}>
               <View style={styles.pulseIndicator}>
-                <View style={[styles.pulseDot, { backgroundColor: pulse.mood === "sert" ? Colors.danger : pulse.mood === "yumupeak" ? Colors.primary : Colors.gold }]} />
+                <View style={[styles.pulseDot, { backgroundColor: pulse.mood === "sert" ? Colors.danger : pulse.mood === "yumupeak" ? Colors.primary : pulse.mood === "festival" ? Colors.violet : Colors.gold }]} />
                 <Text style={styles.pulseStatus}>{pulse.mood.toUpperCase()} PİYASA</Text>
               </View>
-              <Text style={styles.pointsText}>{user.honeyPoints} 🍯</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                {user.streakCount > 0 && (
+                  <View style={styles.streakBadge}>
+                    <Ionicons name="flame" size={14} color={Colors.orange} />
+                    <Text style={styles.streakText}>{user.streakCount}</Text>
+                  </View>
+                )}
+                <Text style={styles.pointsText}>{user.honeyPoints} 🍯</Text>
+              </View>
             </View>
             <View style={styles.pulseContent}>
               <View style={{ flex: 1 }}>
@@ -192,6 +202,8 @@ export default function PanelScreen() {
                  ? 'Piyasa sert, yüksek puanlı keşidecilere odaklanarak işlem hızınızı koruyun.'
                  : pulse.mood === 'yumupeak'
                  ? 'Rekabetçi bir gün, arılarınızla revize turlarını mutlaka deneyin!'
+                 : pulse.mood === 'festival'
+                 ? 'Hasat Bayramı geldi! Bahçedeki çiçekler bugün tam 2 kat daha verimli. Hemen ekmeye başla!'
                  : 'Dengeli bir gün. Çeklerinizi erkenden kovana bırakın, en iyi teklifi yakalayın.'}
              </Text>
           </GlassCard>
@@ -361,6 +373,8 @@ const styles = StyleSheet.create({
   pulseDot: { width: 6, height: 6, borderRadius: 3 },
   pulseStatus: { color: Colors.white, fontSize: 10, fontFamily: "Poppins_700Bold", letterSpacing: 0.5 },
   pointsText: { color: Colors.gold, fontSize: 16, fontFamily: "Poppins_800ExtraBold" },
+  streakBadge: { flexDirection: 'row', alignItems: 'center', gap: 2, backgroundColor: 'rgba(234, 88, 12, 0.15)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 },
+  streakText: { color: Colors.orange, fontSize: 13, fontFamily: "Poppins_700Bold" },
   pulseContent: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   pulseNote: { color: "rgba(255,255,255,0.85)", fontSize: 12, lineHeight: 18, fontFamily: "Poppins_400Regular" },
   miniChart: { width: 80, height: 40, opacity: 0.8 },
