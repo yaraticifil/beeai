@@ -137,7 +137,15 @@ export default function PanelScreen() {
               <Text style={styles.companyText} numberOfLines={1}>
                 {user.companyName}
               </Text>
-              <HoneyBoosterBadge />
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <HoneyBoosterBadge />
+                {user.streakCount > 0 && (
+                  <View style={styles.streakBadge}>
+                    <Ionicons name="flame" size={12} color={Colors.orange} />
+                    <Text style={styles.streakText}>{user.streakCount}</Text>
+                  </View>
+                )}
+              </View>
               <View style={styles.levelProgressContainer}>
                 <View style={styles.levelRow}>
                   <Text style={styles.levelLabel}>Seviye {user.level}</Text>
@@ -344,6 +352,20 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.2)",
   },
   avatarText: { fontSize: 24 },
+  streakBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  streakText: {
+    color: Colors.white,
+    fontSize: 11,
+    fontFamily: 'Poppins_700Bold',
+  },
   welcomeText: { fontSize: 13, fontFamily: "Poppins_400Regular", color: "rgba(255,255,255,0.7)" },
   companyText: { fontSize: 18, fontFamily: "Poppins_800ExtraBold", color: Colors.white },
   levelProgressContainer: { marginTop: 8, width: '100%' },
