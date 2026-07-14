@@ -34,11 +34,19 @@ export default function PulseScreen() {
   return (
     <View style={styles.container}>
        <LinearGradient
-        colors={[Colors.slate, "#1e293b", "#0f172a"]}
+        colors={pulse.isFestival ? ["#4c1d95", "#2e1065", "#0f172a"] : [Colors.slate, "#1e293b", "#0f172a"]}
         style={[styles.header, { paddingTop: topInset + 10 }]}
       >
         <Animated.View entering={FadeInDown.springify()} style={styles.headerContent}>
-          <Text style={styles.h1}>Piyasa Nabzı</Text>
+          <View style={styles.headerTopRow}>
+            <Text style={styles.h1}>Piyasa Nabzı</Text>
+            {user?.streakCount !== undefined && user.streakCount > 0 && (
+              <View style={styles.streakBadge}>
+                <Ionicons name="flame" size={12} color="#f97316" />
+                <Text style={styles.streakText}>{user.streakCount}</Text>
+              </View>
+            )}
+          </View>
           <Text style={styles.h2}>Piyasayı konuşturur, sayıları otonom analiz ederiz.</Text>
         </Animated.View>
       </LinearGradient>
@@ -63,6 +71,13 @@ export default function PulseScreen() {
                 <Text style={styles.moodText}>{moodLabel}</Text>
               </View>
             </View>
+
+            {pulse.isFestival && (
+              <View style={styles.festivalBadge}>
+                 <Ionicons name="sparkles" size={14} color="#8b5cf6" />
+                 <Text style={styles.festivalText}>HASAT BAYRAMI AKTİF!</Text>
+              </View>
+            )}
 
             <View style={styles.modeRow}>
               <Pressable
@@ -162,8 +177,25 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   header: { paddingHorizontal: 20, paddingBottom: 30, borderBottomLeftRadius: 36, borderBottomRightRadius: 36 },
   headerContent: { gap: 6 },
+  headerTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   h1: { fontSize: 24, fontFamily: "Poppins_800ExtraBold", color: Colors.white },
   h2: { fontSize: 13, fontFamily: "Poppins_400Regular", color: "rgba(255,255,255,0.7)", lineHeight: 20 },
+  streakBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: 'rgba(249, 115, 22, 0.25)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(249, 115, 22, 0.4)',
+  },
+  streakText: {
+    color: '#fb923c',
+    fontSize: 13,
+    fontFamily: 'Poppins_700Bold',
+  },
 
   scroll: { flex: 1, paddingHorizontal: 20, marginTop: -20 },
   card: { padding: 20, borderRadius: 28, marginBottom: 20 },
@@ -179,6 +211,26 @@ const styles = StyleSheet.create({
   moodSoft: { backgroundColor: "rgba(34,197,94,0.06)", borderColor: "rgba(34,197,94,0.15)", color: Colors.primary },
   moodNormal: { backgroundColor: "rgba(251,191,36,0.06)", borderColor: "rgba(251,191,36,0.15)", color: Colors.gold },
   moodText: { fontSize: 12, fontFamily: "Poppins_700Bold", color: Colors.slate },
+
+  festivalBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(139, 92, 246, 0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(139, 92, 246, 0.2)',
+    marginBottom: 20,
+    justifyContent: 'center',
+  },
+  festivalText: {
+    color: '#7c3aed',
+    fontSize: 11,
+    fontFamily: 'Poppins_800ExtraBold',
+    letterSpacing: 0.5,
+  },
 
   modeRow: { flexDirection: "row", gap: 12, marginBottom: 20 },
   modeBtn: { flex: 1, flexDirection: "row", gap: 8, alignItems: "center", justifyContent: "center", borderRadius: 16, paddingVertical: 14, borderWidth: 1, borderColor: Colors.cardBorder, backgroundColor: Colors.white },

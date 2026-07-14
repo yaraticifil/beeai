@@ -159,6 +159,8 @@ export interface User {
   flowerSeeds: number;
   flowerBoosts: number;
   honeyBoosterUntil: number; // timestamp
+  streakCount: number;
+  lastLoginDate: string;
   settings: UserSettings;
 
   missions: Mission[];
@@ -172,6 +174,7 @@ export interface DailyPulse {
   mood: "sert" | "normal" | "yumupeak";
   band90: { min: number; max: number }; // %
   note: string;
+  isFestival?: boolean;
 }
 
 /* =========================
@@ -185,6 +188,8 @@ const DEFAULT_USER: Partial<User> = {
   goldenSpinCount: 0,
   lastSpinDate: "",
   lastPulseCheckDate: "",
+  streakCount: 0,
+  lastLoginDate: "",
   flowers: [],
   totalHarvested: 0,
   purchasedItems: [],
@@ -221,6 +226,12 @@ const MISSION_POOL: Omit<Mission, "current" | "claimed">[] = [
 
 function todayKey(): string {
   return new Date().toDateString();
+}
+
+function yesterdayKey(): string {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return d.toDateString();
 }
 
 function toISODate(d: Date): string {
@@ -329,6 +340,9 @@ function computeDailyPulseInternal(companyName?: string): DailyPulse {
   if (base > 3.9) mood = "sert";
   if (base < 2.4) mood = "yumupeak";
 
+  // %10 ihtimalle Hasat Bayramı (deterministik)
+  const isFestival = (h >>> 7) % 10 === 0;
+
   const note =
     mood === "sert"
       ? "Rekabet dar, teklif süreleri uzuyor. Keşideci skoru yüksek olanlar daha hızlı döner."
@@ -341,6 +355,7 @@ function computeDailyPulseInternal(companyName?: string): DailyPulse {
     mood,
     band90: { min: Number(min.toFixed(2)), max: Number(max.toFixed(2)) },
     note,
+    isFestival,
   };
 }
 
@@ -416,7 +431,7 @@ interface UserContextValue {
   harvestFlower: (flowerId: string) => Promise<number>;
   harvestAllFlowers: () => Promise<number>;
   boostFlower: (flowerId: string) => Promise<boolean>;
-  checkDailySpins: () => Promise<void>;
+  checkDailyLogins: () => Promise<void>;
   checkDailyMissions: () => Promise<void>;
   claimMissionReward: (missionId: string) => Promise<void>;
 
@@ -552,12 +567,32 @@ export function UserProvider({ children }: { children: ReactNode }) {
     return true;
   };
 
-  const checkDailySpins = async () => {
+  const checkDailyLogins = async () => {
     if (!user) return;
     const today = todayKey();
-    if (user.lastSpinDate !== today) {
-      await saveUser({ ...user, spinCount: user.spinCount + 3, lastSpinDate: today });
+    if (user.lastLoginDate === today) return;
+
+    const yesterday = yesterdayKey();
+    let newStreak = 1;
+    if (user.lastLoginDate === yesterday) {
+      newStreak = (user.streakCount || 0) + 1;
     }
+
+    const streakBonus = Math.min(50, 10 + (newStreak - 1) * 10);
+
+    let updated: User = {
+      ...user,
+      streakCount: newStreak,
+      lastLoginDate: today,
+      spinCount: user.spinCount + 3,
+      lastSpinDate: today, // Keep lastSpinDate in sync for now
+    };
+
+    const message = `Günlük giriş! ${newStreak} gün üst üste. ${streakBonus} Bal ve 3 Çeviri kazandınız.`;
+    const updatedWithActivity = addActivityInternal(updated, "login", message);
+    const { updatedUser } = applyPointsGainInternal(updatedWithActivity, streakBonus);
+
+    await saveUser(updatedUser);
   };
 
   const checkDailyMissions = async () => {
@@ -656,6 +691,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
       updated = updatedUser;
     }
 
+    if (selected.prize === "BÜYÜK İKRAMİYE") {
+      updated = addActivityInternal(updated, "jackpot", "BÜYÜK İKRAMİYE! Şanslı çarktan dev bal ödülü kazandınız! 🎉");
+    }
+
     await saveUser(updated);
     return { pointsWon: pointsWon, prize: selected.prize };
   };
@@ -703,8 +742,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const isReady = elapsed >= FLOWER_GROWTH_TIME_MS;
     if (!isReady) return 0;
 
+    const pulse = computeDailyPulseInternal(user.companyName);
     let honeyEarnedRaw = Math.floor(Math.random() * 16) + 15;
     if (flower.isGolden) {
+      honeyEarnedRaw *= 2;
+    }
+    if (pulse.isFestival) {
       honeyEarnedRaw *= 2;
     }
 
@@ -735,6 +778,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     );
     if (readyFlowers.length === 0) return 0;
 
+    const pulse = computeDailyPulseInternal(user.companyName);
     let totalEarnedRaw = 0;
     let hasGolden = false;
     readyFlowers.forEach((f) => {
@@ -742,6 +786,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
       if (f.isGolden) {
         earned *= 2;
         hasGolden = true;
+      }
+      if (pulse.isFestival) {
+        earned *= 2;
       }
       totalEarnedRaw += earned;
     });
@@ -990,8 +1037,16 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
     const now = Date.now();
     const scout = (user.bees || []).find(b => b.role === "İzci");
+    const negotiator = (user.bees || []).find(b => b.role === "Aracı");
+
     // İzci bonus: Her seviye %10 hız (max %50). Örn: Sv 2 = %10 hızlanma -> zaman çarpanı 0.9
-    const speedBonus = scout ? Math.min(0.5, (scout.level - 1) * 0.1) : 0;
+    let speedBonus = scout ? Math.min(0.5, (scout.level - 1) * 0.1) : 0;
+
+    // Sinerji Bonus: İzci ve Aracı ikisi de 3+ seviyeyse +%5 ek hız
+    if (scout && scout.level >= 3 && negotiator && negotiator.level >= 3) {
+      speedBonus += 0.05;
+    }
+
     const timeMultiplier = 1 - speedBonus;
 
     const elapsed = now - req.startedAt;
@@ -1226,7 +1281,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       harvestFlower,
       harvestAllFlowers,
       boostFlower,
-      checkDailySpins,
+      checkDailyLogins,
       checkDailyMissions,
       claimMissionReward,
       addCheck,

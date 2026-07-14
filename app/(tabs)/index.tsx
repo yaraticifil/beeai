@@ -64,14 +64,14 @@ function ActionItem({
 
 export default function PanelScreen() {
   const insets = useSafeAreaInsets();
-  const { user, logout, checkDailySpins, checkDailyMissions, getDailyPulse } = useUser();
+  const { user, logout, checkDailyLogins, checkDailyMissions, getDailyPulse } = useUser();
 
   useEffect(() => {
     if (user) {
-      checkDailySpins();
+      checkDailyLogins();
       checkDailyMissions();
     }
-  }, [user, checkDailySpins, checkDailyMissions]);
+  }, [user, checkDailyLogins, checkDailyMissions]);
 
   useEffect(() => {
     if (!user) router.replace("/");
@@ -110,7 +110,9 @@ export default function PanelScreen() {
     <View style={styles.container}>
       <LinearGradient
         colors={
-          pulse.mood === "sert"
+          pulse.isFestival
+            ? ["#4c1d95", "#2e1065", "#0f172a"] // Violet theme for festival
+            : pulse.mood === "sert"
             ? ["#7f1d1d", "#450a0a", "#0f172a"]
             : pulse.mood === "yumupeak"
             ? ["#064e3b", "#022c22", "#0f172a"]
@@ -134,9 +136,17 @@ export default function PanelScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.welcomeText}>Hoş Geldin,</Text>
-              <Text style={styles.companyText} numberOfLines={1}>
-                {user.companyName}
-              </Text>
+              <View style={styles.companyRow}>
+                <Text style={styles.companyText} numberOfLines={1}>
+                  {user.companyName}
+                </Text>
+                {user.streakCount > 0 && (
+                  <View style={styles.streakBadge}>
+                    <Ionicons name="flame" size={12} color="#f97316" />
+                    <Text style={styles.streakText}>{user.streakCount}</Text>
+                  </View>
+                )}
+              </View>
               <HoneyBoosterBadge />
               <View style={styles.levelProgressContainer}>
                 <View style={styles.levelRow}>
@@ -345,7 +355,24 @@ const styles = StyleSheet.create({
   },
   avatarText: { fontSize: 24 },
   welcomeText: { fontSize: 13, fontFamily: "Poppins_400Regular", color: "rgba(255,255,255,0.7)" },
-  companyText: { fontSize: 18, fontFamily: "Poppins_800ExtraBold", color: Colors.white },
+  companyRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  companyText: { fontSize: 18, fontFamily: "Poppins_800ExtraBold", color: Colors.white, flexShrink: 1 },
+  streakBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: 'rgba(249, 115, 22, 0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(249, 115, 22, 0.3)',
+  },
+  streakText: {
+    color: '#fb923c',
+    fontSize: 12,
+    fontFamily: 'Poppins_700Bold',
+  },
   levelProgressContainer: { marginTop: 8, width: '100%' },
   levelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
   levelLabel: { fontSize: 10, fontFamily: 'Poppins_700Bold', color: Colors.gold },
