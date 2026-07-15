@@ -21,6 +21,8 @@ export default {
   white: "#ffffff",
   glass: "rgba(255, 255, 255, 0.7)",
   glassBorder: "rgba(255, 255, 255, 0.4)",
+  violet: "#8b5cf6",
+  orange: "#ea580c",
   light: {
     text: "#0f172a",
     background: "#f8fafc",
