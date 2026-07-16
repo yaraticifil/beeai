@@ -64,14 +64,15 @@ function ActionItem({
 
 export default function PanelScreen() {
   const insets = useSafeAreaInsets();
-  const { user, logout, checkDailySpins, checkDailyMissions, getDailyPulse } = useUser();
+  const { user, logout, checkDailySpins, checkDailyLogins, checkDailyMissions, getDailyPulse } = useUser();
 
   useEffect(() => {
     if (user) {
       checkDailySpins();
+      checkDailyLogins();
       checkDailyMissions();
     }
-  }, [user, checkDailySpins, checkDailyMissions]);
+  }, [user, checkDailySpins, checkDailyLogins, checkDailyMissions]);
 
   useEffect(() => {
     if (!user) router.replace("/");
@@ -114,6 +115,8 @@ export default function PanelScreen() {
             ? ["#7f1d1d", "#450a0a", "#0f172a"]
             : pulse.mood === "yumupeak"
             ? ["#064e3b", "#022c22", "#0f172a"]
+            : pulse.mood === "festival"
+            ? ["#4c1d95", "#2e1065", "#0f172a"]
             : [Colors.slate, "#1e293b", "#0f172a"]
         }
         style={[styles.header, { paddingTop: topInset + 10 }]}
@@ -134,9 +137,17 @@ export default function PanelScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.welcomeText}>Hoş Geldin,</Text>
-              <Text style={styles.companyText} numberOfLines={1}>
-                {user.companyName}
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={styles.companyText} numberOfLines={1}>
+                  {user.companyName}
+                </Text>
+                {user.streakCount > 0 && (
+                  <View style={styles.streakBadge}>
+                    <Ionicons name="flame" size={12} color="#fb923c" />
+                    <Text style={styles.streakText}>{user.streakCount}</Text>
+                  </View>
+                )}
+              </View>
               <HoneyBoosterBadge />
               <View style={styles.levelProgressContainer}>
                 <View style={styles.levelRow}>
@@ -159,8 +170,10 @@ export default function PanelScreen() {
           <GlassCard style={styles.pulseCard} intensity={20}>
             <View style={styles.pulseHeader}>
               <View style={styles.pulseIndicator}>
-                <View style={[styles.pulseDot, { backgroundColor: pulse.mood === "sert" ? Colors.danger : pulse.mood === "yumupeak" ? Colors.primary : Colors.gold }]} />
-                <Text style={styles.pulseStatus}>{pulse.mood.toUpperCase()} PİYASA</Text>
+                <View style={[styles.pulseDot, { backgroundColor: pulse.mood === "sert" ? Colors.danger : pulse.mood === "yumupeak" ? Colors.primary : pulse.mood === "festival" ? "#8b5cf6" : Colors.gold }]} />
+                <Text style={styles.pulseStatus}>
+                  {pulse.mood === "festival" ? "HASAT BAYRAMI" : `${pulse.mood.toUpperCase()} PİYASA`}
+                </Text>
               </View>
               <Text style={styles.pointsText}>{user.honeyPoints} 🍯</Text>
             </View>
@@ -192,6 +205,8 @@ export default function PanelScreen() {
                  ? 'Piyasa sert, yüksek puanlı keşidecilere odaklanarak işlem hızınızı koruyun.'
                  : pulse.mood === 'yumupeak'
                  ? 'Rekabetçi bir gün, arılarınızla revize turlarını mutlaka deneyin!'
+                 : pulse.mood === 'festival'
+                 ? 'Hasat Bayramı başladı! Bahçedeki tüm çiçekler bugün çift bal veriyor.'
                  : 'Dengeli bir gün. Çeklerinizi erkenden kovana bırakın, en iyi teklifi yakalayın.'}
              </Text>
           </GlassCard>
@@ -352,6 +367,22 @@ const styles = StyleSheet.create({
   xpLabel: { fontSize: 9, fontFamily: 'Poppins_600SemiBold', color: 'rgba(255,255,255,0.5)' },
   levelBarBg: { height: 4, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 2, overflow: 'hidden' },
   levelBarFill: { height: '100%', backgroundColor: Colors.gold, borderRadius: 2 },
+  streakBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    backgroundColor: 'rgba(251, 146, 60, 0.15)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(251, 146, 60, 0.3)',
+  },
+  streakText: {
+    color: "#fb923c",
+    fontSize: 10,
+    fontFamily: "Poppins_700Bold",
+  },
   logoutBtn: { width: 44, height: 44, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.12)" },
 
   pulseContainer: { marginTop: 4 },
