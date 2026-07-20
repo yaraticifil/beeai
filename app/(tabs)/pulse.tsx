@@ -26,6 +26,7 @@ export default function PulseScreen() {
   const moodLabel = useMemo(() => {
     if (pulse.mood === "sert") return "Sert";
     if (pulse.mood === "yumupeak") return "Yumuşak";
+    if (pulse.mood === "festival") return "Festival";
     return "Normal";
   }, [pulse.mood]);
 
@@ -58,7 +59,7 @@ export default function PulseScreen() {
                 <Text style={styles.title}>Günlük Endeks</Text>
                 <Text style={styles.date}>{pulse.date}</Text>
               </View>
-              <View style={[styles.moodPill, pulse.mood === "sert" ? styles.moodHard : pulse.mood === "yumupeak" ? styles.moodSoft : styles.moodNormal]}>
+              <View style={[styles.moodPill, pulse.mood === "sert" ? styles.moodHard : pulse.mood === "yumupeak" ? styles.moodSoft : pulse.mood === "festival" ? styles.moodFestival : styles.moodNormal]}>
                 <View style={styles.dot} />
                 <Text style={styles.moodText}>{moodLabel}</Text>
               </View>
@@ -89,7 +90,9 @@ export default function PulseScreen() {
                   {pulse.mood === "sert"
                     ? "Bugün finansal piyasalarda likidite daralması gözleniyor. Teklifler daha seçici ve yüksek iskontolu gelebilir."
                     : pulse.mood === "yumupeak"
-                    ? "Piyasada likidite bolluğu hakim. Arılar revize turlarında daha agresif ve rekabetçi teklifler yakalayabilir."
+                    ? "Piyasada likidite bolluğu hakim. Arılar revize turlarından daha agresif ve rekabetçi teklifler yakalayabilir."
+                    : pulse.mood === "festival"
+                    ? "Bugün kovanımızda Hasat Bayramı coşkusu var! Bahçeden toplanan tüm çiçek ödülleri 2 katına çıkmıştır. Piyasa likiditesi çok yüksek ve arıların motivasyonu zirvede!"
                     : "Piyasa koşulları standart dengesinde seyrediyor. Evrak kalitenize göre hızlı ve sağlıklı akış bekliyoruz."}
                 </Text>
               </Animated.View>
@@ -131,14 +134,14 @@ export default function PulseScreen() {
             <DynamicItem
               icon="people"
               label="Partner İştahı"
-              value={pulse.mood === 'sert' ? 'Düşük' : pulse.mood === 'yumupeak' ? 'Yüksek' : 'Dengeli'}
+              value={pulse.mood === 'sert' ? 'Düşük' : pulse.mood === 'yumupeak' ? 'Yüksek' : pulse.mood === 'festival' ? 'Mükemmel (Bayram)' : 'Dengeli'}
               iconBgColor={Colors.goldLight}
               iconColor={Colors.gold}
             />
             <DynamicItem
               icon="flash"
               label="İşlem Hızı"
-              value={pulse.mood === 'yumupeak' ? 'Yüksek (12dk)' : 'Normal (15dk)'}
+              value={pulse.mood === 'yumupeak' ? 'Yüksek (12dk)' : pulse.mood === 'festival' ? 'Işık Hızı (10dk)' : 'Normal (15dk)'}
               iconBgColor="#e0e7ff"
               iconColor="#4f46e5"
             />
@@ -178,6 +181,7 @@ const styles = StyleSheet.create({
   moodHard: { backgroundColor: "rgba(239,68,68,0.06)", borderColor: "rgba(239,68,68,0.15)", color: Colors.danger },
   moodSoft: { backgroundColor: "rgba(34,197,94,0.06)", borderColor: "rgba(34,197,94,0.15)", color: Colors.primary },
   moodNormal: { backgroundColor: "rgba(251,191,36,0.06)", borderColor: "rgba(251,191,36,0.15)", color: Colors.gold },
+  moodFestival: { backgroundColor: "rgba(139,92,246,0.06)", borderColor: "rgba(139,92,246,0.15)", color: "#8b5cf6" },
   moodText: { fontSize: 12, fontFamily: "Poppins_700Bold", color: Colors.slate },
 
   modeRow: { flexDirection: "row", gap: 12, marginBottom: 20 },

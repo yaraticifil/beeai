@@ -50,6 +50,7 @@ export default function OffersScreen() {
 
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "ready" | "collecting">("all");
+  const [sortBy, setSortBy] = useState<"amount_desc" | "amount_asc" | "date_asc" | "date_desc" | "score_desc">("date_asc");
 
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
@@ -83,7 +84,7 @@ export default function OffersScreen() {
   }, [user?.offerRequests]);
 
   const checks = useMemo(() => {
-    return rawChecks.filter((c) => {
+    const filtered = rawChecks.filter((c) => {
       const r = reqMap.get(c.id);
       const status = r?.status || "yok";
 
@@ -99,7 +100,26 @@ export default function OffersScreen() {
       }
       return true;
     });
-  }, [rawChecks, reqMap, search, filter]);
+
+    return [...filtered].sort((a, b) => {
+      if (sortBy === "amount_desc") {
+        return b.amount - a.amount;
+      }
+      if (sortBy === "amount_asc") {
+        return a.amount - b.amount;
+      }
+      if (sortBy === "date_asc") {
+        return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+      }
+      if (sortBy === "date_desc") {
+        return new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime();
+      }
+      if (sortBy === "score_desc") {
+        return b.issuerPulseScore - a.issuerPulseScore;
+      }
+      return 0;
+    });
+  }, [rawChecks, reqMap, search, filter, sortBy]);
 
 
   const getReq = React.useCallback((checkId: string) => reqMap.get(checkId), [reqMap]);
@@ -172,25 +192,52 @@ export default function OffersScreen() {
               onChangeText={setSearch}
             />
           </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsScroll}>
-            <View style={styles.chipsContainer}>
-              {[
-                { id: "all", label: "Tümü" },
-                { id: "ready", label: "Hazır" },
-                { id: "collecting", label: "Toplanıyor" },
-              ].map((c) => (
-                <Pressable
-                  key={c.id}
-                  onPress={() => setFilter(c.id as any)}
-                  style={[styles.chip, filter === c.id && styles.chipActive]}
-                >
-                  <Text style={[styles.chipText, filter === c.id && styles.chipTextActive]}>
-                    {c.label}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          </ScrollView>
+          <View style={styles.filterGroup}>
+            <Text style={styles.filterLabel}>Filtrele</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsScroll}>
+              <View style={styles.chipsContainer}>
+                {[
+                  { id: "all", label: "Tümü" },
+                  { id: "ready", label: "Hazır" },
+                  { id: "collecting", label: "Toplanıyor" },
+                ].map((c) => (
+                  <Pressable
+                    key={c.id}
+                    onPress={() => setFilter(c.id as any)}
+                    style={[styles.chip, filter === c.id && styles.chipActive]}
+                  >
+                    <Text style={[styles.chipText, filter === c.id && styles.chipTextActive]}>
+                      {c.label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </ScrollView>
+          </View>
+          <View style={styles.filterGroup}>
+            <Text style={styles.filterLabel}>Sırala</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsScroll}>
+              <View style={styles.chipsContainer}>
+                {[
+                  { id: "date_asc", label: "Vade (En Yakın)" },
+                  { id: "date_desc", label: "Vade (En Uzak)" },
+                  { id: "amount_desc", label: "Tutar (Çoktan Aza)" },
+                  { id: "amount_asc", label: "Tutar (Azdan Çoka)" },
+                  { id: "score_desc", label: "Skor (En Yüksek)" },
+                ].map((s) => (
+                  <Pressable
+                    key={s.id}
+                    onPress={() => setSortBy(s.id as any)}
+                    style={[styles.chip, sortBy === s.id && styles.chipActive]}
+                  >
+                    <Text style={[styles.chipText, sortBy === s.id && styles.chipTextActive]}>
+                      {s.label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </ScrollView>
+          </View>
         </Animated.View>
       )}
 
@@ -805,6 +852,15 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingHorizontal: 20,
     gap: 12,
+  },
+  filterGroup: {
+    gap: 6,
+  },
+  filterLabel: {
+    fontSize: 12,
+    fontFamily: 'Poppins_700Bold',
+    color: Colors.textMuted,
+    marginLeft: 4,
   },
   searchBar: {
     flexDirection: 'row',

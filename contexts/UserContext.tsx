@@ -169,7 +169,7 @@ export type ERPType = "tiger" | "mikro" | "netsis";
 
 export interface DailyPulse {
   date: string; // YYYY-MM-DD
-  mood: "sert" | "normal" | "yumupeak";
+  mood: "sert" | "normal" | "yumupeak" | "festival";
   band90: { min: number; max: number }; // %
   note: string;
 }
@@ -326,11 +326,18 @@ function computeDailyPulseInternal(companyName?: string): DailyPulse {
   const max = clamp(base + spread / 2, 1.2, 6.5);
 
   let mood: DailyPulse["mood"] = "normal";
-  if (base > 3.9) mood = "sert";
-  if (base < 2.4) mood = "yumupeak";
+  if (h % 10 === 7) {
+    mood = "festival";
+  } else if (base > 3.9) {
+    mood = "sert";
+  } else if (base < 2.4) {
+    mood = "yumupeak";
+  }
 
   const note =
-    mood === "sert"
+    mood === "festival"
+      ? "Hasat Bayramı başladı! Tüm çiçek hasatlarından elde edilen bal ödülleri bugün 2 katına çıktı!"
+      : mood === "sert"
       ? "Rekabet dar, teklif süreleri uzuyor. Keşideci skoru yüksek olanlar daha hızlı döner."
       : mood === "yumupeak"
       ? "Rekabet canlı, revize turu bugün iyi çalışır."
@@ -708,6 +715,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
       honeyEarnedRaw *= 2;
     }
 
+    const pulse = computeDailyPulseInternal(user.companyName);
+    if (pulse.mood === "festival") {
+      honeyEarnedRaw *= 2;
+    }
+
     const newFlowers = (user.flowers || []).filter((f) => f.id !== flowerId);
     const updatedMissions = (user.missions || []).map(m => {
       if (m.type === "harvest") return { ...m, current: Math.min(m.target, m.current + 1) };
@@ -719,7 +731,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
       flowers: newFlowers,
       totalHarvested: (user.totalHarvested || 0) + 1,
       missions: updatedMissions,
-    }, "harvest", flower.isGolden ? "Altın Çiçek hasat edildi! 2x Bal kazanıldı." : "Çiçek hasat edildi.");
+    }, "harvest", pulse.mood === "festival"
+      ? (flower.isGolden ? "Hasat Bayramı! Altın Çiçek hasat edildi ve 4x Bal kazanıldı." : "Hasat Bayramı! Çiçek hasat edildi ve 2x Bal kazanıldı.")
+      : (flower.isGolden ? "Altın Çiçek hasat edildi! 2x Bal kazanıldı." : "Çiçek hasat edildi."));
 
     const { updatedUser, pointsGained } = applyPointsGainInternal(updatedWithActivity, honeyEarnedRaw);
 
@@ -735,6 +749,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
     );
     if (readyFlowers.length === 0) return 0;
 
+    const pulse = computeDailyPulseInternal(user.companyName);
+    const isFestival = pulse.mood === "festival";
+
     let totalEarnedRaw = 0;
     let hasGolden = false;
     readyFlowers.forEach((f) => {
@@ -742,6 +759,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
       if (f.isGolden) {
         earned *= 2;
         hasGolden = true;
+      }
+      if (isFestival) {
+        earned *= 2;
       }
       totalEarnedRaw += earned;
     });
@@ -754,12 +774,18 @@ export function UserProvider({ children }: { children: ReactNode }) {
       return m;
     });
 
+    let msg = isFestival
+      ? "Hasat Bayramı! Tüm çiçekler 2 kat bal ödülüyle hasat edildi."
+      : hasGolden
+      ? "Çiçekler hasat edildi (Altın çiçekler dahil)!"
+      : "Tüm çiçekler hasat edildi.";
+
     let updatedWithActivity = addActivityInternal({
       ...user,
       flowers: remainingFlowers,
       totalHarvested: (user.totalHarvested || 0) + readyFlowers.length,
       missions: updatedMissions,
-    }, "harvest", hasGolden ? "Çiçekler hasat edildi (Altın çiçekler dahil)!" : "Tüm çiçekler hasat edildi.");
+    }, "harvest", msg);
 
     const { updatedUser, pointsGained } = applyPointsGainInternal(updatedWithActivity, totalEarnedRaw);
 
@@ -990,8 +1016,16 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
     const now = Date.now();
     const scout = (user.bees || []).find(b => b.role === "İzci");
+    const negotiator = (user.bees || []).find(b => b.role === "Aracı");
+
     // İzci bonus: Her seviye %10 hız (max %50). Örn: Sv 2 = %10 hızlanma -> zaman çarpanı 0.9
-    const speedBonus = scout ? Math.min(0.5, (scout.level - 1) * 0.1) : 0;
+    let speedBonus = scout ? Math.min(0.5, (scout.level - 1) * 0.1) : 0;
+
+    // Synergy bonus: if both İzci and Aracı are level 3 or higher, grant an additional 5% speed reduction
+    if (scout && scout.level >= 3 && negotiator && negotiator.level >= 3) {
+      speedBonus += 0.05;
+    }
+
     const timeMultiplier = 1 - speedBonus;
 
     const elapsed = now - req.startedAt;
