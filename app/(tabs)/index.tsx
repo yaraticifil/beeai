@@ -114,6 +114,8 @@ export default function PanelScreen() {
             ? ["#7f1d1d", "#450a0a", "#0f172a"]
             : pulse.mood === "yumupeak"
             ? ["#064e3b", "#022c22", "#0f172a"]
+            : pulse.mood === "festival"
+            ? ["#5b21b6", "#4c1d95", "#0f172a"]
             : [Colors.slate, "#1e293b", "#0f172a"]
         }
         style={[styles.header, { paddingTop: topInset + 10 }]}
@@ -159,7 +161,7 @@ export default function PanelScreen() {
           <GlassCard style={styles.pulseCard} intensity={20}>
             <View style={styles.pulseHeader}>
               <View style={styles.pulseIndicator}>
-                <View style={[styles.pulseDot, { backgroundColor: pulse.mood === "sert" ? Colors.danger : pulse.mood === "yumupeak" ? Colors.primary : Colors.gold }]} />
+                <View style={[styles.pulseDot, { backgroundColor: pulse.mood === "sert" ? Colors.danger : pulse.mood === "yumupeak" ? Colors.primary : pulse.mood === "festival" ? "#8b5cf6" : Colors.gold }]} />
                 <Text style={styles.pulseStatus}>{pulse.mood.toUpperCase()} PİYASA</Text>
               </View>
               <Text style={styles.pointsText}>{user.honeyPoints} 🍯</Text>
@@ -192,6 +194,8 @@ export default function PanelScreen() {
                  ? 'Piyasa sert, yüksek puanlı keşidecilere odaklanarak işlem hızınızı koruyun.'
                  : pulse.mood === 'yumupeak'
                  ? 'Rekabetçi bir gün, arılarınızla revize turlarını mutlaka deneyin!'
+                 : pulse.mood === 'festival'
+                 ? 'Hasat Bayramı kutlu olsun! Bugün bahçeden topladığınız tüm çiçekler 2 kat bal veriyor. Hemen bahçenize çiçek dikin!'
                  : 'Dengeli bir gün. Çeklerinizi erkenden kovana bırakın, en iyi teklifi yakalayın.'}
              </Text>
           </GlassCard>
