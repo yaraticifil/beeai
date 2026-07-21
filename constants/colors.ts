@@ -1,6 +1,8 @@
 const primary = "#22c55e"; // Electric Green
 const gold = "#fbbf24";    // Cyber Gold
 const slate = "#0f172a";   // Deep Slate
+const orange = "#ea580c";
+const violet = "#8b5cf6";
 
 export default {
   primary,
@@ -11,6 +13,8 @@ export default {
   goldDark: "#b45309",
   slate,
   slateLight: "#1e293b",
+  orange,
+  violet,
   background: "#f8fafc",
   card: "#ffffff",
   cardBorder: "rgba(226, 232, 240, 0.8)",

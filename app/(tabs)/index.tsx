@@ -114,6 +114,8 @@ export default function PanelScreen() {
             ? ["#7f1d1d", "#450a0a", "#0f172a"]
             : pulse.mood === "yumupeak"
             ? ["#064e3b", "#022c22", "#0f172a"]
+            : pulse.mood === "festival"
+            ? ["#581c87", "#3b0764", "#0f172a"]
             : [Colors.slate, "#1e293b", "#0f172a"]
         }
         style={[styles.header, { paddingTop: topInset + 10 }]}
@@ -134,9 +136,17 @@ export default function PanelScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.welcomeText}>Hoş Geldin,</Text>
-              <Text style={styles.companyText} numberOfLines={1}>
-                {user.companyName}
-              </Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                <Text style={styles.companyText} numberOfLines={1}>
+                  {user.companyName}
+                </Text>
+                {(user.streakCount || 0) > 0 && (
+                  <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: "rgba(234,88,12,0.15)", borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2, gap: 2 }}>
+                    <Ionicons name="flame" size={14} color={Colors.orange || "#ea580c"} />
+                    <Text style={{ fontSize: 11, fontFamily: "Poppins_700Bold", color: Colors.orange || "#ea580c" }}>{user.streakCount}</Text>
+                  </View>
+                )}
+              </View>
               <HoneyBoosterBadge />
               <View style={styles.levelProgressContainer}>
                 <View style={styles.levelRow}>
@@ -159,7 +169,7 @@ export default function PanelScreen() {
           <GlassCard style={styles.pulseCard} intensity={20}>
             <View style={styles.pulseHeader}>
               <View style={styles.pulseIndicator}>
-                <View style={[styles.pulseDot, { backgroundColor: pulse.mood === "sert" ? Colors.danger : pulse.mood === "yumupeak" ? Colors.primary : Colors.gold }]} />
+                <View style={[styles.pulseDot, { backgroundColor: pulse.mood === "sert" ? Colors.danger : pulse.mood === "yumupeak" ? Colors.primary : pulse.mood === "festival" ? (Colors.violet || "#8b5cf6") : Colors.gold }]} />
                 <Text style={styles.pulseStatus}>{pulse.mood.toUpperCase()} PİYASA</Text>
               </View>
               <Text style={styles.pointsText}>{user.honeyPoints} 🍯</Text>
