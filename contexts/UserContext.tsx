@@ -42,6 +42,7 @@ export interface BeeAgent {
   level: number;
   xp: number; // 0-100
   emoji: string;
+  specialty?: string;
 }
 
 export type CheckSource = "manual" | "erp" | "whatsapp";
@@ -163,13 +164,15 @@ export interface User {
 
   missions: Mission[];
   lastMissionsDate: string;
+  streakCount: number;
+  lastLoginDate: string;
 }
 
 export type ERPType = "tiger" | "mikro" | "netsis";
 
 export interface DailyPulse {
   date: string; // YYYY-MM-DD
-  mood: "sert" | "normal" | "yumupeak";
+  mood: "sert" | "normal" | "yumupeak" | "festival";
   band90: { min: number; max: number }; // %
   note: string;
 }
@@ -199,6 +202,8 @@ const DEFAULT_USER: Partial<User> = {
   settings: { pulseMode: "weather" },
   missions: [],
   lastMissionsDate: "",
+  streakCount: 0,
+  lastLoginDate: "",
 };
 
 const STORAGE_KEY = "@beeai_user";
@@ -221,6 +226,12 @@ const MISSION_POOL: Omit<Mission, "current" | "claimed">[] = [
 
 function todayKey(): string {
   return new Date().toDateString();
+}
+
+function yesterdayKey(): string {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return d.toDateString();
 }
 
 function toISODate(d: Date): string {
@@ -297,10 +308,10 @@ function addActivityInternal(user: User, type: string, message: string): User {
 function makeBeeAgents(): BeeAgent[] {
   const now = Date.now();
   return [
-    { id: `bee_${now}_1`, role: "İzci", name: "İzci Arı", level: 1, xp: 15, emoji: "🕵️‍♂️" },
-    { id: `bee_${now}_2`, role: "Aracı", name: "Müzakereci Arı", level: 1, xp: 20, emoji: "⚡" },
-    { id: `bee_${now}_3`, role: "Kâtip", name: "Kâtip Arı", level: 1, xp: 10, emoji: "🧾" },
-    { id: `bee_${now}_4`, role: "Nabız", name: "Nabız Arı", level: 1, xp: 18, emoji: "📊" },
+    { id: `bee_${now}_1`, role: "İzci", name: "İzci Arı", level: 1, xp: 15, emoji: "🕵️‍♂️", specialty: "Hızlı Analiz" },
+    { id: `bee_${now}_2`, role: "Aracı", name: "Müzakereci Arı", level: 1, xp: 20, emoji: "⚡", specialty: "Oran İyileştirme" },
+    { id: `bee_${now}_3`, role: "Kâtip", name: "Kâtip Arı", level: 1, xp: 10, emoji: "🧾", specialty: "Otonom Kayıt" },
+    { id: `bee_${now}_4`, role: "Nabız", name: "Nabız Arı", level: 1, xp: 18, emoji: "📊", specialty: "Piyasa Tahmini" },
   ];
 }
 
@@ -319,6 +330,8 @@ function computeDailyPulseInternal(companyName?: string): DailyPulse {
   const seedBase = `${dateISO}|${companyName || ""}`;
   const h = hashStringToInt(seedBase);
 
+  const isFestival = (h % 10) === 7;
+
   // 90 gün bandı: 1.8 - 4.8 (pilot)
   const base = 1.8 + (h % 300) / 100; // 1.8-4.8
   const spread = 0.35 + ((h >>> 3) % 55) / 100; // 0.35-0.90
@@ -326,11 +339,18 @@ function computeDailyPulseInternal(companyName?: string): DailyPulse {
   const max = clamp(base + spread / 2, 1.2, 6.5);
 
   let mood: DailyPulse["mood"] = "normal";
-  if (base > 3.9) mood = "sert";
-  if (base < 2.4) mood = "yumupeak";
+  if (isFestival) {
+    mood = "festival";
+  } else if (base > 3.9) {
+    mood = "sert";
+  } else if (base < 2.4) {
+    mood = "yumupeak";
+  }
 
   const note =
-    mood === "sert"
+    mood === "festival"
+      ? "Hasat Bayramı başladı! Bahçedeki tüm çiçekler bugün iki kat daha fazla bal veriyor. Keyifli hasatlar!"
+      : mood === "sert"
       ? "Rekabet dar, teklif süreleri uzuyor. Keşideci skoru yüksek olanlar daha hızlı döner."
       : mood === "yumupeak"
       ? "Rekabet canlı, revize turu bugün iyi çalışır."
@@ -417,6 +437,7 @@ interface UserContextValue {
   harvestAllFlowers: () => Promise<number>;
   boostFlower: (flowerId: string) => Promise<boolean>;
   checkDailySpins: () => Promise<void>;
+  checkDailyLogins: () => Promise<void>;
   checkDailyMissions: () => Promise<void>;
   claimMissionReward: (missionId: string) => Promise<void>;
 
@@ -458,12 +479,54 @@ export function UserProvider({ children }: { children: ReactNode }) {
     loadUser();
   }, []);
 
+  const checkDailyLoginsInternal = async (currentUser: User): Promise<User> => {
+    const today = todayKey();
+    if (currentUser.lastLoginDate === today) return currentUser;
+
+    let newStreak = 1;
+    const yesterday = yesterdayKey();
+    if (currentUser.lastLoginDate === yesterday) {
+      newStreak = (currentUser.streakCount || 0) + 1;
+    } else if (currentUser.lastLoginDate === "") {
+      newStreak = 1;
+    } else {
+      newStreak = 1;
+    }
+
+    const bonusHoney = Math.min(newStreak * 10, 50);
+    const newSpinCount = (currentUser.spinCount || 0) + 1;
+
+    let updated = {
+      ...currentUser,
+      streakCount: newStreak,
+      lastLoginDate: today,
+      spinCount: newSpinCount,
+    };
+
+    updated = addActivityInternal(
+      updated,
+      "login_streak",
+      `Günlük giriş yapıldı! Streak: ${newStreak} gün. +${bonusHoney} Bal ve +1 Çevirme hakkı kazanıldı.`
+    );
+
+    const { updatedUser } = applyPointsGainInternal(updated, bonusHoney);
+    return updatedUser;
+  };
+
+  const checkDailyLogins = async () => {
+    if (!user) return;
+    const updated = await checkDailyLoginsInternal(user);
+    if (updated.lastLoginDate !== user.lastLoginDate) {
+      await saveUser(updated);
+    }
+  };
+
   const loadUser = async () => {
     try {
       const stored = await AsyncStorage.getItem(STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored) as User;
-        const hydrated: User = {
+        let hydrated: User = {
           ...(DEFAULT_USER as User),
           ...parsed,
           settings: { ...(DEFAULT_USER.settings as UserSettings), ...(parsed.settings || {}) },
@@ -478,9 +541,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
           honeyBoosterUntil: parsed.honeyBoosterUntil || ((parsed as any).doubleNextHoney ? Date.now() + 600000 : 0),
           missions: parsed.missions || [],
           lastMissionsDate: parsed.lastMissionsDate || "",
+          streakCount: parsed.streakCount || 0,
+          lastLoginDate: parsed.lastLoginDate || "",
         };
         hydrated.level = computeLevel(hydrated.honeyPoints);
-        setUser(hydrated);
+        hydrated = await checkDailyLoginsInternal(hydrated);
+        await saveUser(hydrated);
       }
     } catch (e) {
       console.error("Failed to load user", e);
@@ -495,7 +561,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   };
 
   const login = async (companyName: string, phoneNumber: string) => {
-    const newUser: User = {
+    let newUser: User = {
       ...(DEFAULT_USER as User),
       companyName,
       phoneNumber,
@@ -511,8 +577,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
       settings: { pulseMode: "weather" },
       missions: [],
       lastMissionsDate: "",
+      streakCount: 0,
+      lastLoginDate: "",
     };
     newUser.level = computeLevel(newUser.honeyPoints);
+    newUser = await checkDailyLoginsInternal(newUser);
     await saveUser(newUser);
   };
 
@@ -708,6 +777,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
       honeyEarnedRaw *= 2;
     }
 
+    const pulse = computeDailyPulseInternal(user.companyName);
+    const isFestival = pulse.mood === "festival";
+    if (isFestival) {
+      honeyEarnedRaw *= 2;
+    }
+
     const newFlowers = (user.flowers || []).filter((f) => f.id !== flowerId);
     const updatedMissions = (user.missions || []).map(m => {
       if (m.type === "harvest") return { ...m, current: Math.min(m.target, m.current + 1) };
@@ -735,6 +810,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
     );
     if (readyFlowers.length === 0) return 0;
 
+    const pulse = computeDailyPulseInternal(user.companyName);
+    const isFestival = pulse.mood === "festival";
+
     let totalEarnedRaw = 0;
     let hasGolden = false;
     readyFlowers.forEach((f) => {
@@ -742,6 +820,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
       if (f.isGolden) {
         earned *= 2;
         hasGolden = true;
+      }
+      if (isFestival) {
+        earned *= 2;
       }
       totalEarnedRaw += earned;
     });
@@ -990,8 +1071,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
     const now = Date.now();
     const scout = (user.bees || []).find(b => b.role === "İzci");
+    const negotiator = (user.bees || []).find(b => b.role === "Aracı");
     // İzci bonus: Her seviye %10 hız (max %50). Örn: Sv 2 = %10 hızlanma -> zaman çarpanı 0.9
-    const speedBonus = scout ? Math.min(0.5, (scout.level - 1) * 0.1) : 0;
+    let speedBonus = scout ? Math.min(0.5, (scout.level - 1) * 0.1) : 0;
+    // Synergy bonus: +5% speed reduction if both Izci and Araci are level >= 3
+    if (scout && scout.level >= 3 && negotiator && negotiator.level >= 3) {
+      speedBonus += 0.05;
+    }
     const timeMultiplier = 1 - speedBonus;
 
     const elapsed = now - req.startedAt;
@@ -1043,7 +1129,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     if (!check) return false;
 
     const negotiator = (user.bees || []).find(b => b.role === "Aracı");
-    const bonusMultiplier = negotiator ? 1 + (negotiator.level - 1) * 0.1 : 1;
+    const bonusMultiplier = negotiator ? 1 + (negotiator.level - 1) * 0.05 : 1;
 
     // Revize: tüm teklifleri küçük iyileştir (oran -0.15, fee -150)
     const revised = req.offers.map((o) => {
@@ -1227,6 +1313,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       harvestAllFlowers,
       boostFlower,
       checkDailySpins,
+      checkDailyLogins,
       checkDailyMissions,
       claimMissionReward,
       addCheck,

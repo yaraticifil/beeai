@@ -52,6 +52,14 @@ function FlowerItem({
   const mins = Math.floor(timeLeft / 60);
   const secs = timeLeft % 60;
 
+  const stage = isReady
+    ? "Hazır"
+    : progress < 0.33
+    ? "Filiz"
+    : progress < 0.66
+    ? "Tomurcuk"
+    : "Büyüyor";
+
   return (
     <Animated.View style={[styles.flowerItem, { transform: [{ scale: scaleAnim }] }]}>
       <Pressable
@@ -67,6 +75,7 @@ function FlowerItem({
         <Text style={[styles.flowerEmoji, !isReady && styles.flowerEmojiGrowing]}>
           {isReady ? (flower.isGolden ? "🌟" : "🌼") : (flower.isGolden ? "✨" : "🌱")}
         </Text>
+        <Text style={styles.stageText}>{stage}</Text>
         <View style={styles.flowerProgressBg}>
           <View
             style={[
@@ -478,6 +487,13 @@ const styles = StyleSheet.create({
   },
   flowerEmojiGrowing: {
     opacity: 0.7,
+  },
+  stageText: {
+    fontSize: 9,
+    fontFamily: "Poppins_600SemiBold",
+    color: Colors.textMuted,
+    textAlign: "center",
+    marginBottom: 2,
   },
   flowerPressableGolden: {
     backgroundColor: "rgba(251, 191, 36, 0.15)",
